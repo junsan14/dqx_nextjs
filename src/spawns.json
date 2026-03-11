@@ -1,0 +1,201 @@
+[
+  {
+    "monster": "いっかくウサギ",
+    "map": "ランガーオ山地",
+    "coords": ["B2", "C2", "B3", "C3"],
+    "spawn_time": "normal"
+  },
+  {
+    "monster": "ビッグハット",
+    "map": "ランガーオ山地",
+    "coords": ["E1", "F1", "E2", "F2"],
+    "spawn_time": "normal"
+  },
+  {
+    "monster": "いっかくウサギ",
+    "map": "ランガーオ山地",
+    "coords": ["E1", "F1", "E2", "F2"],
+    "spawn_time": "normal"
+  },
+  {
+    "monster": "スライム",
+    "map": "ランガーオ山地",
+    "coords": ["C2", "D2", "E2", "C3", "D3", "E3"],
+    "spawn_time": "normal"
+  },
+  {
+    "monster": "ビッグハット",
+    "map": "ランガーオ山地",
+    "coords": ["C2", "D2", "E2", "C3", "D3", "E3"],
+    "spawn_time": "normal"
+  },
+  {
+    "monster": "ブリザード",
+    "map": "ランガーオ山地",
+    "coords": ["G3", "H3"],
+    "spawn_time": "normal"
+  },
+  {
+    "monster": "おにこぞう",
+    "map": "ランガーオ山地",
+    "coords": ["B4", "C4", "D4", "B5", "C5", "D5", "B6", "C6", "D6"],
+    "spawn_time": "normal"
+  },
+  {
+    "monster": "ブラウニー",
+    "map": "ランガーオ山地",
+    "coords": ["B4", "C4", "D4", "B5", "C5", "D5", "B6", "C6", "D6"],
+    "spawn_time": "normal"
+  },
+  {
+    "monster": "ビッグハット",
+    "map": "ランガーオ山地",
+    "coords": ["D4", "E4", "F4", "D5", "E5", "F5", "D6", "E6", "F6"],
+    "spawn_time": "normal"
+  },
+  {
+    "monster": "いっかくウサギ",
+    "map": "ランガーオ山地",
+    "coords": ["D4", "E4", "F4", "D5", "E5", "F5", "D6", "E6", "F6"],
+    "spawn_time": "normal"
+  },
+  {
+    "monster": "ドラキー",
+    "map": "ランガーオ山地",
+    "coords": ["D4", "E4", "F4", "D5", "E5", "F5", "D6", "E6", "F6"],
+    "spawn_time": "night"
+  },
+  {
+    "monster": "ぬすっとウサギ",
+    "map": "ランガーオ山地",
+    "coords": ["B6", "C6", "B7", "C7"],
+    "spawn_time": "normal"
+  },
+  {
+    "monster": "ブリザード",
+    "map": "ランガーオ山地",
+    "coords": ["D6", "E6", "F6", "G6", "D7", "E7", "F7", "G7"],
+    "spawn_time": "normal"
+  },
+  {
+    "monster": "ベレス",
+    "map": "ランガーオ山地",
+    "coords": ["D6", "E6", "F6", "G6", "D7", "E7", "F7", "G7"],
+    "spawn_time": "normal"
+  },
+  {
+    "monster": "アイシクルント",
+    "map": "ランガーオ山地",
+    "coords": ["D6", "E6", "F6", "G6", "D7", "E7", "F7", "G7"],
+    "spawn_time": "day"
+  },
+    {
+    "monster": "メガザルロック",
+    "map": "グレン領東",
+    "coords": ["C2", "D2", "C3", "D3"],
+    "spawn_time": "normal"
+  },
+  {
+    "monster": "ゲリュオン",
+    "map": "グレン領東",
+    "coords": ["C2", "D2", "C3", "D3"],
+    "spawn_time": "normal"
+  },
+  {
+    "monster": "バブルスライム",
+    "map": "グレン領東",
+    "coords": ["E2", "F2", "E3", "F3"],
+    "spawn_time": "normal"
+  },
+  {
+    "monster": "キャタピラー",
+    "map": "グレン領東",
+    "coords": ["E2", "F2", "E3", "F3"],
+    "spawn_time": "normal"
+  },
+  {
+    "monster": "どくろあらい",
+    "map": "グレン領東",
+    "coords": ["E2", "F2", "E3", "F3"],
+    "spawn_time": "normal"
+  },
+  {
+    "monster": "ばくだん岩",
+    "map": "グレン領東",
+    "coords": ["G3", "H3", "G4", "H4"],
+    "spawn_time": "normal"
+  },
+  {
+    "monster": "おおくちばし",
+    "map": "グレン領東",
+    "coords": ["G3", "H3", "G4", "H4"],
+    "spawn_time": "normal"
+  },
+  {
+    "monster": "デスラッピー",
+    "map": "グレン領東",
+    "coords": ["G3", "H3", "G4", "H4"],
+    "spawn_time": "day"
+  },
+  {
+    "monster": "くさった死体",
+    "map": "グレン領東",
+    "coords": ["G3", "H3", "G4", "H4"],
+    "spawn_time": "night"
+  },
+  {
+    "monster": "キャタピラー",
+    "map": "グレン領東",
+    "coords": ["D4", "E4", "F4", "D5", "E5", "F5"],
+    "spawn_time": "normal"
+  },
+  {
+    "monster": "どくろあらい",
+    "map": "グレン領東",
+    "coords": ["D4", "E4", "F4", "D5", "E5", "F5"],
+    "spawn_time": "normal"
+  },
+  {
+    "monster": "おおくちばし",
+    "map": "グレン領東",
+    "coords": ["D4", "E4", "F4", "D5", "E5", "F5"],
+    "spawn_time": "normal"
+  },
+  {
+    "monster": "太古のぬし",
+    "map": "グレン領東",
+    "coords": ["D5", "E5"],
+    "spawn_time": "normal"
+  },
+  {
+    "monster": "スライムベス",
+    "map": "グレン領東",
+    "coords": ["C6", "D6"],
+    "spawn_time": "normal"
+  },
+  {
+    "monster": "どくろあらい",
+    "map": "グレン領東",
+    "coords": ["D6", "E6"],
+    "spawn_time": "normal"
+  },
+  {
+    "monster": "おおくちばし",
+    "map": "グレン領東",
+    "coords": ["D6", "E6"],
+    "spawn_time": "normal"
+  },
+  {
+    "monster": "マドハンド",
+    "map": "グレン領東",
+    "coords": ["F7", "G7", "F8", "G8"],
+    "spawn_time": "normal"
+  },
+  {
+    "monster": "スライムベス",
+    "map": "グレン領東",
+    "coords": ["E1"],
+    "spawn_time": "normal"
+  },
+
+]
