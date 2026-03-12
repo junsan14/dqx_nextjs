@@ -7,7 +7,7 @@ import { createItem, deleteItem, updateItem } from "@/lib/items";
 export default function ItemForm({
   initialData = null,
   mode = "create",
-    categories = [],
+  categories = [],
   onSaved,
   onDeleted,
 }) {
@@ -31,6 +31,7 @@ export default function ItemForm({
       sell_price: initialData?.sell_price ?? "",
       category: initialData?.category ?? "",
       drop_monsters: (initialData?.drop_monsters ?? []).map((row, index) => ({
+        id: row.id ?? null,
         monster_id: row.monster_id,
         drop_type: row.drop_type || "normal",
         sort_order: row.sort_order || index + 1,
@@ -47,26 +48,6 @@ export default function ItemForm({
     setSaving(true);
     setMessage("");
     setErrors({});
-//console.log("form.drop_monsters", form.drop_monsters);
-
-const payload = {
-  name: form.name.trim(),
-  buy_price:
-    form.buy_price === "" || form.buy_price === null
-      ? null
-      : Number(form.buy_price),
-  sell_price:
-    form.sell_price === "" || form.sell_price === null
-      ? null
-      : Number(form.sell_price),
-  category: form.category.trim() || null,
-  drop_monsters: form.drop_monsters.map((row, index) => ({
-    monster_id: row.monster_id,
-    drop_type: row.drop_type ?? "normal",
-    sort_order: index + 1,
-  })),
-};
-
 
     try {
       const payload = {
@@ -81,6 +62,7 @@ const payload = {
             : Number(form.sell_price),
         category: form.category.trim() || null,
         drop_monsters: form.drop_monsters.map((row, index) => ({
+          id: row.id ?? null,
           monster_id: row.monster_id,
           drop_type: row.drop_type === "rare" ? "rare" : "normal",
           sort_order: index + 1,
@@ -161,7 +143,12 @@ const payload = {
         </div>
       </div>
 
-      <ItemFormFields form={form} setForm={setForm} errors={errors} categories={categories}/>
+      <ItemFormFields
+        form={form}
+        setForm={setForm}
+        errors={errors}
+        categories={categories}
+      />
 
       <div style={actionsStyle}>
         <button type="submit" disabled={saving} style={saveButtonStyle}>

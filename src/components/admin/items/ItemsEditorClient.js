@@ -50,6 +50,7 @@ export default function ItemsEditorClient() {
     try {
       const item = await fetchItem(id);
       setSelectedItem(item);
+    
     } catch (error) {
       console.error(error);
       alert(error.message || "アイテム詳細取得失敗");
@@ -100,7 +101,7 @@ export default function ItemsEditorClient() {
     setSelectedId(null);
     setSelectedItem(null);
   }
-
+console.log(selectedItem)
   return (
     <div style={pageStyle}>
       <aside style={sidebarStyle}>

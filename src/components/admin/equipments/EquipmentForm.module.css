@@ -1,0 +1,1003 @@
+.page {
+  --bg: #f8fafc;
+  --card: #ffffff;
+  --text: #0f172a;
+  --border: #cbd5e1;
+  --muted: #64748b;
+  --soft: #f1f5f9;
+  --active: #e2e8f0;
+  --activeBorder: #4f46e5;
+  --inputBg: #ffffff;
+  --chipBg: #eef2ff;
+  --preBg: #f8fafc;
+  --preText: #0f172a;
+  --dangerBg: #fef2f2;
+  --dangerBorder: #ef4444;
+  --dangerText: #b91c1c;
+
+  padding: 20px;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  box-sizing: border-box;
+}
+
+.title {
+  margin: 0 0 16px;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.toolbar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.toolbarMeta {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.inlineCheck {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.layout {
+  display: grid;
+  gap: 12px;
+  align-items: start;
+  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+}
+
+.sidebarCard {
+  position: sticky;
+  top: 12px;
+  align-self: start;
+  max-height: calc(100vh - 24px);
+  overflow: hidden;
+}
+
+.main {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.segment {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.formGrid4 {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.label {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.input,
+.select,
+.textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--inputBg);
+  color: var(--text);
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.inputSmall {
+  width: 80px;
+  max-width: 100%;
+}
+
+.button {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: var(--soft);
+  color: var(--text);
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.button:hover {
+  background: var(--active);
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.buttonActive {
+  border-color: var(--activeBorder);
+  background: var(--active);
+}
+
+.buttonDanger {
+  border: 1px solid var(--dangerBorder);
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: var(--dangerBg);
+  color: var(--dangerText);
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.buttonDanger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.actions {
+  margin-top: 12px;
+}
+
+.stack {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.groupMemberRow {
+  display: grid;
+  grid-template-columns: 80px 100px 160px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+
+.mutedText {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.metaText {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.entryList {
+  display: grid;
+  gap: 6px;
+  max-height: calc(100vh - 220px);
+  overflow: auto;
+  margin-top: 10px;
+  padding-right: 2px;
+}
+
+.entryButton {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--soft);
+  color: var(--text);
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.entryButton:hover {
+  background: var(--active);
+}
+
+.entryButtonActive {
+  border-color: var(--activeBorder);
+  background: var(--active);
+}
+
+.entryTitle {
+  font-weight: 800;
+  word-break: break-word;
+}
+
+.entryMeta {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+  word-break: break-word;
+}
+
+.sectionActions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.sectionActionsLeft {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.sectionActionsRight {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-left: auto;
+  min-width: 0;
+}
+
+.sectionHead {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.sectionTitle {
+  font-weight: 800;
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--chipBg);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 13px;
+  max-width: 100%;
+}
+
+.chipX {
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.jobCandidates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.materialRow {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.4fr) minmax(180px, 1fr) 90px auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.materialNameWrap {
+  min-width: 0;
+}
+
+.materialColWide {
+  min-width: 0;
+}
+
+.materialColXs {
+  width: 90px;
+  max-width: 100%;
+}
+
+.materialColAuto {
+  display: flex;
+  align-items: end;
+}
+
+.gridResizeRow {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.inlineField {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.gridTableWrap {
+  overflow: auto;
+}
+
+.gridTable {
+  border-collapse: collapse;
+}
+
+.gridCell {
+  border: 1px solid var(--border);
+  padding: 0;
+}
+
+.gridInput {
+  width: 56px;
+  min-width: 56px;
+  border: none;
+  padding: 8px;
+  text-align: center;
+  background: var(--inputBg);
+  color: var(--text);
+  box-sizing: border-box;
+}
+
+.gridInputDisabled {
+  background: #e5e7eb;
+  color: #94a3b8;
+}
+
+.pre {
+  margin: 0;
+  padding: 12px;
+  background: var(--preBg);
+  color: var(--preText);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: auto;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.groupEntry {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.groupChildren {
+  display: grid;
+  gap: 6px;
+  padding-left: 12px;
+}
+
+.entryChildButton {
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.entryChildButtonActive {
+  border-color: var(--activeBorder);
+  background: var(--active);
+}
+
+.entryChildSlot {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.entryChildName {
+  font-size: 14px;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.gridEditorControls {
+  display: flex;
+  gap: 12px;
+  align-items: end;
+  margin-top: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.gridMiniField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gridMiniInput {
+  width: 88px;
+  max-width: 100%;
+  border: 1px solid var(--border);
+  background: var(--inputBg);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 8px 10px;
+  box-sizing: border-box;
+}
+
+.gridEditorOuter {
+  padding: 12px 0 4px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.gridEditorPlainCompact {
+  --cell-size: 78px;
+  display: inline-grid;
+  gap: 8px;
+  width: max-content;
+  max-width: none;
+}
+
+.gridCellInputSquare {
+  width: var(--cell-size);
+  height: var(--cell-size);
+  min-width: var(--cell-size);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin: 0;
+  padding: 0;
+  background: var(--inputBg);
+  color: var(--text);
+  text-align: center;
+  outline: none;
+  box-sizing: border-box;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.gridCellInputSquareDisabled {
+  background: var(--soft);
+  color: var(--muted);
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.topTabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.topTabButton {
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  padding: 10px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.topTabButtonActive {
+  background: var(--active);
+  border-color: var(--activeBorder);
+}
+
+.compactFieldGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  align-items: flex-start;
+}
+
+.inputCompact {
+  width: 180px;
+  max-width: 100%;
+  border: 1px solid var(--border);
+  background: var(--inputBg);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 8px 10px;
+  box-sizing: border-box;
+}
+
+.inputCompactWide {
+  width: 280px;
+  max-width: 100%;
+  border: 1px solid var(--border);
+  background: var(--inputBg);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 8px 10px;
+  box-sizing: border-box;
+}
+
+.inputCompactXs {
+  width: 90px;
+  max-width: 100%;
+  border: 1px solid var(--border);
+  background: var(--inputBg);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 8px 10px;
+  box-sizing: border-box;
+}
+
+.selectCompact {
+  width: 180px;
+  max-width: 100%;
+  border: 1px solid var(--border);
+  background: var(--inputBg);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 8px 10px;
+  box-sizing: border-box;
+}
+
+.jobSection {
+  margin-top: 18px;
+}
+
+.tagList,
+.tagPicker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.jobTag {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  background: var(--soft);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 13px;
+  max-width: 100%;
+}
+
+.jobTagOverride {
+  border-color: var(--activeBorder);
+  background: var(--active);
+}
+
+.tagButton {
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 6px 10px;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.tagButtonActive {
+  border-color: var(--activeBorder);
+  background: var(--active);
+}
+
+.stickySaveBar {
+  position: sticky;
+  top: 8px;
+  z-index: 30;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--card) 92%, white 8%);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+.saveLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.saveRight {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.customJobRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.buttonSecondary {
+  border: 1px solid var(--border);
+  background: var(--soft);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.stackMd {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.materialSearchBox {
+  position: relative;
+  margin-bottom: 16px;
+  min-width: 0;
+}
+
+.materialSearchResults {
+  margin-top: 8px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.materialSearchItem {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.materialSearchItem:last-child {
+  border-bottom: 0;
+}
+
+.materialSearchItem:hover {
+  background: var(--soft);
+}
+
+.materialSearchEmpty {
+  padding: 10px 12px;
+  color: var(--muted);
+}
+
+.materialTableWrap {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.materialTableHead {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 100px 88px;
+  gap: 0;
+  background: var(--soft);
+  border-bottom: 1px solid var(--border);
+}
+
+.materialTableBody {
+  display: block;
+}
+
+.materialTableRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 100px 88px;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.materialTableRow:last-child {
+  border-bottom: 0;
+}
+
+.materialCellName,
+.materialCellCount,
+.materialCellAction {
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.materialCellCount,
+.materialCellAction {
+  justify-content: center;
+}
+
+.buttonPrimaryLarge {
+  padding: 12px 18px;
+  font-size: 15px;
+  font-weight: 600;
+  box-sizing: border-box;
+}
+
+@media (max-width: 1200px) {
+  .layout {
+    grid-template-columns: 320px minmax(0, 1fr);
+  }
+
+  .formGrid4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1024px) {
+  .page {
+    padding: 16px;
+  }
+
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebarCard {
+    position: relative;
+    top: 0;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .entryList {
+    max-height: 320px;
+  }
+
+  .stickySaveBar {
+    top: 6px;
+  }
+
+  .materialRow {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .groupMemberRow {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .gridEditorPlainCompact {
+    --cell-size: 64px;
+    gap: 7px;
+  }
+
+  .gridCellInputSquare {
+    font-size: 16px;
+    border-radius: 9px;
+  }
+
+  .toolbarMeta {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .sectionActions {
+    align-items: stretch;
+  }
+
+  .sectionActionsLeft,
+  .sectionActionsRight {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .sectionActionsRight {
+    justify-content: flex-start;
+  }
+
+  .saveLeft,
+  .saveRight {
+    width: 100%;
+  }
+
+  .materialTableHead,
+  .materialTableRow {
+    grid-template-columns: minmax(0, 1fr) 90px 78px;
+  }
+}
+
+@media (max-width: 768px) {
+  .page {
+    padding: 12px;
+  }
+
+  .title {
+    font-size: 20px;
+  }
+
+  .card {
+    padding: 12px;
+  }
+
+  .formGrid4 {
+    grid-template-columns: 1fr;
+  }
+
+  .groupMemberRow {
+    grid-template-columns: 1fr;
+  }
+
+  .topTabs {
+    gap: 6px;
+  }
+
+  .topTabButton {
+    flex: 1 1 calc(50% - 6px);
+    text-align: center;
+  }
+
+  .stickySaveBar {
+    position: sticky;
+    top: 4px;
+    padding: 10px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .saveLeft,
+  .saveRight {
+    justify-content: stretch;
+  }
+
+  .saveRight > * {
+    flex: 1 1 auto;
+  }
+
+  .compactFieldGrid {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .inputCompact,
+  .inputCompactWide,
+  .inputCompactXs,
+  .selectCompact {
+    width: 100%;
+  }
+
+  .gridEditorControls {
+    gap: 10px;
+  }
+
+  .gridMiniField {
+    flex: 1 1 120px;
+  }
+
+  .gridMiniInput {
+    width: 100%;
+  }
+
+  .entryList {
+    max-height: 260px;
+  }
+}
+
+@media (max-width: 640px) {
+  .gridEditorPlainCompact {
+    --cell-size: 52px;
+    gap: 6px;
+  }
+
+  .gridCellInputSquare {
+    font-size: 15px;
+    border-radius: 8px;
+  }
+
+  .materialTableHead,
+  .materialTableRow {
+    grid-template-columns: minmax(0, 1fr) 84px 76px;
+  }
+
+  .materialCellName,
+  .materialCellCount,
+  .materialCellAction {
+    padding: 8px;
+  }
+
+  .button,
+  .buttonDanger,
+  .buttonSecondary,
+  .buttonPrimaryLarge,
+  .topTabButton {
+    min-height: 42px;
+  }
+
+  .toolbar,
+  .sectionActionsLeft,
+  .sectionActionsRight,
+  .customJobRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 480px) {
+  .page {
+    padding: 10px;
+  }
+
+  .title {
+    font-size: 18px;
+  }
+
+  .card {
+    padding: 10px;
+    border-radius: 10px;
+  }
+
+  .gridEditorPlainCompact {
+    --cell-size: 46px;
+    gap: 5px;
+  }
+
+  .gridCellInputSquare {
+    font-size: 14px;
+    border-radius: 7px;
+  }
+
+  .topTabButton {
+    flex: 1 1 100%;
+  }
+
+  .materialTableWrap {
+    overflow-x: auto;
+  }
+
+  .materialTableHead,
+  .materialTableRow {
+    min-width: 280px;
+  }
+
+  .entryButton,
+  .entryChildButton {
+    padding: 9px;
+  }
+
+  .chip,
+  .jobTag,
+  .tagButton {
+    font-size: 12px;
+  }
+}

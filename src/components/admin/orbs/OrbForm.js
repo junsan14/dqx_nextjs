@@ -28,6 +28,7 @@ export default function OrbForm({
       color: initialData?.color ?? "",
       effect: initialData?.effect ?? "",
       drop_monsters: (initialData?.drop_monsters ?? []).map((row, index) => ({
+        id:row.id,
         monster_id: row.monster_id,
         sort_order: row.sort_order || index + 1,
         monster: row.monster || null,

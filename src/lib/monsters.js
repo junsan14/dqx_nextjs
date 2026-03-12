@@ -15,20 +15,111 @@ const api = axios.create({
   },
 });
 
-export async function lookupMonsters(keyword = "") {
+export function getMonsterAssetUrl(path = "") {
+  if (!path) return "";
+
+  if (path.startsWith("http://") || path.startsWith("https://")) {
+    return path;
+  }
+
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  return `${API_URL}${normalized}`;
+}
+
+export async function searchMonsters(keyword = "", searchType = "monster") {
   try {
-    const res = await api.get("/api/monster-lookup", {
-      params: { keyword },
+    const res = await api.get("/api/monster-search", {
+      params: {
+        keyword,
+        search_type: searchType,
+      },
     });
 
-    return Array.isArray(res.data?.data) ? res.data.data : [];
+    if (Array.isArray(res.data?.data)) return res.data.data;
+    if (Array.isArray(res.data)) return res.data;
+
+    return [];
   } catch (error) {
     console.error(error);
 
     if (error.response) {
-      throw new Error(`モンスター検索失敗: ${error.response.status}`);
+      throw new Error(`モンスター取得失敗: ${error.response.status}`);
     }
 
-    throw new Error("モンスター検索失敗");
+    throw new Error("モンスター取得失敗");
+  }
+}
+
+export async function fetchMonsterDetail(id) {
+  try {
+    const res = await api.get(`/api/monster-search/${id}`);
+
+    return res.data?.data ?? res.data ?? null;
+  } catch (error) {
+    console.error(error);
+
+    if (error.response) {
+      throw new Error(`モンスター詳細取得失敗: ${error.response.status}`);
+    }
+
+    throw new Error("モンスター詳細取得失敗");
+  }
+}
+
+
+export async function createMonster(payload) {
+  try {
+    const res = await api.post("/api/monster-search", payload);
+    return res.data?.data ?? res.data ?? null;
+  } catch (error) {
+    console.error(error);
+
+    if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    }
+
+    if (error.response) {
+      throw new Error(`モンスター作成失敗: ${error.response.status}`);
+    }
+
+    throw new Error("モンスター作成失敗");
+  }
+}
+
+export async function updateMonster(id, payload) {
+  try {
+    const res = await api.put(`/api/monster-search/${id}`, payload);
+    return res.data?.data ?? res.data ?? null;
+  } catch (error) {
+    console.error(error);
+
+    if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    }
+
+    if (error.response) {
+      throw new Error(`モンスター更新失敗: ${error.response.status}`);
+    }
+
+    throw new Error("モンスター更新失敗");
+  }
+}
+
+export async function deleteMonster(id) {
+  try {
+    const res = await api.delete(`/api/monster-search/${id}`);
+    return res.data?.data ?? res.data ?? null;
+  } catch (error) {
+    console.error(error);
+
+    if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    }
+
+    if (error.response) {
+      throw new Error(`モンスター削除失敗: ${error.response.status}`);
+    }
+
+    throw new Error("モンスター削除失敗");
   }
 }

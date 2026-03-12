@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { searchMonsters } from "@/lib/monsters";
+import MonsterSearchHero from "./MonsterSearchHero";
+import MonsterSearchCard from "./MonsterSearchCard";
 
 const SEARCH_OPTIONS = [
   { value: "monster", label: "モンスター" },
@@ -10,7 +13,7 @@ const SEARCH_OPTIONS = [
   { value: "equipment", label: "装備" },
 ];
 
-export default function MonstersPage() {
+export default function MonstersSearchClient() {
   const [searchType, setSearchType] = useState("monster");
   const [keyword, setKeyword] = useState("");
   const [monsters, setMonsters] = useState([]);
@@ -33,9 +36,7 @@ export default function MonstersPage() {
   };
 
   const formatSuggestionName = (monster) => {
-    if (searchType === "monster") {
-      return monster.name;
-    }
+    if (searchType === "monster") return monster.name;
 
     if (searchType === "orb") {
       return (
@@ -75,72 +76,6 @@ export default function MonstersPage() {
     return Array.from(map.values()).slice(0, 8);
   };
 
-  const searchMonsters = async ({
-    keyword: searchKeyword = "",
-    searchType: currentSearchType = "monster",
-  } = {}) => {
-    try {
-      setLoading(true);
-
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
-      const query = new URLSearchParams({
-        keyword: searchKeyword,
-        search_type: currentSearchType,
-      });
-
-      const url = `${baseUrl}/api/monsters/search?${query.toString()}`;
-      const res = await fetch(url, { cache: "no-store" });
-
-      if (!res.ok) {
-        throw new Error(`モンスター取得に失敗した: ${res.status}`);
-      }
-
-      const data = await res.json();
-      const list = data.data ?? data ?? [];
-
-      setMonsters(list);
-      setSuggestions(buildUniqueSuggestions(list));
-      setSearched(true);
-    } catch (error) {
-      console.error(error);
-      setMonsters([]);
-      setSuggestions([]);
-      setSearched(true);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    searchMonsters({ keyword: "", searchType });
-  }, []);
-
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-
-    debounceRef.current = setTimeout(() => {
-      searchMonsters({
-        keyword,
-        searchType,
-      });
-    }, keyword.length >= 2 ? 180 : 0);
-
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, [keyword, searchType]);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (!wrapperRef.current?.contains(event.target)) {
-        setShowSuggestions(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
   const formatSubText = (monster) => {
     if (searchType === "orb") {
       const orbName =
@@ -163,11 +98,57 @@ export default function MonstersPage() {
     return monster.system_type || null;
   };
 
+  const runSearch = async ({
+    keyword: searchKeyword = "",
+    searchType: currentSearchType = "monster",
+  } = {}) => {
+    try {
+      setLoading(true);
+      const list = await searchMonsters(searchKeyword, currentSearchType);
+      setMonsters(list);
+      setSuggestions(buildUniqueSuggestions(list));
+      setSearched(true);
+    } catch (error) {
+      console.error(error);
+      setMonsters([]);
+      setSuggestions([]);
+      setSearched(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    runSearch({ keyword: "", searchType: "monster" });
+  }, []);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    debounceRef.current = setTimeout(() => {
+      runSearch({ keyword, searchType });
+    }, keyword.length >= 2 ? 180 : 0);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [keyword, searchType]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!wrapperRef.current?.contains(event.target)) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const handleSuggestionClick = (label) => {
     setKeyword(label);
     setShowSuggestions(false);
-
-    searchMonsters({
+    runSearch({
       keyword: label,
       searchType,
     });
@@ -175,16 +156,7 @@ export default function MonstersPage() {
 
   return (
     <main style={styles.page}>
-      <section style={styles.hero}>
-        <div style={styles.heroGlow} />
-        <p style={styles.kicker}>DQX MONSTER DATABASE</p>
-        <h1 style={styles.title}>モンスター検索</h1>
-        <p style={styles.lead}>
-          モンスター名、オーブ、アイテム、装備名から
-          <br />
-          関連モンスターをすばやく探せる
-        </p>
-      </section>
+      <MonsterSearchHero />
 
       <section style={styles.searchSection}>
         <div style={styles.searchCard}>
@@ -199,9 +171,7 @@ export default function MonstersPage() {
                 }}
                 style={{
                   ...styles.segmentButton,
-                  ...(searchType === option.value
-                    ? styles.segmentButtonActive
-                    : {}),
+                  ...(searchType === option.value ? styles.segmentButtonActive : {}),
                 }}
               >
                 {option.label}
@@ -239,9 +209,7 @@ export default function MonstersPage() {
                         style={styles.suggestionButton}
                         onClick={() => handleSuggestionClick(suggestion.label)}
                       >
-                        <div style={styles.suggestionMain}>
-                          {suggestion.label}
-                        </div>
+                        <div style={styles.suggestionMain}>{suggestion.label}</div>
                       </button>
                     </li>
                   ))}
@@ -271,34 +239,14 @@ export default function MonstersPage() {
           {monsters.map((monster) => (
             <Link
               key={monster.id}
-              href={`/tools/monsters/${monster.id}`}
-              style={styles.card}
+              href={`/tools/monster-search/${monster.id}`}
+              style={{ textDecoration: "none", color: "inherit" }}
             >
-              <div style={styles.cardHeader}>
-                <div>
-                  <h2 style={styles.cardTitle}>{monster.name}</h2>
-                  {monster.monster_no && (
-                    <p style={styles.monsterNo}>No. {monster.monster_no}</p>
-                  )}
-                </div>
-                <span style={styles.arrow}>→</span>
-              </div>
-
-              <div style={styles.metaRow}>
-                {monster.system_type && (
-                  <span style={styles.typeChip}>{monster.system_type}</span>
-                )}
-
-                {searchType === "orb" && (monster.matched_color || monster.orb_color) && (
-                  <span style={styles.colorChip}>
-                    {monster.matched_color || monster.orb_color}
-                  </span>
-                )}
-              </div>
-
-              {formatSubText(monster) && (
-                <p style={styles.subText}>{formatSubText(monster)}</p>
-              )}
+              <MonsterSearchCard
+                monster={monster}
+                searchType={searchType}
+                formatSubText={formatSubText}
+              />
             </Link>
           ))}
         </section>
@@ -310,46 +258,9 @@ export default function MonstersPage() {
 const styles = {
   page: {
     minHeight: "100vh",
-    background:
-      "linear-gradient(180deg, #f8fafc 0%, #eef2ff 42%, #f8fafc 100%)",
+    background: "linear-gradient(180deg, #f8fafc 0%, #eef2ff 42%, #f8fafc 100%)",
     padding: "28px 16px 64px",
     color: "#0f172a",
-  },
-  hero: {
-    maxWidth: "1100px",
-    margin: "0 auto 22px",
-    position: "relative",
-    padding: "24px 4px 8px",
-  },
-  heroGlow: {
-    position: "absolute",
-    top: "-40px",
-    right: "10%",
-    width: "220px",
-    height: "220px",
-    background: "radial-gradient(circle, rgba(99,102,241,0.16), transparent 70%)",
-    filter: "blur(10px)",
-    pointerEvents: "none",
-  },
-  kicker: {
-    margin: "0 0 10px",
-    fontSize: "12px",
-    letterSpacing: "0.18em",
-    color: "#6366f1",
-    fontWeight: 800,
-  },
-  title: {
-    margin: "0 0 10px",
-    fontSize: "clamp(34px, 6vw, 58px)",
-    lineHeight: 1.02,
-    fontWeight: 900,
-    letterSpacing: "-0.04em",
-  },
-  lead: {
-    margin: 0,
-    color: "#475569",
-    fontSize: "16px",
-    lineHeight: 1.7,
   },
   searchSection: {
     maxWidth: "1100px",
@@ -380,7 +291,6 @@ const styles = {
     fontSize: "14px",
     fontWeight: 700,
     cursor: "pointer",
-    transition: "all .18s ease",
   },
   segmentButtonActive: {
     background: "#111827",
@@ -491,75 +401,5 @@ const styles = {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
     gap: "16px",
-  },
-  card: {
-    display: "block",
-    textDecoration: "none",
-    color: "inherit",
-    borderRadius: "24px",
-    padding: "18px",
-    background: "rgba(255,255,255,0.88)",
-    border: "1px solid rgba(255,255,255,0.88)",
-    boxShadow: "0 14px 34px rgba(15,23,42,0.07)",
-    transition: "transform .16s ease, box-shadow .16s ease, border-color .16s ease",
-  },
-  cardHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: "12px",
-    marginBottom: "12px",
-  },
-  cardTitle: {
-    margin: 0,
-    fontSize: "24px",
-    lineHeight: 1.2,
-    fontWeight: 900,
-    letterSpacing: "-0.03em",
-  },
-  monsterNo: {
-    margin: "6px 0 0",
-    fontSize: "12px",
-    color: "#94a3b8",
-    fontWeight: 700,
-  },
-  arrow: {
-    fontSize: "18px",
-    color: "#94a3b8",
-    fontWeight: 800,
-  },
-  metaRow: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "8px",
-    marginBottom: "10px",
-  },
-  typeChip: {
-    display: "inline-flex",
-    alignItems: "center",
-    borderRadius: "999px",
-    padding: "7px 10px",
-    background: "#eef2ff",
-    color: "#4338ca",
-    fontSize: "12px",
-    fontWeight: 800,
-  },
-  colorChip: {
-    display: "inline-flex",
-    alignItems: "center",
-    borderRadius: "999px",
-    padding: "7px 10px",
-    background: "#f8fafc",
-    color: "#0f172a",
-    fontSize: "12px",
-    fontWeight: 800,
-    border: "1px solid #e2e8f0",
-  },
-  subText: {
-    margin: 0,
-    color: "#475569",
-    fontSize: "14px",
-    lineHeight: 1.7,
-    minHeight: "24px",
   },
 };

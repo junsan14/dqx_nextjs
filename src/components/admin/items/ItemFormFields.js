@@ -14,7 +14,7 @@ export default function ItemFormFields({
       [key]: value,
     }));
   }
-
+console.log(form)
   return (
     <div style={wrapStyle}>
       <section style={sectionStyle}>

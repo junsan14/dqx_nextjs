@@ -1,0 +1,152 @@
+function makeSpawnKey(spawn, index) {
+  if (spawn?.id) return `spawn-${spawn.id}`;
+  return `new-spawn-${index}-${Date.now()}-${Math.random()}`;
+}
+
+export function parseAreaToCoords(area) {
+  if (Array.isArray(area)) {
+    return area
+      .map((value) => String(value ?? "").trim().toUpperCase())
+      .filter(Boolean);
+  }
+
+  if (typeof area === "string") {
+    const trimmed = area.trim();
+
+    if (!trimmed) return [];
+
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return parsed
+          .map((value) => String(value ?? "").trim().toUpperCase())
+          .filter(Boolean);
+      }
+    } catch (_error) {
+      // JSONじゃない文字列は下のCSV風パースで拾う
+    }
+
+    return trimmed
+      .split(/[,\s、]+/)
+      .map((value) => String(value ?? "").trim().toUpperCase())
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
+export function stringifyCoords(coords) {
+  return JSON.stringify(
+    Array.isArray(coords)
+      ? coords
+          .map((value) => String(value ?? "").trim().toUpperCase())
+          .filter(Boolean)
+      : []
+  );
+}
+
+export function emptyMonster() {
+  return {
+    id: null,
+    display_order: 0,
+    name: "",
+    system_type: "",
+    source_url: "",
+    drops: [],
+    spawns: [],
+  };
+}
+
+export function normalizeMonster(row = {}) {
+  const rawDrops = Array.isArray(row?.drops) ? row.drops : [];
+  const rawSpawns = Array.isArray(row?.spawns) ? row.spawns : [];
+
+  return {
+    id: row?.id ?? null,
+    display_order: row?.display_order ?? 0,
+    name: row?.name ?? "",
+    system_type: row?.system_type ?? "",
+    source_url: row?.source_url ?? "",
+    drops: rawDrops.map((drop, index) => ({
+      id: drop?.id ?? null,
+      __key: drop?.id
+        ? `drop-${drop.id}`
+        : `new-drop-${index}-${Date.now()}-${Math.random()}`,
+      drop_target_type: drop?.drop_target_type ?? "item",
+      drop_target_id: drop?.drop_target_id ?? null,
+      drop_type: drop?.drop_type ?? "normal",
+      sort_order: drop?.sort_order ?? index + 1,
+      target_name:
+        drop?.target_name ??
+        drop?.target?.name ??
+        drop?.item_name ??
+        "",
+    })),
+    spawns: rawSpawns.map((spawn, index) => {
+      const coords = parseAreaToCoords(spawn?.area);
+
+      return {
+        id: spawn?.id ?? null,
+        __key: makeSpawnKey(spawn, index),
+        monster_id: spawn?.monster_id ?? row?.id ?? null,
+        map_id: spawn?.map_id ?? null,
+        map_name:
+          spawn?.map?.name ??
+          spawn?.map_name ??
+          "",
+        map_image_url:
+          spawn?.map?.image_url ??
+          spawn?.map?.image_path ??
+          spawn?.map_image_url ??
+          spawn?.image_url ??
+          spawn?.image_path ??
+          "",
+        area: typeof spawn?.area === "string" ? spawn.area : stringifyCoords(coords),
+        coords,
+        spawn_time: spawn?.spawn_time ?? "normal",
+        note: spawn?.note ?? "",
+      };
+    }),
+  };
+}
+
+export function buildMonsterPayload(monster = {}) {
+  return {
+    display_order: Number(monster?.display_order ?? 0),
+    name: String(monster?.name ?? "").trim(),
+    system_type: String(monster?.system_type ?? "").trim(),
+    source_url: String(monster?.source_url ?? "").trim(),
+    drops: Array.isArray(monster?.drops)
+      ? monster.drops.map((drop, index) => ({
+          id: drop?.id ?? null,
+          drop_target_type: String(drop?.drop_target_type ?? "item"),
+          drop_target_id: Number(drop?.drop_target_id ?? 0) || null,
+          drop_type: String(drop?.drop_type ?? "normal"),
+          sort_order: Number(drop?.sort_order ?? index + 1),
+        }))
+      : [],
+    spawns: Array.isArray(monster?.spawns)
+      ? monster.spawns.map((spawn) => ({
+          id: spawn?.id ?? null,
+          map_id: Number(spawn?.map_id ?? 0) || null,
+          area: stringifyCoords(spawn?.coords ?? parseAreaToCoords(spawn?.area)),
+          spawn_time: String(spawn?.spawn_time ?? "normal").trim() || "normal",
+          note: String(spawn?.note ?? "").trim(),
+        }))
+      : [],
+  };
+}
+
+export const DROP_TARGET_TYPE_OPTIONS = [
+  { value: "item", label: "アイテム" },
+  { value: "orb", label: "宝珠" },
+  { value: "equipment", label: "装備" },
+  { value: "accessory", label: "アクセサリ" },
+];
+
+export const DROP_TYPE_OPTIONS = [
+  { value: "normal", label: "通常" },
+  { value: "rare", label: "レア" },
+  { value: "steal", label: "ぬすむ" },
+  { value: "other", label: "その他" },
+];

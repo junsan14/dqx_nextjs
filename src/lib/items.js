@@ -14,28 +14,113 @@ const api = axios.create({
   },
 });
 
-export async function fetchItems(q = "") {
+function normalizeDropMonster(row = {}, index = 0) {
+  return {
+    id: row?.id ?? null,
+    monster_id: row?.monster_id ?? row?.monsterId ?? row?.monster?.id ?? null,
+    monsterId: row?.monsterId ?? row?.monster_id ?? row?.monster?.id ?? null,
+    drop_type: row?.drop_type ?? row?.dropType ?? "normal",
+    dropType: row?.dropType ?? row?.drop_type ?? "normal",
+    sort_order: row?.sort_order ?? row?.sortOrder ?? index + 1,
+    sortOrder: row?.sortOrder ?? row?.sort_order ?? index + 1,
+    monster: row?.monster ?? null,
+  };
+}
+
+function normalizeDropMonsters(rows = []) {
+  if (!Array.isArray(rows)) return [];
+  return rows.map((row, index) => normalizeDropMonster(row, index));
+}
+
+function normalizeItem(row = {}) {
+  const dropMonsters = normalizeDropMonsters(
+    row?.drop_monsters ??
+      row?.monster_drops ??
+      row?.dropMonsters ??
+      row?.monsterDrops ??
+      []
+  );
+
+  return {
+    id: row?.id ?? null,
+    name: row?.name ?? "",
+
+    buy_price: row?.buy_price ?? row?.buyPrice ?? null,
+    buyPrice: row?.buyPrice ?? row?.buy_price ?? null,
+
+    sell_price: row?.sell_price ?? row?.sellPrice ?? null,
+    sellPrice: row?.sellPrice ?? row?.sell_price ?? null,
+
+    category: row?.category ?? "",
+
+    created_at: row?.created_at ?? row?.createdAt ?? null,
+    createdAt: row?.createdAt ?? row?.created_at ?? null,
+
+    updated_at: row?.updated_at ?? row?.updatedAt ?? null,
+    updatedAt: row?.updatedAt ?? row?.updated_at ?? null,
+
+    drop_monsters: dropMonsters,
+    monster_drops: dropMonsters,
+    dropMonsters: dropMonsters,
+    monsterDrops: dropMonsters,
+  };
+}
+
+function extractItemList(json) {
+  if (Array.isArray(json?.data)) return json.data.map(normalizeItem);
+  if (Array.isArray(json?.data?.data)) return json.data.data.map(normalizeItem);
+  return [];
+}
+
+export async function fetchItems(q = "", category = "") {
   try {
-    const res = await api.get(`${API_URL}/api/items`, {
-      params: q ? { q } : {},
-    });
+    const params = {};
 
-    const json = res.data;
+    if (q) params.q = q;
+    if (category) params.category = category;
 
-    if (Array.isArray(json?.data)) return json.data;
-    if (Array.isArray(json?.data?.data)) return json.data.data;
+    const res = await api.get(`${API_URL}/api/items`, { params });
 
-    return [];
+    return extractItemList(res.data);
   } catch (error) {
     console.error(error);
     throw new Error("アイテム一覧取得失敗");
   }
 }
 
+export async function fetchItemsByIds(ids = []) {
+  try {
+    const safeIds = Array.from(
+      new Set(
+        (Array.isArray(ids) ? ids : [])
+          .map((id) => Number(id))
+          .filter((id) => Number.isInteger(id) && id > 0)
+      )
+    );
+
+    if (safeIds.length === 0) return [];
+
+    const res = await api.get(`${API_URL}/api/items`, {
+      params: { ids: safeIds.join(",") },
+    });
+
+    const json = res.data;
+
+    if (Array.isArray(json)) return json;
+    if (Array.isArray(json?.data)) return json.data;
+    if (Array.isArray(json?.data?.data)) return json.data.data;
+
+    return [];
+  } catch (error) {
+    console.error(error);
+    throw new Error("アイテム一括取得失敗");
+  }
+}
+
 export async function fetchItem(id) {
   try {
     const res = await api.get(`${API_URL}/api/items/${id}`);
-    return res.data.data;
+    return normalizeItem(res.data?.data ?? res.data);
   } catch (error) {
     console.error(error);
     throw new Error("アイテム取得失敗");
@@ -45,7 +130,7 @@ export async function fetchItem(id) {
 export async function createItem(data) {
   try {
     const res = await api.post(`${API_URL}/api/items`, data);
-    return res.data.data;
+    return normalizeItem(res.data?.data ?? res.data);
   } catch (error) {
     console.error(error);
 
@@ -60,7 +145,7 @@ export async function createItem(data) {
 export async function updateItem(id, data) {
   try {
     const res = await api.put(`${API_URL}/api/items/${id}`, data);
-    return res.data.data;
+    return normalizeItem(res.data?.data ?? res.data);
   } catch (error) {
     console.error(error);
 

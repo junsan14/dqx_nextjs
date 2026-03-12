@@ -22,11 +22,14 @@ export const ORB_COLORS = ["炎", "水", "風", "光", "闇"];
 オーブ一覧
 --------------------------------
 */
-export async function fetchOrbs(q = "") {
+export async function fetchOrbs(q = "", color = "") {
   try {
-    const res = await api.get("/api/orbs", {
-      params: q ? { q } : {},
-    });
+    const params = {};
+
+    if (q) params.q = q;
+    if (color) params.color = color;
+
+    const res = await api.get("/api/orbs", { params });
 
     const json = res.data;
 

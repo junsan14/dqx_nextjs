@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { lookupMonsters } from "@/lib/monsters";
+import { searchMonsters, fetchMonsterDetail } from "@/lib/monsters";
+
+function rowKey(row) {
+  return row?.id ?? row?._tmpKey;
+}
+
+function makeTempKey() {
+  return `tmp_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+}
 
 export default function MonsterPicker({
   value = [],
@@ -15,11 +23,18 @@ export default function MonsterPicker({
   const [candidates, setCandidates] = useState([]);
   const [searching, setSearching] = useState(false);
 
-  const rows = useMemo(() => (Array.isArray(value) ? value : []), [value]);
+  const rows = useMemo(() => {
+    const source = Array.isArray(value) ? value : [];
+    return source.map((row) => ({
+      ...row,
+      _tmpKey: row._tmpKey ?? (row.id ? null : makeTempKey()),
+    }));
+  }, [value]);
 
   useEffect(() => {
     if (!keyword.trim()) {
       setCandidates([]);
+      setSearching(false);
       return;
     }
 
@@ -29,8 +44,10 @@ export default function MonsterPicker({
       setSearching(true);
 
       try {
-        const result = await lookupMonsters(keyword);
-        if (!ignore) setCandidates(result);
+        const result = await searchMonsters(keyword, "monster");
+        if (!ignore) {
+          setCandidates(Array.isArray(result) ? result : []);
+        }
       } catch (error) {
         console.error(error);
         if (!ignore) setCandidates([]);
@@ -47,6 +64,63 @@ export default function MonsterPicker({
     };
   }, [keyword]);
 
+  useEffect(() => {
+    const current = Array.isArray(value) ? value : [];
+    const targetRows = current.filter(
+      (row) => row?.monster_id && !row?.monster?.name
+    );
+
+    if (!targetRows.length) return;
+
+    let ignore = false;
+
+    async function hydrateMonsters() {
+      try {
+        const resolved = await Promise.all(
+          targetRows.map(async (row) => {
+            try {
+              const monster = await fetchMonsterDetail(row.monster_id);
+              return {
+                key: row.id ?? row._tmpKey,
+                monster,
+              };
+            } catch (error) {
+              console.error("monster hydrate error:", row.monster_id, error);
+              return {
+                key: row.id ?? row._tmpKey,
+                monster: null,
+              };
+            }
+          })
+        );
+
+        if (ignore) return;
+
+        const resolvedMap = new Map(
+          resolved.filter((x) => x.monster).map((x) => [x.key, x.monster])
+        );
+
+        if (!resolvedMap.size) return;
+
+        const nextRows = current.map((row) => {
+          const key = row.id ?? row._tmpKey;
+          const monster = resolvedMap.get(key);
+          return monster ? { ...row, monster } : row;
+        });
+
+        onChange(normalizeRows(nextRows));
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    hydrateMonsters();
+
+    return () => {
+      ignore = true;
+    };
+  }, [value, onChange, defaultDropType]);
+
   function normalizeRows(nextRows) {
     return nextRows.map((row, index) => ({
       ...row,
@@ -57,13 +131,18 @@ export default function MonsterPicker({
 
   function addMonster(monster) {
     const current = Array.isArray(value) ? value : [];
-    const exists = current.some((x) => Number(x.monster_id) === Number(monster.id));
+
+    const exists = current.some(
+      (x) => Number(x.monster_id) === Number(monster.id)
+    );
     if (exists) return;
 
     onChange(
       normalizeRows([
         ...current,
         {
+          id: null,
+          _tmpKey: makeTempKey(),
           monster_id: monster.id,
           drop_type: defaultDropType,
           sort_order: current.length + 1,
@@ -76,18 +155,25 @@ export default function MonsterPicker({
     setCandidates([]);
   }
 
-  function removeMonster(monsterId) {
+  function removeMonster(targetKey) {
     const current = Array.isArray(value) ? value : [];
+
     onChange(
       normalizeRows(
-        current.filter((x) => Number(x.monster_id) !== Number(monsterId))
+        current.filter((row) => {
+          const currentKey = row.id ?? row._tmpKey;
+          return currentKey !== targetKey;
+        })
       )
     );
   }
 
-  function moveMonster(monsterId, direction) {
+  function moveMonster(targetKey, direction) {
     const current = [...(Array.isArray(value) ? value : [])];
-    const index = current.findIndex((x) => Number(x.monster_id) === Number(monsterId));
+    const index = current.findIndex(
+      (row) => (row.id ?? row._tmpKey) === targetKey
+    );
+
     if (index < 0) return;
 
     const targetIndex = direction === "up" ? index - 1 : index + 1;
@@ -98,19 +184,20 @@ export default function MonsterPicker({
     onChange(normalizeRows(current));
   }
 
-  function updateDropType(monsterId, nextDropType) {
+  function updateDropType(targetKey, nextDropType) {
     const current = Array.isArray(value) ? value : [];
+
     onChange(
       normalizeRows(
         current.map((row) =>
-          Number(row.monster_id) === Number(monsterId)
+          (row.id ?? row._tmpKey) === targetKey
             ? { ...row, drop_type: nextDropType }
             : row
         )
       )
     );
   }
-
+console.log(rows)
   return (
     <div style={wrapStyle}>
       <input
@@ -124,15 +211,17 @@ export default function MonsterPicker({
 
       {!!candidates.length && (
         <div style={candidateWrapStyle}>
-          {candidates.map((monster) => (
+          {candidates.map((monster, idx) => (
             <button
-              key={monster.id}
+              key={monster.id ?? `candidate_${idx}`}
               type="button"
               style={candidateButtonStyle}
               onClick={() => addMonster(monster)}
             >
               <div style={candidateMainStyle}>
-                <div style={{ fontWeight: 700 }}>{monster.name}</div>
+                <div style={{ fontWeight: 700 }}>
+                  {monster.name || `monster_id: ${monster.id}`}
+                </div>
                 <div style={metaStyle}>
                   No:{monster.monster_no ?? "-"} / {monster.system_type || "系統なし"}
                 </div>
@@ -147,67 +236,72 @@ export default function MonsterPicker({
         <div style={mutedStyle}>{titleWhenEmpty}</div>
       ) : (
         <div style={listStyle}>
-          {rows.map((row, index) => (
-            <div key={row.monster_id} style={dropItemStyle}>
-              <div style={dropInfoStyle}>
-                <div style={{ fontWeight: 700 }}>
-                  {row.monster?.name || `monster_id: ${row.monster_id}`}
-                </div>
-                <div style={metaStyle}>
-                  No:{row.monster?.monster_no ?? "-"} / {row.monster?.system_type || "系統なし"}
-                </div>
-              </div>
+          {rows.map((row, index) => {
+            const targetKey = rowKey(row);
+            const monsterName = row.monster?.name || row.name || `monster_id: ${row.monster_id}`;
+            const monsterNo = row.monster?.monster_no ?? "-";
+            const systemType = row.monster?.system_type || "系統なし";
 
-              <div style={controlAreaStyle}>
-                {enableDropTypeSelect ? (
-                  <label style={selectWrapStyle}>
-                    <span style={controlLabelStyle}>ドロップ種別</span>
-                    <select
-                      value={row.drop_type || defaultDropType}
-                      onChange={(e) => updateDropType(row.monster_id, e.target.value)}
-                      style={selectStyle}
-                    >
-                      {dropTypeOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                ) : (
-                  <div style={fixedTypeBadgeStyle}>
-                    {row.drop_type || defaultDropType}
+            return (
+              <div key={targetKey} style={dropItemStyle}>
+                <div style={dropInfoStyle}>
+                  <div style={{ fontWeight: 700 }}>{monsterName}</div>
+                  <div style={metaStyle}>
+                    No:{monsterNo} / {systemType}
                   </div>
-                )}
+                </div>
 
-                <div style={dropActionStyle}>
-                  <button
-                    type="button"
-                    onClick={() => moveMonster(row.monster_id, "up")}
-                    disabled={index === 0}
-                    style={miniButtonStyle}
-                  >
-                    ↑
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => moveMonster(row.monster_id, "down")}
-                    disabled={index === rows.length - 1}
-                    style={miniButtonStyle}
-                  >
-                    ↓
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => removeMonster(row.monster_id)}
-                    style={removeButtonStyle}
-                  >
-                    削除
-                  </button>
+                <div style={controlAreaStyle}>
+                  {enableDropTypeSelect ? (
+                    <label style={selectWrapStyle}>
+                      <span style={controlLabelStyle}>ドロップ種別</span>
+                      <select
+                        value={row.drop_type || defaultDropType}
+                        onChange={(e) => updateDropType(targetKey, e.target.value)}
+                        style={selectStyle}
+                      >
+                        {dropTypeOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : (
+                    <div style={fixedTypeBadgeStyle}>
+                      {row.drop_type || defaultDropType}
+                    </div>
+                  )}
+
+                  <div style={dropActionStyle}>
+                    <button
+                      type="button"
+                      onClick={() => moveMonster(targetKey, "up")}
+                      disabled={index === 0}
+                      style={miniButtonStyle}
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => moveMonster(targetKey, "down")}
+                      disabled={index === rows.length - 1}
+                      style={miniButtonStyle}
+                    >
+                      ↓
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeMonster(targetKey)}
+                      style={removeButtonStyle}
+                    >
+                      削除
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
