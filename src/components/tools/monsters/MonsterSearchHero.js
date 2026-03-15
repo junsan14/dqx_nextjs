@@ -1,5 +1,3 @@
-import { mochiy } from "@/app/fonts";
-
 export default function MonsterSearchHero() {
   return (
     <section style={styles.hero}>

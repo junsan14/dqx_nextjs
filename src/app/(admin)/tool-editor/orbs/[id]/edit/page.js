@@ -1,4 +1,5 @@
-import OrbForm from "@/admin/components/orbs/OrbForm";
+
+import OrbForm from "@/components/admin/orbs/OrbForm";
 
 
 

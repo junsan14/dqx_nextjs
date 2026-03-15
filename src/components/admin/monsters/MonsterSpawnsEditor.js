@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { normalizeMapRow } from "@/lib/monsterMapSpawns";
 import { applyMonsterThemeToStyleTree } from "../theme";
-
+import Image from "next/image";
 const COLS_8 = ["A", "B", "C", "D", "E", "F", "G", "H"];
 const ROWS_8 = [1, 2, 3, 4, 5, 6, 7, 8];
 
@@ -105,7 +105,7 @@ function SpawnMapGrid({
     <div style={styles.mapBoardWrap}>
       <div className="monster-spawns-map-board" style={styles.mapBoard}>
         {mapImageUrl ? (
-          <img src={mapImageUrl} alt="map" style={styles.mapImage} />
+          <Image src={mapImageUrl} alt="map" style={styles.mapImage}  fill/>
         ) : (
           <div style={styles.mapPlaceholder}>マップ画像なし</div>
         )}
@@ -713,7 +713,7 @@ export default function MonsterSpawnsEditor({
 
   return (
     <>
-      <style jsx>{`
+      <style>{`
         @media (max-width: 768px) {
           .monster-spawns-card {
             padding: 14px !important;

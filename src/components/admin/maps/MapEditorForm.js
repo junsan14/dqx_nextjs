@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo } from "react";
 import { resolveMapImageUrl } from "@/lib/maps";
+import Image from "next/image";
 import {
   DEFAULT_CONTINENT_OPTIONS,
   DEFAULT_MAP_TYPE_OPTIONS,
@@ -289,7 +290,7 @@ export default function MapEditorForm({
                 </div>
 
                 {previewUrl ? (
-                  <img src={previewUrl} alt="" style={styles.previewImage} />
+                  <Image src={previewUrl} alt="" style={styles.previewImage} fill />
                 ) : null}
               </div>
             );

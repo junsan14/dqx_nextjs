@@ -4,13 +4,8 @@ import {
   FaCoins,
   FaMapLocationDot,
   FaChevronRight,
-  FaCircleCheck,
-  FaWandMagicSparkles,
   FaShieldHalved,
   FaGem,
-  FaSackDollar,
-  FaDragon,
-  FaMap,
 } from "react-icons/fa6";
 
 export const metadata = {
@@ -59,26 +54,6 @@ const pains = [
   },
 ];
 
-const features = [
-  {
-    icon: FaSackDollar,
-    title: "職人情報の確認",
-    text: "装備の原価・売値・利益をまとめて確認できる。",
-    soft: "bg-amber-50 text-amber-600",
-  },
-  {
-    icon: FaDragon,
-    title: "モンスター検索",
-    text: "宝珠・装備・レアドロップからモンスターを逆引きできる。",
-    soft: "bg-indigo-50 text-indigo-600",
-  },
-  {
-    icon: FaMap,
-    title: "出現位置の確認",
-    text: "エリアだけでなく、マップ上の出現位置まで確認できる。",
-    soft: "bg-cyan-50 text-cyan-600",
-  },
-];
 
 export default function HomePage() {
   return (

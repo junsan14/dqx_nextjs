@@ -14,7 +14,7 @@ export default function MonsterSearchSidebar({
 }) {
   return (
     <>
-      <style jsx>{`
+      <style>{`
         @media (max-width: 960px) {
           .monster-search-sidebar {
             width: 100% !important;

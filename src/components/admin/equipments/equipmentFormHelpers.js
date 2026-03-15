@@ -111,7 +111,7 @@ export function slugify(text) {
     .trim()
     .toLowerCase()
     .replace(/\s+/g, "_")
-    .replace(/[　]+/g, "_")
+    .replace(/[ ]+/g, "_")
     .replace(/[^\p{L}\p{N}_-]/gu, "");
 }
 
@@ -283,7 +283,7 @@ export function normalizeOneRowFromApi(row) {
   return rr;
 }
 
-export function hydrateRowMaterialsWithItems(row, items = []) {
+export function hydrateRowMaterialsWithItems(row) {
   const rawMaterials = Array.isArray(row?.materialsJson)
     ? row.materialsJson
     : safeJsonParse(row?.materialsJson, []);

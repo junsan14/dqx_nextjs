@@ -94,7 +94,7 @@ export default function EquipmentMaterialsPanel({
           <div className={styles.materialTableHead}>
             <div className={styles.materialCellName}>素材</div>
             <div className={styles.materialCellCount}>個数</div>
-            <div className={styles.materialCellAction}></div>
+          
           </div>
 
           <div className={styles.materialTableBody}>

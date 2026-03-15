@@ -352,7 +352,7 @@ export default function MonstersSearchClient() {
         <MonsterSearchHero />
         <MonstersSearchPageLoading />
 
-        <style jsx global>{`
+        <style>{`
           @keyframes monsterSearchShimmer {
             0% {
               background-position: 200% 0;
@@ -500,7 +500,7 @@ export default function MonstersSearchClient() {
         </section>
       )}
 
-      <style jsx global>{`
+      <style>{`
         @keyframes monsterSearchShimmer {
           0% {
             background-position: 200% 0;

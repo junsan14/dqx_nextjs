@@ -10,7 +10,7 @@ export default function MonsterForm({ monster, onChange, theme }) {
 
   return (
     <>
-      <style jsx>{`
+      <style>{`
         @media (max-width: 640px) {
           .monster-form-card {
             padding: 14px !important;

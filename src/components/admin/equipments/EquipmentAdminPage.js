@@ -12,7 +12,7 @@ import EquipmentGridPanel from "./EquipmentGridPanel";
 import EquipmentMaterialsPanel from "./EquipmentMaterialsPanel";
 import EquipmentEffectsPanel from "./EquipmentEffectsPanel";
 import EquipmentJsonPreview from "./EquipmentJsonPreview";
-import { fetchItems,fetchItemsByIds } from "@/lib/items";
+import {fetchItemsByIds } from "@/lib/items";
 import { fetchEquipments } from "@/lib/equipments";
 import { fetchGameJobs } from "@/lib/gameJobs";
 import { fetchEquipmentTypes } from "@/lib/equipmentTypes";

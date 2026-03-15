@@ -747,7 +747,7 @@ export default function MonsterDropsEditor({ drops = [], onChange, theme }) {
 
   return (
     <>
-      <style jsx>{`
+      <style>{`
         .monster-drops-editor-grid {
           display: grid;
           grid-template-columns: 1fr;

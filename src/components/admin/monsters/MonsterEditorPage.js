@@ -324,7 +324,7 @@ export default function MonsterEditorPage() {
 
   return (
     <>
-      <style jsx>{`
+      <style>{`
         @media (max-width: 960px) {
           .monster-editor-page {
             flex-direction: column;

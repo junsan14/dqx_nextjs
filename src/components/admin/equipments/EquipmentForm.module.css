@@ -358,7 +358,7 @@
 
 .materialColAuto {
   display: flex;
-  align-items: end;
+  align-items: flex-end;
 }
 
 .gridResizeRow {
@@ -463,7 +463,7 @@
 .gridEditorControls {
   display: flex;
   gap: 12px;
-  align-items: end;
+  align-items: flex-end;
   margin-top: 8px;
   margin-bottom: 16px;
   flex-wrap: wrap;

@@ -70,8 +70,8 @@ export default function CraftProfitSummaryCard({
             <div className="text-xs text-slate-500 dark:text-slate-400">結晶</div>
             {crystalByEquipLevel ? (
               <div className="text-sm text-slate-800 dark:text-slate-200 leading-7">
-                なし: {crystalByEquipLevel.plus0}個　★: {crystalByEquipLevel.plus1}個　
-                ★★: {crystalByEquipLevel.plus2}個　★★★: {crystalByEquipLevel.plus3}個
+                なし: {crystalByEquipLevel.plus0}個 ★: {crystalByEquipLevel.plus1}個
+                ★★: {crystalByEquipLevel.plus2}個 ★★★: {crystalByEquipLevel.plus3}個
               </div>
             ) : (
               <div className="text-sm text-slate-400 dark:text-slate-400">

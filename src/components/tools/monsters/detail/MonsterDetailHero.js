@@ -30,7 +30,6 @@ function joinDisplayValue(value) {
 }
 
 export default function MonsterDetailHero({ monster }) {
-  const systemType = joinDisplayValue(monster?.system_type);
   const description =
     joinDisplayValue(monster?.description) ||
     joinDisplayValue(monster?.note) ||

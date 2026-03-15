@@ -14,16 +14,7 @@ const api = axios.create({
   },
 });
 
-function normalizeArrayJson(value, fallback = []) {
-  if (Array.isArray(value)) return value;
-  if (value && typeof value === "object") return value;
-  return fallback;
-}
 
-function makeRowKey(row = {}) {
-  if (row?.id != null) return `equipment-${row.id}`;
-  return `tmp-${Math.random().toString(36).slice(2)}-${Date.now()}`;
-}
 
 function normalizeEquipment(row = {}) {
   return {
