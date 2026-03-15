@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { getMonsterAssetUrl } from "@/lib/monsters";
@@ -12,6 +12,29 @@ const MAP_CROP = {
   offsetX: "4.3%",
   offsetY: "4.5%",
 };
+
+function usePrefersDark() {
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const applyTheme = () => setIsDark(media.matches);
+
+    applyTheme();
+
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", applyTheme);
+      return () => media.removeEventListener("change", applyTheme);
+    }
+
+    media.addListener(applyTheme);
+    return () => media.removeListener(applyTheme);
+  }, []);
+
+  return isDark;
+}
 
 function parseAreaList(area) {
   if (!area) return [];
@@ -220,13 +243,21 @@ export default function MonsterMapOverlay({
   imagePath,
   href,
 }) {
+  const isDark = usePrefersDark();
+  const styles = getStyles(isDark);
+
+  const resolvedImageUrl = useMemo(() => getMonsterAssetUrl(imagePath), [imagePath]);
   const [imageLoaded, setImageLoaded] = useState(false);
 
-  const resolvedImageUrl = getMonsterAssetUrl(imagePath);
+  useEffect(() => {
+    setImageLoaded(false);
+  }, [resolvedImageUrl]);
 
-  const bubbles = buildMergedGroups(collectUniqueCells(spawns))
-    .map(getBubblePosition)
-    .filter(Boolean);
+  const bubbles = useMemo(() => {
+    return buildMergedGroups(collectUniqueCells(spawns))
+      .map(getBubblePosition)
+      .filter(Boolean);
+  }, [spawns]);
 
   if (!resolvedImageUrl) {
     return <div style={styles.noImageBox}>画像なし</div>;
@@ -235,13 +266,6 @@ export default function MonsterMapOverlay({
   const content = (
     <div style={styles.mapImageFrame}>
       <div style={styles.mapImageBox}>
-        {!imageLoaded && (
-          <div style={styles.loadingOverlay}>
-            <div style={styles.loadingShimmer} />
-            <div style={styles.loadingText}>読み込み中...</div>
-          </div>
-        )}
-
         <div
           style={{
             ...styles.imageInner,
@@ -255,6 +279,7 @@ export default function MonsterMapOverlay({
             }}
           >
             <Image
+              key={resolvedImageUrl}
               src={resolvedImageUrl}
               alt="map"
               fill={false}
@@ -267,6 +292,13 @@ export default function MonsterMapOverlay({
             />
           </div>
         </div>
+
+        {!imageLoaded && (
+          <div style={styles.loadingOverlay}>
+            <div style={styles.loadingShimmer} />
+            <div style={styles.loadingText}>読み込み中...</div>
+          </div>
+        )}
 
         {imageLoaded && (
           <div style={styles.bubbleLayer}>
@@ -289,6 +321,17 @@ export default function MonsterMapOverlay({
           </div>
         )}
       </div>
+
+      <style>{`
+        @keyframes monsterMapShimmer {
+          0% {
+            background-position: 200% 0;
+          }
+          100% {
+            background-position: -200% 0;
+          }
+        }
+      `}</style>
     </div>
   );
 
@@ -303,115 +346,133 @@ export default function MonsterMapOverlay({
   return content;
 }
 
-const styles = {
-  mapImageFrame: {
-    width: "100%",
-  },
-  linkWrap: {
-    display: "block",
-    textDecoration: "none",
-  },
-  mapImageBox: {
-    position: "relative",
-    width: "100%",
-    aspectRatio: "1 / 1",
-    borderRadius: "18px",
-    overflow: "hidden",
-    background: "#f8fafc",
-  },
-  loadingOverlay: {
-    position: "absolute",
-    inset: 0,
-    zIndex: 2,
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "10px",
-    background: "rgba(248, 250, 252, 0.88)",
-  },
-  loadingShimmer: {
-    width: "100%",
-    height: "100%",
-    position: "absolute",
-    inset: 0,
-    background:
-      "linear-gradient(90deg, rgba(226,232,240,0.7) 0%, rgba(241,245,249,0.95) 50%, rgba(226,232,240,0.7) 100%)",
-    backgroundSize: "200% 100%",
-    animation: "monsterMapShimmer 1.4s ease-in-out infinite",
-  },
-  loadingText: {
-    position: "relative",
-    zIndex: 1,
-    fontSize: "13px",
-    fontWeight: 700,
-    color: "#64748b",
-    background: "rgba(255,255,255,0.82)",
-    borderRadius: "999px",
-    padding: "6px 10px",
-  },
-  imageInner: {
-    position: "absolute",
-    inset: 0,
-    overflow: "hidden",
-    transition: "opacity 0.2s ease",
-  },
-  imageCropInner: {
-    position: "absolute",
-    inset: 0,
-    width: "108%",
-    height: "108%",
-    transformOrigin: "top left",
-  },
-  mapImage: {
-    display: "block",
-    width: "100%",
-    height: "100%",
-  },
-  bubbleLayer: {
-    position: "absolute",
-    inset: 0,
-    pointerEvents: "none",
-  },
-  spawnBubble: {
-    position: "absolute",
-    borderRadius: "999px",
-    transform: "translate(-50%, -50%)",
-    background:
-      "radial-gradient(circle at 50% 50%, rgba(14,165,233,0.52) 0%, rgba(59,130,246,0.42) 48%, rgba(37,99,235,0.28) 74%, rgba(37,99,235,0.12) 100%)",
-    border: "3px solid rgba(30,64,175,0.78)",
-    boxShadow:
-      "0 0 0 4px rgba(255,255,255,0.82), 0 12px 28px rgba(30,64,175,0.30), inset 0 0 28px rgba(255,255,255,0.30)",
-    backdropFilter: "blur(1px)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "2px",
-    textAlign: "center",
-  },
-  spawnBubbleMerged: {
-    borderRadius: "999px",
-  },
-  bubbleText: {
-    fontSize: "10px",
-    fontWeight: 800,
-    color: "#0f172a",
-    background: "rgba(255,255,255,0.9)",
-    borderRadius: "999px",
-    padding: "2px 5px",
-    lineHeight: 1.1,
-    boxShadow: "0 2px 8px rgba(15,23,42,0.12)",
-    whiteSpace: "nowrap",
-  },
-  noImageBox: {
-    borderRadius: "18px",
-    background: "#f8fafc",
-    aspectRatio: "1 / 1",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: "#94a3b8",
-    fontSize: "13px",
-    fontWeight: 700,
-  },
-};
+function getStyles(isDark) {
+  return {
+    mapImageFrame: {
+      width: "100%",
+    },
+    linkWrap: {
+      display: "block",
+      textDecoration: "none",
+    },
+    mapImageBox: {
+      position: "relative",
+      width: "100%",
+      aspectRatio: "1 / 1",
+      borderRadius: "18px",
+      overflow: "hidden",
+      background: isDark ? "#020617" : "#e5e7eb",
+      border: isDark ? "1px solid #334155" : "1px solid #d1d5db",
+    },
+    loadingOverlay: {
+      position: "absolute",
+      inset: 0,
+      zIndex: 3,
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: "10px",
+      background: isDark
+        ? "rgba(2,6,23,0.92)"
+        : "rgba(226,232,240,0.92)",
+    },
+    loadingShimmer: {
+      width: "100%",
+      height: "100%",
+      position: "absolute",
+      inset: 0,
+      background: isDark
+        ? "linear-gradient(90deg, rgba(15,23,42,0.88) 0%, rgba(30,41,59,0.98) 50%, rgba(15,23,42,0.88) 100%)"
+        : "linear-gradient(90deg, rgba(203,213,225,0.85) 0%, rgba(226,232,240,0.98) 50%, rgba(203,213,225,0.85) 100%)",
+      backgroundSize: "200% 100%",
+      animation: "monsterMapShimmer 1.2s ease-in-out infinite",
+    },
+    loadingText: {
+      position: "relative",
+      zIndex: 1,
+      fontSize: "13px",
+      fontWeight: 700,
+      color: isDark ? "#cbd5e1" : "#475569",
+      background: isDark ? "rgba(15,23,42,0.9)" : "rgba(255,255,255,0.86)",
+      borderRadius: "999px",
+      padding: "6px 10px",
+      border: isDark ? "1px solid #334155" : "1px solid #cbd5e1",
+    },
+    imageInner: {
+      position: "absolute",
+      inset: 0,
+      overflow: "hidden",
+      transition: "opacity 0.18s ease",
+      zIndex: 1,
+    },
+    imageCropInner: {
+      position: "absolute",
+      inset: 0,
+      width: "108%",
+      height: "108%",
+      transformOrigin: "top left",
+    },
+    mapImage: {
+      display: "block",
+      width: "100%",
+      height: "100%",
+      filter: isDark ? "brightness(0.92)" : "none",
+    },
+    bubbleLayer: {
+      position: "absolute",
+      inset: 0,
+      pointerEvents: "none",
+      zIndex: 2,
+    },
+    spawnBubble: {
+      position: "absolute",
+      borderRadius: "999px",
+      transform: "translate(-50%, -50%)",
+      background: isDark
+        ? "radial-gradient(circle at 50% 50%, rgba(56,189,248,0.42) 0%, rgba(59,130,246,0.34) 48%, rgba(37,99,235,0.22) 74%, rgba(37,99,235,0.10) 100%)"
+        : "radial-gradient(circle at 50% 50%, rgba(14,165,233,0.52) 0%, rgba(59,130,246,0.42) 48%, rgba(37,99,235,0.28) 74%, rgba(37,99,235,0.12) 100%)",
+      border: isDark
+        ? "3px solid rgba(96,165,250,0.68)"
+        : "3px solid rgba(30,64,175,0.78)",
+      boxShadow: isDark
+        ? "0 0 0 3px rgba(15,23,42,0.88), 0 10px 24px rgba(2,6,23,0.42), inset 0 0 24px rgba(255,255,255,0.10)"
+        : "0 0 0 4px rgba(255,255,255,0.82), 0 12px 28px rgba(30,64,175,0.30), inset 0 0 28px rgba(255,255,255,0.30)",
+      backdropFilter: "blur(1px)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "2px",
+      textAlign: "center",
+    },
+    spawnBubbleMerged: {
+      borderRadius: "999px",
+    },
+    bubbleText: {
+      fontSize: "10px",
+      fontWeight: 800,
+      color: isDark ? "#e2e8f0" : "#0f172a",
+      background: isDark ? "rgba(15,23,42,0.92)" : "rgba(255,255,255,0.9)",
+      borderRadius: "999px",
+      padding: "2px 5px",
+      lineHeight: 1.1,
+      boxShadow: isDark
+        ? "0 2px 8px rgba(2,6,23,0.32)"
+        : "0 2px 8px rgba(15,23,42,0.12)",
+      whiteSpace: "nowrap",
+      border: isDark ? "1px solid rgba(71,85,105,0.7)" : "1px solid transparent",
+    },
+    noImageBox: {
+      borderRadius: "18px",
+      background: isDark ? "#020617" : "#f8fafc",
+      aspectRatio: "1 / 1",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      color: isDark ? "#64748b" : "#94a3b8",
+      fontSize: "13px",
+      fontWeight: 700,
+      border: isDark ? "1px solid #334155" : "1px solid transparent",
+    },
+  };
+}

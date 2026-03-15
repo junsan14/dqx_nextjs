@@ -5,6 +5,29 @@ import MonsterMapOverlay from "./MonsterMapOverlay";
 
 const AREA_PREVIEW_COUNT = 4;
 
+function usePrefersDark() {
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const applyTheme = () => setIsDark(media.matches);
+
+    applyTheme();
+
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", applyTheme);
+      return () => media.removeEventListener("change", applyTheme);
+    }
+
+    media.addListener(applyTheme);
+    return () => media.removeListener(applyTheme);
+  }, []);
+
+  return isDark;
+}
+
 function joinDisplayValue(value) {
   if (value == null) return "";
 
@@ -203,6 +226,9 @@ function useIsMobile(breakpoint = 920) {
 
 export default function MonsterMapCard({ mapItem }) {
   const isMobile = useIsMobile();
+  const isDark = usePrefersDark();
+  const styles = getStyles(isDark);
+
   const summary = useMemo(() => buildSummary(mapItem), [mapItem]);
   const layerGroups = useMemo(() => buildLayerGroups(mapItem), [mapItem]);
 
@@ -362,170 +388,176 @@ export default function MonsterMapCard({ mapItem }) {
   );
 }
 
-const styles = {
-  card: {
-    width: "100%",
-    maxWidth: "100%",
-    minWidth: 0,
-    boxSizing: "border-box",
-    overflow: "hidden",
-    background: "#fff",
-    borderRadius: "18px",
-    padding: "16px",
-    boxShadow: "0 8px 24px rgba(15,23,42,0.04)",
-    height: "100%",
-    minHeight: "100%",
-    border: "1px solid #e5e7eb",
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px",
-  },
-  topRow: {
-    display: "flex",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: "12px",
-    minWidth: 0,
-    flexWrap: "nowrap",
-  },
-  topRowMobile: {
-    flexDirection: "column",
-    alignItems: "stretch",
-  },
-  titleWrap: {
-    minWidth: 0,
-    flex: "1 1 auto",
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    flexWrap: "wrap",
-  },
-  mapTitle: {
-    margin: 0,
-    fontSize: "18px",
-    fontWeight: 800,
-    lineHeight: 1.35,
-    color: "#111827",
-    overflowWrap: "anywhere",
-    wordBreak: "break-word",
-  },
-  timeTagWrap: {
-    display: "flex",
-    gap: "6px",
-    flexWrap: "wrap",
-    alignItems: "center",
-    minWidth: 0,
-  },
-  layerSwitchRow: {
-    display: "flex",
-    gap: "8px",
-    flexWrap: "wrap",
-    justifyContent: "flex-end",
-    alignItems: "center",
-    flex: "0 0 auto",
-    maxWidth: "100%",
-    marginLeft: "auto",
-  },
-  layerSwitchRowMobile: {
-    justifyContent: "flex-start",
-    marginLeft: 0,
-  },
-  layerSwitchButton: {
-    appearance: "none",
-    border: "1px solid #cbd5e1",
-    background: "#f8fafc",
-    color: "#334155",
-    padding: "8px 12px",
-    borderRadius: "999px",
-    fontSize: "12px",
-    fontWeight: 700,
-    lineHeight: 1.2,
-    cursor: "pointer",
-    transition: "all 0.2s ease",
-    whiteSpace: "nowrap",
-  },
-  layerSwitchButtonActive: {
-    background: "#2563eb",
-    color: "#fff",
-    border: "1px solid #2563eb",
-    boxShadow: "0 8px 20px rgba(37,99,235,0.18)",
-  },
-  coordsSection: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "8px",
-    minWidth: 0,
-  },
-  areaRow: {
-    display: "flex",
-    gap: "6px",
-    flexWrap: "wrap",
-    minWidth: 0,
-    alignItems: "center",
-  },
-  coordsAccordion: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "8px",
-    paddingTop: "2px",
-  },
-  tag: {
-    fontSize: "11px",
-    fontWeight: 700,
-    padding: "4px 8px",
-    borderRadius: "999px",
-    background: "#eef2ff",
-    color: "#3730a3",
-    maxWidth: "100%",
-    boxSizing: "border-box",
-    border: "1px solid transparent",
-    lineHeight: 1.35,
-  },
-  tagArea: {
-    background: "#f1f5f9",
-    color: "#334155",
-    border: "1px solid #cbd5e1",
-  },
-  tagDay: {
-    background: "#ffedd5",
-    color: "#c2410c",
-    border: "1px solid #fdba74",
-  },
-  tagNight: {
-    background: "#111827",
-    color: "#ffffff",
-    border: "1px solid #374151",
-  },
-  coordsToggleButton: {
-    appearance: "none",
-    border: "1px solid #cbd5e1",
-    background: "#ffffff",
-    color: "#475569",
-    padding: "4px 8px",
-    borderRadius: "999px",
-    fontSize: "11px",
-    fontWeight: 700,
-    cursor: "pointer",
-    lineHeight: 1.35,
-  },
-  coordsCloseButton: {
-    alignSelf: "flex-start",
-    appearance: "none",
-    border: "none",
-    background: "transparent",
-    color: "#64748b",
-    fontSize: "12px",
-    fontWeight: 700,
-    cursor: "pointer",
-    padding: 0,
-  },
-  mapWrap: {
-    width: "100%",
-    maxWidth: "100%",
-    minWidth: 0,
-    overflow: "hidden",
-    flex: "1 1 auto",
-    display: "flex",
-    flexDirection: "column",
-  },
-};
+function getStyles(isDark) {
+  return {
+    card: {
+      width: "100%",
+      maxWidth: "100%",
+      minWidth: 0,
+      boxSizing: "border-box",
+      overflow: "hidden",
+      background: isDark ? "#0f172a" : "#fff",
+      borderRadius: "18px",
+      padding: "16px",
+      boxShadow: isDark
+        ? "0 10px 28px rgba(2,6,23,0.30)"
+        : "0 8px 24px rgba(15,23,42,0.04)",
+      height: "100%",
+      minHeight: "100%",
+      border: isDark ? "1px solid #334155" : "1px solid #e5e7eb",
+      display: "flex",
+      flexDirection: "column",
+      gap: "12px",
+    },
+    topRow: {
+      display: "flex",
+      alignItems: "flex-start",
+      justifyContent: "space-between",
+      gap: "12px",
+      minWidth: 0,
+      flexWrap: "nowrap",
+    },
+    topRowMobile: {
+      flexDirection: "column",
+      alignItems: "stretch",
+    },
+    titleWrap: {
+      minWidth: 0,
+      flex: "1 1 auto",
+      display: "flex",
+      alignItems: "center",
+      gap: "8px",
+      flexWrap: "wrap",
+    },
+    mapTitle: {
+      margin: 0,
+      fontSize: "18px",
+      fontWeight: 800,
+      lineHeight: 1.35,
+      color: isDark ? "#f8fafc" : "#111827",
+      overflowWrap: "anywhere",
+      wordBreak: "break-word",
+    },
+    timeTagWrap: {
+      display: "flex",
+      gap: "6px",
+      flexWrap: "wrap",
+      alignItems: "center",
+      minWidth: 0,
+    },
+    layerSwitchRow: {
+      display: "flex",
+      gap: "8px",
+      flexWrap: "wrap",
+      justifyContent: "flex-end",
+      alignItems: "center",
+      flex: "0 0 auto",
+      maxWidth: "100%",
+      marginLeft: "auto",
+    },
+    layerSwitchRowMobile: {
+      justifyContent: "flex-start",
+      marginLeft: 0,
+    },
+    layerSwitchButton: {
+      appearance: "none",
+      border: isDark ? "1px solid #475569" : "1px solid #cbd5e1",
+      background: isDark ? "#111827" : "#f8fafc",
+      color: isDark ? "#cbd5e1" : "#334155",
+      padding: "8px 12px",
+      borderRadius: "999px",
+      fontSize: "12px",
+      fontWeight: 700,
+      lineHeight: 1.2,
+      cursor: "pointer",
+      transition: "all 0.2s ease",
+      whiteSpace: "nowrap",
+    },
+    layerSwitchButtonActive: {
+      background: isDark ? "#4f46e5" : "#2563eb",
+      color: "#fff",
+      border: isDark ? "1px solid #4f46e5" : "1px solid #2563eb",
+      boxShadow: isDark
+        ? "0 8px 20px rgba(79,70,229,0.28)"
+        : "0 8px 20px rgba(37,99,235,0.18)",
+    },
+    coordsSection: {
+      display: "flex",
+      flexDirection: "column",
+      gap: "8px",
+      minWidth: 0,
+    },
+    areaRow: {
+      display: "flex",
+      gap: "6px",
+      flexWrap: "wrap",
+      minWidth: 0,
+      alignItems: "center",
+    },
+    coordsAccordion: {
+      display: "flex",
+      flexDirection: "column",
+      gap: "8px",
+      paddingTop: "2px",
+    },
+    tag: {
+      fontSize: "11px",
+      fontWeight: 700,
+      padding: "4px 8px",
+      borderRadius: "999px",
+      background: isDark ? "rgba(99,102,241,0.16)" : "#eef2ff",
+      color: isDark ? "#c7d2fe" : "#3730a3",
+      maxWidth: "100%",
+      boxSizing: "border-box",
+      border: "1px solid transparent",
+      lineHeight: 1.35,
+    },
+    tagArea: {
+      background: isDark ? "#111827" : "#f1f5f9",
+      color: isDark ? "#cbd5e1" : "#334155",
+      border: isDark ? "1px solid #334155" : "1px solid #cbd5e1",
+    },
+    tagDay: {
+      background: isDark ? "rgba(251,146,60,0.16)" : "#ffedd5",
+      color: isDark ? "#fdba74" : "#c2410c",
+      border: isDark ? "1px solid rgba(251,146,60,0.28)" : "1px solid #fdba74",
+    },
+    tagNight: {
+      background: isDark ? "#020617" : "#111827",
+      color: "#ffffff",
+      border: isDark ? "1px solid #334155" : "1px solid #374151",
+    },
+    coordsToggleButton: {
+      appearance: "none",
+      border: isDark ? "1px solid #334155" : "1px solid #cbd5e1",
+      background: isDark ? "#0f172a" : "#ffffff",
+      color: isDark ? "#cbd5e1" : "#475569",
+      padding: "4px 8px",
+      borderRadius: "999px",
+      fontSize: "11px",
+      fontWeight: 700,
+      cursor: "pointer",
+      lineHeight: 1.35,
+    },
+    coordsCloseButton: {
+      alignSelf: "flex-start",
+      appearance: "none",
+      border: "none",
+      background: "transparent",
+      color: isDark ? "#94a3b8" : "#64748b",
+      fontSize: "12px",
+      fontWeight: 700,
+      cursor: "pointer",
+      padding: 0,
+    },
+    mapWrap: {
+      width: "100%",
+      maxWidth: "100%",
+      minWidth: 0,
+      overflow: "hidden",
+      flex: "1 1 auto",
+      display: "flex",
+      flexDirection: "column",
+    },
+  };
+}

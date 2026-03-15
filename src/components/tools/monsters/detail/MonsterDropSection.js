@@ -19,6 +19,29 @@ function useIsMobile(breakpoint = 920) {
   return isMobile;
 }
 
+function usePrefersDark() {
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const apply = () => setIsDark(media.matches);
+
+    apply();
+
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", apply);
+      return () => media.removeEventListener("change", apply);
+    }
+
+    media.addListener(apply);
+    return () => media.removeListener(apply);
+  }, []);
+
+  return isDark;
+}
+
 function normalizeList(list) {
   return Array.isArray(list) ? list.filter(Boolean) : [];
 }
@@ -43,49 +66,49 @@ function getOrbColor(orb) {
   );
 }
 
-function getOrbColorStyles(color) {
+function getOrbColorStyles(color, isDark) {
   const key = String(color || "").trim();
 
   switch (key) {
     case "炎":
       return {
-        background: "#fff1f2",
-        color: "#be123c",
+        background: isDark ? "rgba(190,24,93,0.18)" : "#fff1f2",
+        color: isDark ? "#fda4af" : "#be123c",
       };
     case "水":
       return {
-        background: "#eff6ff",
-        color: "#1d4ed8",
+        background: isDark ? "rgba(29,78,216,0.18)" : "#eff6ff",
+        color: isDark ? "#93c5fd" : "#1d4ed8",
       };
     case "風":
       return {
-        background: "#ecfdf5",
-        color: "#047857",
+        background: isDark ? "rgba(4,120,87,0.18)" : "#ecfdf5",
+        color: isDark ? "#86efac" : "#047857",
       };
     case "雷":
       return {
-        background: "#fffbeb",
-        color: "#b45309",
+        background: isDark ? "rgba(180,83,9,0.2)" : "#fffbeb",
+        color: isDark ? "#fdba74" : "#b45309",
       };
     case "土":
       return {
-        background: "#fdf8f3",
-        color: "#92400e",
+        background: isDark ? "rgba(146,64,14,0.2)" : "#fdf8f3",
+        color: isDark ? "#fdba74" : "#92400e",
       };
     case "光":
       return {
-        background: "#fffbea",
-        color: "#a16207",
+        background: isDark ? "rgba(161,98,7,0.2)" : "#fffbea",
+        color: isDark ? "#fde68a" : "#a16207",
       };
     case "闇":
       return {
-        background: "#ede9fe",
-        color: "#5b21b6",
+        background: isDark ? "rgba(91,33,182,0.2)" : "#ede9fe",
+        color: isDark ? "#c4b5fd" : "#5b21b6",
       };
     default:
       return {
-        background: "#f1f5f9",
-        color: "#334155",
+        background: isDark ? "#1e293b" : "#f1f5f9",
+        color: isDark ? "#cbd5e1" : "#334155",
       };
   }
 }
@@ -117,7 +140,7 @@ function uniqueByNameWithType(list) {
   return Array.from(map.values());
 }
 
-function DropTagList({ items }) {
+function DropTagList({ items, styles }) {
   if (!items.length) return <div style={styles.emptyBox}>データなし</div>;
 
   return (
@@ -149,7 +172,7 @@ function DropTagList({ items }) {
   );
 }
 
-function PlainTagList({ items }) {
+function PlainTagList({ items, styles }) {
   if (!items.length) return <div style={styles.emptyBox}>データなし</div>;
 
   return (
@@ -168,14 +191,14 @@ function PlainTagList({ items }) {
   );
 }
 
-function OrbTagList({ items }) {
+function OrbTagList({ items, styles, isDark }) {
   if (!items.length) return <div style={styles.emptyBox}>データなし</div>;
 
   return (
     <div style={styles.tagList}>
       {items.map((item, index) => {
         const color = getOrbColor(item);
-        const colorStyle = getOrbColorStyles(color);
+        const colorStyle = getOrbColorStyles(color, isDark);
 
         return (
           <span
@@ -203,7 +226,7 @@ function OrbTagList({ items }) {
   );
 }
 
-function Panel({ title, children }) {
+function Panel({ title, children, styles }) {
   return (
     <section style={styles.panel}>
       <h3 style={styles.panelTitle}>{title}</h3>
@@ -219,6 +242,9 @@ export default function MonsterDropSection({
   orbDrops = [],
 }) {
   const isMobile = useIsMobile();
+  const isDark = usePrefersDark();
+  const styles = getStyles(isDark);
+
   const scrollerRef = useRef(null);
   const [activeTab, setActiveTab] = useState(0);
   const isProgrammaticScrollRef = useRef(false);
@@ -244,8 +270,8 @@ export default function MonsterDropSection({
         key: "drops",
         label: "ドロップ",
         content: (
-          <Panel title="ドロップ">
-            <DropTagList items={mergedDrops} />
+          <Panel title="ドロップ" styles={styles}>
+            <DropTagList items={mergedDrops} styles={styles} />
           </Panel>
         ),
       },
@@ -253,8 +279,8 @@ export default function MonsterDropSection({
         key: "equipment",
         label: "白宝箱",
         content: (
-          <Panel title="白宝箱">
-            <PlainTagList items={equipment} />
+          <Panel title="白宝箱" styles={styles}>
+            <PlainTagList items={equipment} styles={styles} />
           </Panel>
         ),
       },
@@ -262,13 +288,13 @@ export default function MonsterDropSection({
         key: "orb",
         label: "宝珠",
         content: (
-          <Panel title="宝珠">
-            <OrbTagList items={orbs} />
+          <Panel title="宝珠" styles={styles}>
+            <OrbTagList items={orbs} styles={styles} isDark={isDark} />
           </Panel>
         ),
       },
     ];
-  }, [normalDrops, rareDrops, equipmentDrops, orbDrops]);
+  }, [normalDrops, rareDrops, equipmentDrops, orbDrops, styles, isDark]);
 
   useEffect(() => {
     if (!isMobile) return;
@@ -355,159 +381,172 @@ export default function MonsterDropSection({
   );
 }
 
-const styles = {
-  section: {
-    marginTop: "18px",
-    display: "grid",
-    gap: "12px",
-  },
+function getStyles(isDark) {
+  return {
+    section: {
+      marginTop: "18px",
+      display: "grid",
+      gap: "12px",
+    },
 
-  tabListMobile: {
-    display: "grid",
-    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-    gap: "8px",
-    width: "100%",
-  },
-  tabButton: {
-    appearance: "none",
-    border: "none",
-    background: "#eef2ff",
-    color: "#475569",
-    padding: "14px 10px",
-    borderRadius: "14px",
-    fontSize: "14px",
-    fontWeight: 900,
-    cursor: "pointer",
-    transition: "all .18s ease",
-  },
-  tabButtonActive: {
-    background: "linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%)",
-    color: "#fff",
-    boxShadow: "0 10px 24px rgba(37,99,235,0.20)",
-  },
+    tabListMobile: {
+      display: "grid",
+      gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+      gap: "8px",
+      width: "100%",
+    },
+    tabButton: {
+      appearance: "none",
+      border: "none",
+      background: isDark ? "#1e293b" : "#eef2ff",
+      color: isDark ? "#cbd5e1" : "#475569",
+      padding: "14px 10px",
+      borderRadius: "14px",
+      fontSize: "14px",
+      fontWeight: 900,
+      cursor: "pointer",
+      transition: "all .18s ease",
+    },
+    tabButtonActive: {
+      background: isDark
+        ? "linear-gradient(180deg, #4f46e5 0%, #4338ca 100%)"
+        : "linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%)",
+      color: "#fff",
+      boxShadow: isDark
+        ? "0 10px 24px rgba(79,70,229,0.35)"
+        : "0 10px 24px rgba(37,99,235,0.20)",
+    },
 
-  desktopGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-    gap: "14px",
-    alignItems: "stretch",
-  },
-  desktopCol: {
-    display: "flex",
-  },
+    desktopGrid: {
+      display: "grid",
+      gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+      gap: "14px",
+      alignItems: "stretch",
+    },
+    desktopCol: {
+      display: "flex",
+    },
 
-  panel: {
-    background: "#fff",
-    borderRadius: "20px",
-    padding: "16px",
-    minWidth: 0,
-    width: "100%",
-    boxShadow: "0 8px 24px rgba(15,23,42,0.04)",
-    display: "flex",
-    flexDirection: "column",
-    height: "100%",
-  },
-  panelTitle: {
-    margin: "0 0 14px",
-    fontSize: "16px",
-    fontWeight: 900,
-    color: "#111827",
-  },
-  panelBody: {
-    flex: 1,
-    alignContent: "flex-start",
-  },
+    panel: {
+      background: isDark ? "#0f172a" : "#fff",
+      border: isDark ? "1px solid #334155" : "1px solid transparent",
+      borderRadius: "20px",
+      padding: "16px",
+      minWidth: 0,
+      width: "100%",
+      boxShadow: isDark
+        ? "0 8px 24px rgba(2,6,23,0.28)"
+        : "0 8px 24px rgba(15,23,42,0.04)",
+      display: "flex",
+      flexDirection: "column",
+      height: "100%",
+    },
+    panelTitle: {
+      margin: "0 0 14px",
+      fontSize: "16px",
+      fontWeight: 900,
+      color: isDark ? "#f8fafc" : "#111827",
+    },
+    panelBody: {
+      flex: 1,
+      alignContent: "flex-start",
+    },
 
-  tagList: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "10px",
-    alignContent: "flex-start",
-  },
-  itemTag: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "8px",
-    padding: "8px 12px",
-    borderRadius: "999px",
-    background: "#f8fbff",
-    color: "#0f172a",
-    fontSize: "13px",
-    fontWeight: 800,
-    lineHeight: 1.3,
-    boxShadow: "0 1px 0 rgba(255,255,255,0.8) inset",
-    minHeight: "38px",
-  },
-  itemTagNormal: {
-    background: "#f8fafc",
-  },
-  itemTagRare: {
-    background: "#fff7ed",
-  },
-  kindBadge: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "4px 7px",
-    borderRadius: "999px",
-    fontSize: "10px",
-    fontWeight: 900,
-    lineHeight: 1,
-    flexShrink: 0,
-  },
-  kindBadgeNormal: {
-    background: "#e2e8f0",
-    color: "#475569",
-  },
-  kindBadgeRare: {
-    background: "#fb923c",
-    color: "#fff",
-  },
-  orbColorBadge: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "4px 8px",
-    borderRadius: "999px",
-    fontSize: "10px",
-    fontWeight: 900,
-    lineHeight: 1,
-    flexShrink: 0,
-  },
-  itemTagText: {
-    fontSize: "13px",
-    fontWeight: 800,
-    color: "#0f172a",
-  },
-  emptyBox: {
-    background: "#f8fafc",
-    color: "#94a3b8",
-    borderRadius: "14px",
-    minHeight: "92px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: "13px",
-    fontWeight: 700,
-  },
+    tagList: {
+      display: "flex",
+      flexWrap: "wrap",
+      gap: "10px",
+      alignContent: "flex-start",
+    },
+    itemTag: {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: "8px",
+      padding: "8px 12px",
+      borderRadius: "999px",
+      background: isDark ? "#111827" : "#f8fbff",
+      color: isDark ? "#f8fafc" : "#0f172a",
+      fontSize: "13px",
+      fontWeight: 800,
+      lineHeight: 1.3,
+      boxShadow: isDark
+        ? "none"
+        : "0 1px 0 rgba(255,255,255,0.8) inset",
+      border: isDark ? "1px solid #334155" : "1px solid transparent",
+      minHeight: "38px",
+    },
+    itemTagNormal: {
+      background: isDark ? "#111827" : "#f8fafc",
+    },
+    itemTagRare: {
+      background: isDark ? "rgba(249,115,22,0.14)" : "#fff7ed",
+      border: isDark ? "1px solid rgba(251,146,60,0.28)" : "1px solid transparent",
+    },
+    kindBadge: {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "4px 7px",
+      borderRadius: "999px",
+      fontSize: "10px",
+      fontWeight: 900,
+      lineHeight: 1,
+      flexShrink: 0,
+    },
+    kindBadgeNormal: {
+      background: isDark ? "#334155" : "#e2e8f0",
+      color: isDark ? "#cbd5e1" : "#475569",
+    },
+    kindBadgeRare: {
+      background: "#fb923c",
+      color: "#fff",
+    },
+    orbColorBadge: {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "4px 8px",
+      borderRadius: "999px",
+      fontSize: "10px",
+      fontWeight: 900,
+      lineHeight: 1,
+      flexShrink: 0,
+    },
+    itemTagText: {
+      fontSize: "13px",
+      fontWeight: 800,
+      color: isDark ? "#f8fafc" : "#0f172a",
+    },
+    emptyBox: {
+      background: isDark ? "#111827" : "#f8fafc",
+      color: isDark ? "#64748b" : "#94a3b8",
+      border: isDark ? "1px solid #334155" : "1px solid transparent",
+      borderRadius: "14px",
+      minHeight: "92px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: "13px",
+      fontWeight: 700,
+    },
 
-  mobileScroller: {
-    display: "flex",
-    overflowX: "auto",
-    overflowY: "hidden",
-    scrollSnapType: "x mandatory",
-    WebkitOverflowScrolling: "touch",
-    scrollbarWidth: "thin",
-    gap: 0,
-    overscrollBehaviorX: "contain",
-
-  },
-  mobilePage: {
-    flex: "0 0 100%",
-    width: "100%",
-    minWidth: "100%",
-    scrollSnapAlign: "start",
-    scrollSnapStop: "always",
-    boxSizing: "border-box",
-  },
-};
+    mobileScroller: {
+      display: "flex",
+      overflowX: "auto",
+      overflowY: "hidden",
+      scrollSnapType: "x mandatory",
+      WebkitOverflowScrolling: "touch",
+      scrollbarWidth: "thin",
+      gap: 0,
+      overscrollBehaviorX: "contain",
+    },
+    mobilePage: {
+      flex: "0 0 100%",
+      width: "100%",
+      minWidth: "100%",
+      scrollSnapAlign: "start",
+      scrollSnapStop: "always",
+      boxSizing: "border-box",
+    },
+  };
+}

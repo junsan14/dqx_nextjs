@@ -15,7 +15,9 @@ const SEARCH_OPTIONS = [
   { value: "equipment", label: "装備" },
 ];
 
-function MonstersSearchPageLoading() {
+function MonstersSearchPageLoading({ isDark }) {
+  const loadingStyles = getLoadingStyles(isDark);
+
   return (
     <div style={loadingStyles.pageWrap}>
       <section style={loadingStyles.searchCard}>
@@ -77,7 +79,9 @@ function MonstersSearchPageLoading() {
   );
 }
 
-function MonsterDetailLoading() {
+function MonsterDetailLoading({ isDark }) {
+  const loadingStyles = getLoadingStyles(isDark);
+
   return (
     <div style={loadingStyles.detailCard}>
       <div style={loadingStyles.detailHero}>
@@ -124,6 +128,7 @@ function MonsterDetailLoading() {
 }
 
 export default function MonstersSearchClient() {
+  const [isDark, setIsDark] = useState(false);
   const [searchType, setSearchType] = useState("monster");
   const [keyword, setKeyword] = useState("");
   const [monsters, setMonsters] = useState([]);
@@ -141,6 +146,25 @@ export default function MonstersSearchClient() {
   const debounceRef = useRef(null);
   const wrapperRef = useRef(null);
   const itemRefs = useRef({});
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const applyTheme = () => setIsDark(media.matches);
+
+    applyTheme();
+
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", applyTheme);
+      return () => media.removeEventListener("change", applyTheme);
+    }
+
+    media.addListener(applyTheme);
+    return () => media.removeListener(applyTheme);
+  }, []);
+
+  const styles = useMemo(() => getStyles(isDark), [isDark]);
 
   const currentLabel = useMemo(() => {
     return SEARCH_OPTIONS.find((x) => x.value === searchType)?.label ?? "検索";
@@ -350,7 +374,7 @@ export default function MonstersSearchClient() {
     return (
       <main style={styles.page}>
         <MonsterSearchHero />
-        <MonstersSearchPageLoading />
+        <MonstersSearchPageLoading isDark={isDark} />
 
         <style>{`
           @keyframes monsterSearchShimmer {
@@ -477,7 +501,7 @@ export default function MonstersSearchClient() {
                 {isOpen && (
                   <div style={styles.detailWrap}>
                     {isDetailLoading && !detail ? (
-                      <MonsterDetailLoading />
+                      <MonsterDetailLoading isDark={isDark} />
                     ) : errorText ? (
                       <div style={styles.errorCard}>{errorText}</div>
                     ) : detail ? (
@@ -514,396 +538,434 @@ export default function MonstersSearchClient() {
   );
 }
 
-const shimmer = {
-  background:
-    "linear-gradient(90deg, rgba(226,232,240,0.9) 0%, rgba(241,245,249,1) 50%, rgba(226,232,240,0.9) 100%)",
-  backgroundSize: "200% 100%",
-  animation: "monsterSearchShimmer 1.4s ease-in-out infinite",
-};
+function getShimmer(isDark) {
+  return {
+    background: isDark
+      ? "linear-gradient(90deg, rgba(30,41,59,0.95) 0%, rgba(51,65,85,1) 50%, rgba(30,41,59,0.95) 100%)"
+      : "linear-gradient(90deg, rgba(226,232,240,0.9) 0%, rgba(241,245,249,1) 50%, rgba(226,232,240,0.9) 100%)",
+    backgroundSize: "200% 100%",
+    animation: "monsterSearchShimmer 1.4s ease-in-out infinite",
+  };
+}
 
-const loadingStyles = {
-  pageWrap: {
-    width: "100%",
-    maxWidth: "1100px",
-    margin: "0 auto",
-    minWidth: 0,
-    boxSizing: "border-box",
-  },
-  searchCard: {
-    position: "relative",
-    border: "1px solid rgba(255,255,255,0.75)",
-    background: "rgba(255,255,255,0.82)",
-    backdropFilter: "blur(14px)",
-    WebkitBackdropFilter: "blur(14px)",
-    borderRadius: "24px",
-    padding: "18px",
-    boxShadow: "0 18px 50px rgba(15,23,42,0.08)",
-    width: "100%",
-    boxSizing: "border-box",
-    marginBottom: "28px",
-  },
-  segmentRow: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "8px",
-    marginBottom: "14px",
-  },
-  pill: {
-    height: "40px",
-    borderRadius: "999px",
-    ...shimmer,
-  },
-  searchInputWrap: {
-    position: "relative",
-  },
-  searchIcon: {
-    position: "absolute",
-    left: "16px",
-    top: "50%",
-    transform: "translateY(-50%)",
-    color: "#94a3b8",
-    fontSize: "18px",
-    zIndex: 2,
-  },
-  searchInputSkeleton: {
-    width: "100%",
-    height: "58px",
-    borderRadius: "18px",
-    ...shimmer,
-  },
-  statusRow: {
-    marginTop: "12px",
-    display: "flex",
-    justifyContent: "flex-end",
-  },
-  list: {
-    display: "grid",
-    gap: "16px",
-    width: "100%",
-  },
-  card: {
-    borderRadius: "24px",
-    background: "rgba(255,255,255,0.88)",
-    border: "1px solid rgba(255,255,255,0.75)",
-    boxShadow: "0 18px 40px rgba(15,23,42,0.06)",
-    overflow: "hidden",
-  },
-  cardInner: {
-    display: "grid",
-    gridTemplateColumns: "72px minmax(0,1fr) 24px",
-    gap: "16px",
-    alignItems: "center",
-    padding: "18px",
-  },
-  thumb: {
-    width: "72px",
-    height: "72px",
-    borderRadius: "20px",
-    ...shimmer,
-  },
-  content: {
-    minWidth: 0,
-  },
-  line: {
-    borderRadius: "999px",
-    ...shimmer,
-  },
-  metaRow: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "8px",
-    marginTop: "16px",
-  },
-  badge: {
-    height: "28px",
-    borderRadius: "999px",
-    ...shimmer,
-  },
-  chevron: {
-    width: "18px",
-    height: "18px",
-    borderRadius: "999px",
-    ...shimmer,
-    justifySelf: "end",
-  },
-  detailCard: {
-    borderRadius: "0 0 24px 24px",
-    padding: "18px",
-    background: "rgba(255,255,255,0.96)",
-    border: "1px solid #c7d2fe",
-    borderTop: "1px solid rgba(199,210,254,0.55)",
-    boxShadow: "0 14px 34px rgba(79,70,229,0.08)",
-    width: "100%",
-    boxSizing: "border-box",
-  },
-  detailHero: {
-    display: "grid",
-    gridTemplateColumns: "88px minmax(0,1fr)",
-    gap: "16px",
-    alignItems: "center",
-  },
-  detailHeroThumb: {
-    width: "88px",
-    height: "88px",
-    borderRadius: "24px",
-    ...shimmer,
-  },
-  detailSection: {
-    marginTop: "22px",
-  },
-  detailList: {
-    display: "grid",
-    gap: "10px",
-    marginTop: "12px",
-  },
-  mapGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(2, minmax(0,1fr))",
-    gap: "12px",
-    marginTop: "12px",
-  },
-  mapBox: {
-    height: "96px",
-    borderRadius: "18px",
-    ...shimmer,
-  },
-};
+function getLoadingStyles(isDark) {
+  const shimmer = getShimmer(isDark);
 
-const styles = {
-  page: {
-    minHeight: "100vh",
-    background: "linear-gradient(180deg, #f8fafc 0%, #eef2ff 42%, #f8fafc 100%)",
-    padding: "28px 16px 64px",
-    color: "#0f172a",
-    width: "100%",
-    maxWidth: "100%",
-    minWidth: 0,
-    overflowX: "hidden",
-    boxSizing: "border-box",
-  },
-  searchSection: {
-    maxWidth: "1100px",
-    margin: "0 auto 28px",
-    width: "100%",
-    minWidth: 0,
-    boxSizing: "border-box",
-    position: "relative",
-    zIndex: 10,
-  },
-  searchCard: {
-    position: "relative",
-    border: "1px solid rgba(255,255,255,0.75)",
-    background: "rgba(255,255,255,0.82)",
-    backdropFilter: "blur(14px)",
-    WebkitBackdropFilter: "blur(14px)",
-    borderRadius: "24px",
-    padding: "18px",
-    boxShadow: "0 18px 50px rgba(15,23,42,0.08)",
-    width: "100%",
-    maxWidth: "100%",
-    minWidth: 0,
-    boxSizing: "border-box",
-    overflow: "visible",
-    zIndex: 60,
-  },
-  segment: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "8px",
-    marginBottom: "14px",
-    minWidth: 0,
-  },
-  segmentButton: {
-    border: "1px solid #e2e8f0",
-    background: "#fff",
-    color: "#334155",
-    borderRadius: "999px",
-    padding: "10px 14px",
-    fontSize: "14px",
-    fontWeight: 700,
-    cursor: "pointer",
-    maxWidth: "100%",
-    boxSizing: "border-box",
-    transition: "all 0.18s ease",
-  },
-  segmentButtonActive: {
-    background: "#111827",
-    color: "#fff",
-    border: "1px solid #111827",
-    boxShadow: "0 10px 24px rgba(17,24,39,0.18)",
-  },
-  searchArea: {
-    position: "relative",
-    minWidth: 0,
-  },
-  searchIcon: {
-    position: "absolute",
-    left: "16px",
-    top: "50%",
-    transform: "translateY(-50%)",
-    color: "#94a3b8",
-    fontSize: "18px",
-    zIndex: 2,
-  },
-  input: {
-    width: "100%",
-    height: "58px",
-    borderRadius: "18px",
-    border: "1px solid #e2e8f0",
-    background: "#fff",
-    fontSize: "16px",
-    padding: "0 18px 0 46px",
-    outline: "none",
-    color: "#0f172a",
-    boxSizing: "border-box",
-    minWidth: 0,
-    maxWidth: "100%",
-  },
-  suggestionBox: {
-    position: "absolute",
-    top: "64px",
-    left: 0,
-    right: 0,
-    background: "rgba(255,255,255,0.97)",
-    border: "1px solid #e2e8f0",
-    borderRadius: "18px",
-    boxShadow: "0 18px 40px rgba(15,23,42,0.12)",
-    overflow: "hidden",
-    zIndex: 999,
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box",
-  },
-  suggestionHeader: {
-    padding: "12px 14px 8px",
-    fontSize: "12px",
-    fontWeight: 800,
-    color: "#64748b",
-    letterSpacing: "0.08em",
-  },
-  suggestionList: {
-    margin: 0,
-    padding: "0 0 6px",
-    listStyle: "none",
-    minWidth: 0,
-  },
-  suggestionButton: {
-    width: "100%",
-    display: "block",
-    textAlign: "left",
-    padding: "12px 14px",
-    background: "transparent",
-    border: "none",
-    cursor: "pointer",
-    color: "inherit",
-    borderTop: "1px solid #f1f5f9",
-    boxSizing: "border-box",
-  },
-  suggestionMain: {
-    fontSize: "15px",
-    fontWeight: 800,
-    color: "#0f172a",
-    overflowWrap: "anywhere",
-    wordBreak: "break-word",
-  },
-  statusRow: {
-    marginTop: "12px",
-    display: "flex",
-    justifyContent: "flex-end",
-    minWidth: 0,
-  },
-  statusText: {
-    fontSize: "13px",
-    color: "#64748b",
-    fontWeight: 700,
-  },
-  empty: {
-    maxWidth: "1100px",
-    margin: "24px auto 0",
-    borderRadius: "24px",
-    padding: "38px 18px",
-    textAlign: "center",
-    background: "rgba(255,255,255,0.72)",
-    border: "1px solid #e2e8f0",
-    width: "100%",
-    minWidth: 0,
-    boxSizing: "border-box",
-  },
-  emptyIcon: {
-    fontSize: "28px",
-    color: "#94a3b8",
-    marginBottom: "8px",
-  },
-  emptyTitle: {
-    margin: "0 0 8px",
-    fontSize: "22px",
-    fontWeight: 900,
-  },
-  emptyText: {
-    margin: 0,
-    color: "#64748b",
-  },
-  list: {
-    margin: "0 auto",
-    display: "grid",
-    gap: "16px",
-    width: "100%",
-    maxWidth: "1100px",
-    minWidth: 0,
-    boxSizing: "border-box",
-  },
-  listItem: {
-    display: "grid",
-    gap: 0,
-    minWidth: 0,
-    width: "100%",
-    maxWidth: "100%",
-    overflowX: "hidden",
-    boxSizing: "border-box",
-    transition: "opacity 0.18s ease",
-  },
-  listItemOpen: {
-    gap: 0,
-  },
-  listItemLoading: {
-    opacity: 0.7,
-  },
-  detailWrap: {
-    display: "grid",
-    gap: 0,
-    marginTop: 0,
-    minWidth: 0,
-    width: "100%",
-    maxWidth: "100%",
-    overflowX: "hidden",
-    boxSizing: "border-box",
-  },
-  detailCard: {
-    borderRadius: "0 0 24px 24px",
-    padding: "18px",
-    background: "rgba(255,255,255,0.96)",
-    border: "1px solid #c7d2fe",
-    borderTop: "1px solid rgba(199,210,254,0.55)",
-    boxShadow: "0 14px 34px rgba(79,70,229,0.08)",
-    width: "100%",
-    maxWidth: "100%",
-    minWidth: 0,
-    overflowX: "hidden",
-    boxSizing: "border-box",
-  },
-  errorCard: {
-    borderRadius: "0 0 20px 20px",
-    padding: "20px",
-    background: "#fff",
-    border: "1px solid #fecaca",
-    borderTop: "1px solid rgba(254,202,202,0.7)",
-    color: "#b91c1c",
-    fontSize: "14px",
-    fontWeight: 700,
-    width: "100%",
-    maxWidth: "100%",
-    minWidth: 0,
-    overflowX: "hidden",
-    boxSizing: "border-box",
-  },
-};
+  return {
+    pageWrap: {
+      width: "100%",
+      maxWidth: "1100px",
+      margin: "0 auto",
+      minWidth: 0,
+      boxSizing: "border-box",
+    },
+    searchCard: {
+      position: "relative",
+      border: isDark
+        ? "1px solid rgba(51,65,85,0.9)"
+        : "1px solid rgba(255,255,255,0.75)",
+      background: isDark ? "rgba(15,23,42,0.84)" : "rgba(255,255,255,0.82)",
+      backdropFilter: "blur(14px)",
+      WebkitBackdropFilter: "blur(14px)",
+      borderRadius: "24px",
+      padding: "18px",
+      boxShadow: isDark
+        ? "0 18px 50px rgba(2,6,23,0.5)"
+        : "0 18px 50px rgba(15,23,42,0.08)",
+      width: "100%",
+      boxSizing: "border-box",
+      marginBottom: "28px",
+    },
+    segmentRow: {
+      display: "flex",
+      flexWrap: "wrap",
+      gap: "8px",
+      marginBottom: "14px",
+    },
+    pill: {
+      height: "40px",
+      borderRadius: "999px",
+      ...shimmer,
+    },
+    searchInputWrap: {
+      position: "relative",
+    },
+    searchIcon: {
+      position: "absolute",
+      left: "16px",
+      top: "50%",
+      transform: "translateY(-50%)",
+      color: isDark ? "#64748b" : "#94a3b8",
+      fontSize: "18px",
+      zIndex: 2,
+    },
+    searchInputSkeleton: {
+      width: "100%",
+      height: "58px",
+      borderRadius: "18px",
+      ...shimmer,
+    },
+    statusRow: {
+      marginTop: "12px",
+      display: "flex",
+      justifyContent: "flex-end",
+    },
+    list: {
+      display: "grid",
+      gap: "16px",
+      width: "100%",
+    },
+    card: {
+      borderRadius: "24px",
+      background: isDark ? "rgba(15,23,42,0.9)" : "rgba(255,255,255,0.88)",
+      border: isDark
+        ? "1px solid rgba(51,65,85,0.9)"
+        : "1px solid rgba(255,255,255,0.75)",
+      boxShadow: isDark
+        ? "0 18px 40px rgba(2,6,23,0.42)"
+        : "0 18px 40px rgba(15,23,42,0.06)",
+      overflow: "hidden",
+    },
+    cardInner: {
+      display: "grid",
+      gridTemplateColumns: "72px minmax(0,1fr) 24px",
+      gap: "16px",
+      alignItems: "center",
+      padding: "18px",
+    },
+    thumb: {
+      width: "72px",
+      height: "72px",
+      borderRadius: "20px",
+      ...shimmer,
+    },
+    content: {
+      minWidth: 0,
+    },
+    line: {
+      borderRadius: "999px",
+      ...shimmer,
+    },
+    metaRow: {
+      display: "flex",
+      flexWrap: "wrap",
+      gap: "8px",
+      marginTop: "16px",
+    },
+    badge: {
+      height: "28px",
+      borderRadius: "999px",
+      ...shimmer,
+    },
+    chevron: {
+      width: "18px",
+      height: "18px",
+      borderRadius: "999px",
+      ...shimmer,
+      justifySelf: "end",
+    },
+    detailCard: {
+      borderRadius: "0 0 24px 24px",
+      padding: "18px",
+      background: isDark ? "rgba(15,23,42,0.98)" : "rgba(255,255,255,0.96)",
+      border: isDark ? "1px solid #4f46e5" : "1px solid #c7d2fe",
+      borderTop: isDark
+        ? "1px solid rgba(99,102,241,0.35)"
+        : "1px solid rgba(199,210,254,0.55)",
+      boxShadow: isDark
+        ? "0 14px 34px rgba(79,70,229,0.16)"
+        : "0 14px 34px rgba(79,70,229,0.08)",
+      width: "100%",
+      boxSizing: "border-box",
+    },
+    detailHero: {
+      display: "grid",
+      gridTemplateColumns: "88px minmax(0,1fr)",
+      gap: "16px",
+      alignItems: "center",
+    },
+    detailHeroThumb: {
+      width: "88px",
+      height: "88px",
+      borderRadius: "24px",
+      ...shimmer,
+    },
+    detailSection: {
+      marginTop: "22px",
+    },
+    detailList: {
+      display: "grid",
+      gap: "10px",
+      marginTop: "12px",
+    },
+    mapGrid: {
+      display: "grid",
+      gridTemplateColumns: "repeat(2, minmax(0,1fr))",
+      gap: "12px",
+      marginTop: "12px",
+    },
+    mapBox: {
+      height: "96px",
+      borderRadius: "18px",
+      ...shimmer,
+    },
+  };
+}
+
+function getStyles(isDark) {
+  return {
+    page: {
+      minHeight: "100vh",
+      background: isDark
+        ? "linear-gradient(180deg, #020617 0%, #0f172a 42%, #020617 100%)"
+        : "linear-gradient(180deg, #f8fafc 0%, #eef2ff 42%, #f8fafc 100%)",
+      padding: "28px 16px 64px",
+      color: isDark ? "#f8fafc" : "#0f172a",
+      width: "100%",
+      maxWidth: "100%",
+      minWidth: 0,
+      overflowX: "hidden",
+      boxSizing: "border-box",
+    },
+    searchSection: {
+      maxWidth: "1100px",
+      margin: "0 auto 28px",
+      width: "100%",
+      minWidth: 0,
+      boxSizing: "border-box",
+      position: "relative",
+      zIndex: 10,
+    },
+    searchCard: {
+      position: "relative",
+      border: isDark
+        ? "1px solid rgba(51,65,85,0.95)"
+        : "1px solid rgba(255,255,255,0.75)",
+      background: isDark ? "rgba(15,23,42,0.84)" : "rgba(255,255,255,0.82)",
+      backdropFilter: "blur(14px)",
+      WebkitBackdropFilter: "blur(14px)",
+      borderRadius: "24px",
+      padding: "18px",
+      boxShadow: isDark
+        ? "0 18px 50px rgba(2,6,23,0.5)"
+        : "0 18px 50px rgba(15,23,42,0.08)",
+      width: "100%",
+      maxWidth: "100%",
+      minWidth: 0,
+      boxSizing: "border-box",
+      overflow: "visible",
+      zIndex: 60,
+    },
+    segment: {
+      display: "flex",
+      flexWrap: "wrap",
+      gap: "8px",
+      marginBottom: "14px",
+      minWidth: 0,
+    },
+    segmentButton: {
+      border: isDark ? "1px solid #334155" : "1px solid #e2e8f0",
+      background: isDark ? "#0f172a" : "#fff",
+      color: isDark ? "#cbd5e1" : "#334155",
+      borderRadius: "999px",
+      padding: "10px 14px",
+      fontSize: "14px",
+      fontWeight: 700,
+      cursor: "pointer",
+      maxWidth: "100%",
+      boxSizing: "border-box",
+      transition: "all 0.18s ease",
+    },
+    segmentButtonActive: {
+      background: isDark ? "#6366f1" : "#111827",
+      color: "#fff",
+      border: isDark ? "1px solid #6366f1" : "1px solid #111827",
+      boxShadow: isDark
+        ? "0 10px 24px rgba(99,102,241,0.35)"
+        : "0 10px 24px rgba(17,24,39,0.18)",
+    },
+    searchArea: {
+      position: "relative",
+      minWidth: 0,
+    },
+    searchIcon: {
+      position: "absolute",
+      left: "16px",
+      top: "50%",
+      transform: "translateY(-50%)",
+      color: isDark ? "#64748b" : "#94a3b8",
+      fontSize: "18px",
+      zIndex: 2,
+    },
+    input: {
+      width: "100%",
+      height: "58px",
+      borderRadius: "18px",
+      border: isDark ? "1px solid #334155" : "1px solid #e2e8f0",
+      background: isDark ? "#0f172a" : "#fff",
+      fontSize: "16px",
+      padding: "0 18px 0 46px",
+      outline: "none",
+      color: isDark ? "#f8fafc" : "#0f172a",
+      boxSizing: "border-box",
+      minWidth: 0,
+      maxWidth: "100%",
+    },
+    suggestionBox: {
+      position: "absolute",
+      top: "64px",
+      left: 0,
+      right: 0,
+      background: isDark ? "rgba(15,23,42,0.98)" : "rgba(255,255,255,0.97)",
+      border: isDark ? "1px solid #334155" : "1px solid #e2e8f0",
+      borderRadius: "18px",
+      boxShadow: isDark
+        ? "0 18px 40px rgba(2,6,23,0.5)"
+        : "0 18px 40px rgba(15,23,42,0.12)",
+      overflow: "hidden",
+      zIndex: 999,
+      minWidth: 0,
+      maxWidth: "100%",
+      boxSizing: "border-box",
+    },
+    suggestionHeader: {
+      padding: "12px 14px 8px",
+      fontSize: "12px",
+      fontWeight: 800,
+      color: isDark ? "#94a3b8" : "#64748b",
+      letterSpacing: "0.08em",
+    },
+    suggestionList: {
+      margin: 0,
+      padding: "0 0 6px",
+      listStyle: "none",
+      minWidth: 0,
+    },
+    suggestionButton: {
+      width: "100%",
+      display: "block",
+      textAlign: "left",
+      padding: "12px 14px",
+      background: "transparent",
+      border: "none",
+      cursor: "pointer",
+      color: "inherit",
+      borderTop: isDark ? "1px solid #1e293b" : "1px solid #f1f5f9",
+      boxSizing: "border-box",
+    },
+    suggestionMain: {
+      fontSize: "15px",
+      fontWeight: 800,
+      color: isDark ? "#f8fafc" : "#0f172a",
+      overflowWrap: "anywhere",
+      wordBreak: "break-word",
+    },
+    statusRow: {
+      marginTop: "12px",
+      display: "flex",
+      justifyContent: "flex-end",
+      minWidth: 0,
+    },
+    statusText: {
+      fontSize: "13px",
+      color: isDark ? "#94a3b8" : "#64748b",
+      fontWeight: 700,
+    },
+    empty: {
+      maxWidth: "1100px",
+      margin: "24px auto 0",
+      borderRadius: "24px",
+      padding: "38px 18px",
+      textAlign: "center",
+      background: isDark ? "rgba(15,23,42,0.74)" : "rgba(255,255,255,0.72)",
+      border: isDark ? "1px solid #334155" : "1px solid #e2e8f0",
+      width: "100%",
+      minWidth: 0,
+      boxSizing: "border-box",
+    },
+    emptyIcon: {
+      fontSize: "28px",
+      color: isDark ? "#64748b" : "#94a3b8",
+      marginBottom: "8px",
+    },
+    emptyTitle: {
+      margin: "0 0 8px",
+      fontSize: "22px",
+      fontWeight: 900,
+      color: isDark ? "#f8fafc" : "#0f172a",
+    },
+    emptyText: {
+      margin: 0,
+      color: isDark ? "#94a3b8" : "#64748b",
+    },
+    list: {
+      margin: "0 auto",
+      display: "grid",
+      gap: "16px",
+      width: "100%",
+      maxWidth: "1100px",
+      minWidth: 0,
+      boxSizing: "border-box",
+    },
+    listItem: {
+      display: "grid",
+      gap: 0,
+      minWidth: 0,
+      width: "100%",
+      maxWidth: "100%",
+      overflowX: "hidden",
+      boxSizing: "border-box",
+      transition: "opacity 0.18s ease",
+    },
+    listItemOpen: {
+      gap: 0,
+    },
+    listItemLoading: {
+      opacity: 0.7,
+    },
+    detailWrap: {
+      display: "grid",
+      gap: 0,
+      marginTop: 0,
+      minWidth: 0,
+      width: "100%",
+      maxWidth: "100%",
+      overflowX: "hidden",
+      boxSizing: "border-box",
+    },
+    detailCard: {
+      borderRadius: "0 0 24px 24px",
+      padding: "18px",
+      background: isDark ? "rgba(15,23,42,0.98)" : "rgba(255,255,255,0.96)",
+      border: isDark ? "1px solid #4f46e5" : "1px solid #c7d2fe",
+      borderTop: isDark
+        ? "1px solid rgba(99,102,241,0.35)"
+        : "1px solid rgba(199,210,254,0.55)",
+      boxShadow: isDark
+        ? "0 14px 34px rgba(79,70,229,0.16)"
+        : "0 14px 34px rgba(79,70,229,0.08)",
+      width: "100%",
+      maxWidth: "100%",
+      minWidth: 0,
+      overflowX: "hidden",
+      boxSizing: "border-box",
+    },
+    errorCard: {
+      borderRadius: "0 0 20px 20px",
+      padding: "20px",
+      background: isDark ? "#0f172a" : "#fff",
+      border: isDark ? "1px solid rgba(239,68,68,0.45)" : "1px solid #fecaca",
+      borderTop: isDark
+        ? "1px solid rgba(239,68,68,0.28)"
+        : "1px solid rgba(254,202,202,0.7)",
+      color: isDark ? "#fca5a5" : "#b91c1c",
+      fontSize: "14px",
+      fontWeight: 700,
+      width: "100%",
+      maxWidth: "100%",
+      minWidth: 0,
+      overflowX: "hidden",
+      boxSizing: "border-box",
+    },
+  };
+}
