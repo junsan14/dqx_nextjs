@@ -500,7 +500,7 @@ const styles = {
     scrollbarWidth: "thin",
     gap: 0,
     overscrollBehaviorX: "contain",
-    touchAction: "pan-x",
+
   },
   mobilePage: {
     flex: "0 0 100%",

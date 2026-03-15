@@ -105,14 +105,6 @@ export default function CraftProfitClient() {
         if (cancelled) return;
 
         setSets(nextSets);
-
-        const first = nextSets[0] || null;
-        if (first) {
-          setSetId(first.id);
-          setSetQuery(first.name);
-          setUnitCostMap(buildInitialUnitCostMap(first));
-          setStarPrice(defaultStarPrices(first));
-        }
       } catch (error) {
         if (cancelled) return;
         console.error("CraftProfit load error:", error);
@@ -137,8 +129,13 @@ export default function CraftProfitClient() {
   useEffect(() => {
     if (selectedSet?.name) {
       setSetQuery(selectedSet.name);
+      setUnitCostMap(buildInitialUnitCostMap(selectedSet));
+      setStarPrice(defaultStarPrices(selectedSet));
+    } else {
+      setUnitCostMap({});
+      setStarPrice(defaultStarPrices(null));
     }
-  }, [selectedSet?.id, selectedSet?.name]);
+  }, [selectedSet]);
 
   const filteredSets = useMemo(() => {
     const q = setQuery.toLowerCase().trim();
@@ -235,11 +232,12 @@ export default function CraftProfitClient() {
     setSetId(nextId);
 
     const nextSet = sets.find((s) => s.id === nextId) || null;
-    if (!nextSet) return;
+    if (!nextSet) {
+      setSetQuery("");
+      return;
+    }
 
     setSetQuery(nextSet.name);
-    setUnitCostMap(buildInitialUnitCostMap(nextSet));
-    setStarPrice(defaultStarPrices(nextSet));
   };
 
   const updateUnitCost = (materialKey, value) => {

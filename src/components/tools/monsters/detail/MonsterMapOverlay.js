@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { getMonsterAssetUrl } from "@/lib/monsters";
@@ -217,6 +220,8 @@ export default function MonsterMapOverlay({
   imagePath,
   href,
 }) {
+  const [imageLoaded, setImageLoaded] = useState(false);
+
   const resolvedImageUrl = getMonsterAssetUrl(imagePath);
 
   const bubbles = buildMergedGroups(collectUniqueCells(spawns))
@@ -230,7 +235,19 @@ export default function MonsterMapOverlay({
   const content = (
     <div style={styles.mapImageFrame}>
       <div style={styles.mapImageBox}>
-        <div style={styles.imageInner}>
+        {!imageLoaded && (
+          <div style={styles.loadingOverlay}>
+            <div style={styles.loadingShimmer} />
+            <div style={styles.loadingText}>読み込み中...</div>
+          </div>
+        )}
+
+        <div
+          style={{
+            ...styles.imageInner,
+            opacity: imageLoaded ? 1 : 0,
+          }}
+        >
           <div
             style={{
               ...styles.imageCropInner,
@@ -246,28 +263,31 @@ export default function MonsterMapOverlay({
               sizes="100vw"
               style={styles.mapImage}
               priority={false}
+              onLoad={() => setImageLoaded(true)}
             />
           </div>
         </div>
 
-        <div style={styles.bubbleLayer}>
-          {bubbles.map((bubble) => (
-            <div
-              key={bubble.key}
-              title={bubble.label}
-              style={{
-                ...styles.spawnBubble,
-                ...(bubble.isMerged ? styles.spawnBubbleMerged : {}),
-                left: `${bubble.left}%`,
-                top: `${bubble.top}%`,
-                width: `${bubble.width}%`,
-                height: `${bubble.height}%`,
-              }}
-            >
-              <span style={styles.bubbleText}>{bubble.shortLabel}</span>
-            </div>
-          ))}
-        </div>
+        {imageLoaded && (
+          <div style={styles.bubbleLayer}>
+            {bubbles.map((bubble) => (
+              <div
+                key={bubble.key}
+                title={bubble.label}
+                style={{
+                  ...styles.spawnBubble,
+                  ...(bubble.isMerged ? styles.spawnBubbleMerged : {}),
+                  left: `${bubble.left}%`,
+                  top: `${bubble.top}%`,
+                  width: `${bubble.width}%`,
+                  height: `${bubble.height}%`,
+                }}
+              >
+                <span style={styles.bubbleText}>{bubble.shortLabel}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -299,10 +319,42 @@ const styles = {
     overflow: "hidden",
     background: "#f8fafc",
   },
+  loadingOverlay: {
+    position: "absolute",
+    inset: 0,
+    zIndex: 2,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "10px",
+    background: "rgba(248, 250, 252, 0.88)",
+  },
+  loadingShimmer: {
+    width: "100%",
+    height: "100%",
+    position: "absolute",
+    inset: 0,
+    background:
+      "linear-gradient(90deg, rgba(226,232,240,0.7) 0%, rgba(241,245,249,0.95) 50%, rgba(226,232,240,0.7) 100%)",
+    backgroundSize: "200% 100%",
+    animation: "monsterMapShimmer 1.4s ease-in-out infinite",
+  },
+  loadingText: {
+    position: "relative",
+    zIndex: 1,
+    fontSize: "13px",
+    fontWeight: 700,
+    color: "#64748b",
+    background: "rgba(255,255,255,0.82)",
+    borderRadius: "999px",
+    padding: "6px 10px",
+  },
   imageInner: {
     position: "absolute",
     inset: 0,
     overflow: "hidden",
+    transition: "opacity 0.2s ease",
   },
   imageCropInner: {
     position: "absolute",
