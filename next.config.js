@@ -2,16 +2,15 @@
 const nextConfig = {
   images: {
     remotePatterns: [
-      {
+            {
         protocol: "http",
         hostname: "localhost",
         port: "8000",
-        pathname: "/images/**",
+        pathname: "/storage/**",
       },
-       {
-        protocol: "http",
-        hostname: "localhost",
-        port: "8000",
+      {
+        protocol: "https",
+        hostname: "api.dqx-tool.com",
         pathname: "/storage/**",
       },
     ],
