@@ -1,93 +1,121 @@
+"use client";
+
+function joinDisplayValue(value) {
+  if (value == null) return "";
+
+  if (Array.isArray(value)) {
+    return value.map((v) => String(v).trim()).filter(Boolean).join(" / ");
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed || trimmed === "[]") return "";
+
+    try {
+      const parsed = JSON.parse(trimmed);
+
+      if (Array.isArray(parsed)) {
+        return parsed.map((v) => String(v).trim()).filter(Boolean).join(" / ");
+      }
+
+      if (typeof parsed === "string") return parsed.trim();
+    } catch (_) {
+      return trimmed;
+    }
+
+    return trimmed;
+  }
+
+  return String(value);
+}
+
 export default function MonsterDetailHero({ monster }) {
+  const systemType = joinDisplayValue(monster?.system_type);
+  const description =
+    joinDisplayValue(monster?.description) ||
+    joinDisplayValue(monster?.note) ||
+    "";
+
   return (
-    <section style={styles.heroCard}>
-      <div style={styles.heroHeader}>
-        <div style={styles.heroMain}>
-          <div style={styles.nameRow}>
-            <h1 style={styles.title}>{monster.name}</h1>
-            {monster.system_type ? (
-              <span style={styles.systemTag}>{monster.system_type}</span>
+    <section style={styles.card}>
+      <div style={styles.contentCol}>
+       
+
+        {description ? <p style={styles.description}>{description}</p> : null}
+
+        {monster?.exp != null || monster?.gold != null ? (
+          <div style={styles.metaGrid}>
+            {monster?.exp != null ? (
+              <div style={styles.metaItem}>
+                <span style={styles.metaLabel}>EXP</span>
+                <span style={styles.metaValue}>{monster.exp}</span>
+              </div>
+            ) : null}
+
+            {monster?.gold != null ? (
+              <div style={styles.metaItem}>
+                <span style={styles.metaLabel}>G</span>
+                <span style={styles.metaValue}>{monster.gold}</span>
+              </div>
             ) : null}
           </div>
-
-          <div style={styles.metaRow}>
-            {monster.monster_no ? <span>No. {monster.monster_no}</span> : null}
-          </div>
-        </div>
+        ) : null}
       </div>
-
-      {monster.source_url ? (
-        <div style={styles.sourceRow}>
-          <a
-            href={monster.source_url}
-            target="_blank"
-            rel="noreferrer"
-            style={styles.sourceLink}
-          >
-            元データを見る
-          </a>
-        </div>
-      ) : null}
     </section>
   );
 }
 
 const styles = {
-  heroCard: {
-    background: "#fff",
-    border: "1px solid #e5e7eb",
-    borderRadius: "20px",
-    padding: "20px",
-    boxShadow: "0 8px 30px rgba(15,23,42,0.05)",
-    marginBottom: "18px",
+  card: {
+    marginBottom: "16px",
   },
-  heroHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: "12px",
-    alignItems: "flex-start",
-  },
-  heroMain: {
+  contentCol: {
     minWidth: 0,
+    display: "grid",
+    gap: "12px",
+    alignContent: "start",
   },
-  nameRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    flexWrap: "wrap",
-  },
-  title: {
-    margin: 0,
-    fontSize: "28px",
-    lineHeight: 1.1,
-    fontWeight: 800,
-    letterSpacing: "-0.03em",
-  },
-  systemTag: {
+  typeTag: {
     display: "inline-flex",
     alignItems: "center",
-    padding: "5px 10px",
+    width: "fit-content",
+    padding: "8px 12px",
     borderRadius: "999px",
-    background: "#eef2ff",
-    color: "#4338ca",
-    fontSize: "11px",
-    fontWeight: 700,
-  },
-  metaRow: {
-    display: "flex",
-    gap: "8px",
-    flexWrap: "wrap",
-    marginTop: "8px",
+    background: "#eff6ff",
+    color: "#1d4ed8",
     fontSize: "12px",
+    fontWeight: 800,
+    border: "1px solid #bfdbfe",
+  },
+  description: {
+    margin: 0,
+    color: "#475569",
+    fontSize: "14px",
+    lineHeight: 1.8,
+    wordBreak: "break-word",
+  },
+  metaGrid: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "10px",
+  },
+  metaItem: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "8px",
+    background: "#f8fafc",
+    border: "1px solid #e2e8f0",
+    borderRadius: "14px",
+    padding: "8px 10px",
+  },
+  metaLabel: {
+    fontSize: "11px",
+    fontWeight: 800,
     color: "#64748b",
   },
-  sourceRow: {
-    marginTop: "14px",
-  },
-  sourceLink: {
-    fontSize: "12px",
-    color: "#2563eb",
-    textDecoration: "none",
-    fontWeight: 700,
+  metaValue: {
+    fontSize: "13px",
+    fontWeight: 800,
+    color: "#0f172a",
   },
 };

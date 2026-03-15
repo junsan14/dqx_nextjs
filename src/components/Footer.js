@@ -1,21 +1,17 @@
+"use client";
+
 import Link from "next/link";
+import { useAuth } from "@/hooks/auth";
 
 export default function Footer() {
+  const { user } = useAuth();
+
   return (
     <footer className="border-t border-slate-800 bg-slate-950 text-slate-400">
       <div className="mx-auto max-w-6xl px-4 py-10">
 
         <div className="grid gap-8 md:grid-cols-3">
 
-          <div>
-            <h3 className="text-sm font-bold text-slate-200">
-              DQX Tools
-            </h3>
-            <p className="mt-3 text-sm leading-6">
-              ドラクエ10のプレイを便利にするツールサイト。
-              職人・モンスター検索などを提供。
-            </p>
-          </div>
 
           <div>
             <h3 className="text-sm font-bold text-slate-200">
@@ -24,19 +20,12 @@ export default function Footer() {
 
             <ul className="mt-3 space-y-2 text-sm">
               <li>
-                <Link
-                  href="/tools/craft-profit"
-                  className="hover:text-white"
-                >
+                <Link href="/tools/craft-profit" className="hover:text-white">
                   Craft Profit
                 </Link>
               </li>
 
-              <li>
-                <Link
-                  href="/tools/monster-search"
-                  className="hover:text-white"
-                >
+              <li>                <Link href="/tools/monster-search" className="hover:text-white">
                   モンスター検索
                 </Link>
               </li>
@@ -45,21 +34,28 @@ export default function Footer() {
 
           <div>
             <h3 className="text-sm font-bold text-slate-200">
-              Site
+              Admin
             </h3>
 
             <ul className="mt-3 space-y-2 text-sm">
-              <li>
-                <Link href="/" className="hover:text-white">
-                  トップページ
-                </Link>
-              </li>
 
-              <li>
-                <Link href="/tools" className="hover:text-white">
-                  ツール一覧
-                </Link>
-              </li>
+              {!user && (
+                <li>
+                  <Link
+                    href="/login"
+                    className="rounded-md border border-slate-700 px-3 py-1.5 hover:bg-slate-800 hover:text-white"
+                  >
+                    管理者ログイン
+                  </Link>
+                </li>
+              )}
+
+              {user && (
+                <li className="text-slate-500">
+                  Logged in
+                </li>
+              )}
+
             </ul>
           </div>
 

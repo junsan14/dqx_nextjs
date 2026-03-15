@@ -1,0 +1,92 @@
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background:
+    radial-gradient(circle at top left, rgba(99,102,241,.35), transparent 35%),
+    radial-gradient(circle at bottom right, rgba(56,189,248,.25), transparent 30%),
+    linear-gradient(135deg,#0f172a,#1e293b,#312e81);
+
+  padding: 20px;
+}
+
+/* カード */
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+}
+
+.auth-card__inner {
+  background: rgba(255,255,255,.95);
+  border-radius: 24px;
+  padding: 34px;
+  box-shadow: 0 30px 70px rgba(0,0,0,.35);
+  backdrop-filter: blur(12px);
+}
+
+/* フォーム */
+.auth-card form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* label */
+.auth-card label {
+  font-weight: 600;
+  font-size: .9rem;
+  margin-bottom: 6px;
+  color: #0f172a;
+}
+
+/* input */
+.auth-card input {
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid #dbe4f0;
+  padding: 0 12px;
+  font-size: .95rem;
+}
+
+.auth-card input:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79,70,229,.15);
+  outline: none;
+}
+
+/* button */
+.auth-card button {
+  height: 46px;
+  border-radius: 12px;
+  border: none;
+
+  background: linear-gradient(135deg,#4f46e5,#6366f1);
+  color: white;
+
+  font-weight: 700;
+  cursor: pointer;
+
+  box-shadow: 0 10px 20px rgba(79,70,229,.3);
+}
+
+.auth-card button:hover {
+  transform: translateY(-1px);
+}
+
+/* link */
+.auth-card a {
+  color: #4f46e5;
+  font-size: .9rem;
+}
+
+/* mobile */
+@media (max-width:600px) {
+
+  .auth-card__inner{
+    padding:24px;
+    border-radius:18px;
+  }
+
+}

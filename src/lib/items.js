@@ -106,9 +106,9 @@ export async function fetchItemsByIds(ids = []) {
 
     const json = res.data;
 
-    if (Array.isArray(json)) return json;
-    if (Array.isArray(json?.data)) return json.data;
-    if (Array.isArray(json?.data?.data)) return json.data.data;
+    if (Array.isArray(json)) return json.map(normalizeItem);
+    if (Array.isArray(json?.data)) return json.data.map(normalizeItem);
+    if (Array.isArray(json?.data?.data)) return json.data.data.map(normalizeItem);
 
     return [];
   } catch (error) {

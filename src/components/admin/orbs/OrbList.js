@@ -1,6 +1,17 @@
-export default function OrbList({ orbs = [], selectedId, onSelect }) {
+"use client";
+
+import { useMemo } from "react";
+
+export default function OrbList({
+  orbs = [],
+  selectedId,
+  onSelect,
+  theme,
+}) {
+  const mergedTheme = useMemo(() => normalizeOrbListTheme(theme), [theme]);
+
   if (!orbs.length) {
-    return <div style={emptyStyle}>オーブがない</div>;
+    return <div style={emptyStyle(mergedTheme)}>オーブがない</div>;
   }
 
   return (
@@ -14,12 +25,12 @@ export default function OrbList({ orbs = [], selectedId, onSelect }) {
             type="button"
             onClick={() => onSelect(orb.id)}
             style={{
-              ...itemStyle,
-              ...(active ? activeItemStyle : {}),
+              ...itemStyle(mergedTheme),
+              ...(active ? activeItemStyle(mergedTheme) : {}),
             }}
           >
-            <div style={nameStyle}>{orb.name}</div>
-            <div style={metaStyle}>
+            <div style={nameStyle(mergedTheme)}>{orb.name}</div>
+            <div style={metaStyle(mergedTheme)}>
               {orb.color || "色なし"} / ID: {orb.id}
             </div>
           </button>
@@ -29,37 +40,56 @@ export default function OrbList({ orbs = [], selectedId, onSelect }) {
   );
 }
 
+function normalizeOrbListTheme(theme) {
+  return {
+    empty: theme?.mutedText ?? theme?.subText ?? "#666",
+    itemBg: theme?.cardBg ?? theme?.panelBg ?? "#fff",
+    itemBorder: theme?.cardBorder ?? theme?.panelBorder ?? "#ddd",
+    itemText: theme?.text ?? theme?.pageText ?? "#111827",
+    metaText: theme?.subText ?? "#666",
+    activeBorder: theme?.selectedBorder ?? theme?.primaryBorder ?? "#111",
+    activeBg: theme?.selectedBg ?? "#f3f7ff",
+  };
+}
+
 const listWrapStyle = {
-  overflowY: "auto",
+  display: "grid",
+  gap: 8,
+  padding: 8,
 };
 
-const emptyStyle = {
+const emptyStyle = (theme) => ({
   padding: 16,
-  color: "#666",
-};
+  color: theme.empty,
+});
 
-const itemStyle = {
+const itemStyle = (theme) => ({
   display: "grid",
   gap: 4,
   width: "100%",
   textAlign: "left",
   padding: 12,
-  border: "none",
-  borderBottom: "1px solid #f0f0f0",
-  background: "#fff",
+  border: `1px solid ${theme.itemBorder}`,
+  borderRadius: 10,
+  background: theme.itemBg,
   cursor: "pointer",
-};
+  color: theme.itemText,
+});
 
-const activeItemStyle = {
-  background: "#f3f7ff",
-};
+const activeItemStyle = (theme) => ({
+  background: theme.activeBg,
+  borderColor: theme.activeBorder,
+});
 
-const nameStyle = {
+const nameStyle = (theme) => ({
   fontSize: 15,
   fontWeight: 700,
-};
+  wordBreak: "break-word",
+  color: theme.itemText,
+});
 
-const metaStyle = {
+const metaStyle = (theme) => ({
   fontSize: 12,
-  color: "#666",
-};
+  color: theme.metaText,
+  wordBreak: "break-word",
+});

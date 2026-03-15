@@ -1,9 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import OrbList from "./OrbList";
 import OrbForm from "./OrbForm";
 import { fetchOrb, fetchOrbs } from "@/lib/orbs";
+import {
+  getMonsterEditorTheme,
+  usePrefersDarkMode,
+} from "../theme";
 
 export default function OrbManager({ initialOrbs = [] }) {
   const [orbs, setOrbs] = useState(initialOrbs);
@@ -12,6 +16,12 @@ export default function OrbManager({ initialOrbs = [] }) {
   const [search, setSearch] = useState("");
   const [loadingList, setLoadingList] = useState(false);
   const [message, setMessage] = useState("");
+
+  const [isMobile, setIsMobile] = useState(false);
+  const [listOpen, setListOpen] = useState(true);
+
+  const isDark = usePrefersDarkMode();
+  const theme = useMemo(() => getMonsterEditorTheme(isDark), [isDark]);
 
   const selectedId = selectedOrb?.id ?? null;
 
@@ -24,6 +34,21 @@ export default function OrbManager({ initialOrbs = [] }) {
     });
   }, [orbs]);
 
+  useEffect(() => {
+    function handleResize() {
+      const mobile = window.innerWidth <= 900;
+      setIsMobile(mobile);
+
+      if (!mobile) {
+        setListOpen(true);
+      }
+    }
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   async function handleSelectOrb(id) {
     setLoadingOrb(true);
     setMessage("");
@@ -31,6 +56,10 @@ export default function OrbManager({ initialOrbs = [] }) {
     try {
       const orb = await fetchOrb(id);
       setSelectedOrb(orb);
+
+      if (isMobile) {
+        setListOpen(false);
+      }
     } catch (error) {
       console.error(error);
       setMessage(error.message || "オーブ取得失敗");
@@ -39,9 +68,13 @@ export default function OrbManager({ initialOrbs = [] }) {
     }
   }
 
-  async function handleNew() {
+  function handleNew() {
     setSelectedOrb(null);
     setMessage("");
+
+    if (isMobile) {
+      setListOpen(false);
+    }
   }
 
   async function handleSearch() {
@@ -50,7 +83,7 @@ export default function OrbManager({ initialOrbs = [] }) {
 
     try {
       const list = await fetchOrbs(search);
-      setOrbs(list);
+      setOrbs(Array.isArray(list) ? list : []);
     } catch (error) {
       console.error(error);
       setMessage(error.message || "一覧取得失敗");
@@ -60,13 +93,29 @@ export default function OrbManager({ initialOrbs = [] }) {
   }
 
   async function handleReloadAndSelect(savedOrb = null) {
-    const list = await fetchOrbs(search);
-    setOrbs(list);
+    setMessage("");
 
-    if (savedOrb?.id) {
-      setSelectedOrb(savedOrb);
-    } else {
-      setSelectedOrb(null);
+    try {
+      const list = await fetchOrbs(search);
+      setOrbs(Array.isArray(list) ? list : []);
+
+      if (savedOrb?.id) {
+        const latest = await fetchOrb(savedOrb.id);
+        setSelectedOrb(latest);
+
+        if (isMobile) {
+          setListOpen(false);
+        }
+      } else {
+        setSelectedOrb(null);
+
+        if (isMobile) {
+          setListOpen(true);
+        }
+      }
+    } catch (error) {
+      console.error(error);
+      setMessage(error.message || "一覧更新失敗");
     }
   }
 
@@ -79,55 +128,95 @@ export default function OrbManager({ initialOrbs = [] }) {
     }
 
     setMessage("削除した");
+
+    if (isMobile) {
+      setListOpen(true);
+    }
   }
 
-  return (
-    <div style={layoutStyle}>
-      <aside style={sidebarStyle}>
-        <div style={toolbarStyle}>
-          <button type="button" onClick={handleNew} style={newButtonStyle}>
-            ＋ 新規追加
-          </button>
+  function openList() {
+    setListOpen(true);
+  }
 
-          <div style={{ display: "flex", gap: 8 }}>
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="名前・色で検索"
-              style={searchInputStyle}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleSearch();
-              }}
+  const showSidebar = !isMobile || listOpen;
+
+  return (
+    <div style={layoutStyle(isMobile, theme)}>
+      {showSidebar ? (
+        <aside style={sidebarStyle(isMobile, theme)}>
+          <div style={toolbarStyle(theme)}>
+            <div style={topActionRowStyle(isMobile)}>
+              <button type="button" onClick={handleNew} style={newButtonStyle(theme)}>
+                ＋ 新規追加
+              </button>
+
+              {isMobile ? (
+                <button
+                  type="button"
+                  onClick={() => setListOpen(false)}
+                  style={subButtonStyle(theme)}
+                >
+                  閉じる
+                </button>
+              ) : null}
+            </div>
+
+            <div style={searchRowStyle(isMobile)}>
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="名前・色で検索"
+                style={searchInputStyle(theme)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSearch();
+                }}
+              />
+              <button
+                type="button"
+                onClick={handleSearch}
+                disabled={loadingList}
+                style={searchButtonStyle(isMobile, theme)}
+              >
+                {loadingList ? "検索中..." : "検索"}
+              </button>
+            </div>
+          </div>
+
+          <div style={listAreaStyle(isMobile)}>
+            <OrbList
+              orbs={sortedOrbs}
+              selectedId={selectedId}
+              onSelect={handleSelectOrb}
+              theme={theme}
             />
-            <button
-              type="button"
-              onClick={handleSearch}
-              disabled={loadingList}
-              style={searchButtonStyle}
-            >
-              {loadingList ? "検索中..." : "検索"}
+          </div>
+        </aside>
+      ) : null}
+
+      <section style={contentStyle(isMobile, theme)}>
+        {isMobile && !listOpen ? (
+          <div style={mobileTopBarStyle}>
+            <button type="button" onClick={openList} style={subButtonStyle(theme)}>
+              一覧を開く
+            </button>
+
+            <button type="button" onClick={handleNew} style={newButtonStyle(theme)}>
+              新規追加
             </button>
           </div>
-        </div>
+        ) : null}
 
-        <OrbList
-          orbs={sortedOrbs}
-          selectedId={selectedId}
-          onSelect={handleSelectOrb}
-        />
-      </aside>
-
-      <section style={contentStyle}>
-        {message ? <div style={messageStyle}>{message}</div> : null}
+        {message ? <div style={messageStyle(theme)}>{message}</div> : null}
 
         {loadingOrb ? (
-          <div>読み込み中...</div>
+          <div style={loadingTextStyle(theme)}>読み込み中...</div>
         ) : (
           <OrbForm
             mode={selectedOrb?.id ? "edit" : "create"}
             initialData={selectedOrb}
             onSaved={handleReloadAndSelect}
             onDeleted={handleDeleted}
+            theme={theme}
           />
         )}
       </section>
@@ -135,67 +224,137 @@ export default function OrbManager({ initialOrbs = [] }) {
   );
 }
 
-const layoutStyle = {
-  display: "grid",
-  gridTemplateColumns: "320px minmax(0, 1fr)",
-  gap: 20,
-  alignItems: "start",
-};
+function layoutStyle(isMobile, theme) {
+  return {
+    display: "grid",
+    gridTemplateColumns: isMobile ? "1fr" : "320px minmax(0, 1fr)",
+    gap: 20,
+    alignItems: "start",
+    color: theme.pageText,
+  };
+}
 
-const sidebarStyle = {
-  border: "1px solid #ddd",
-  borderRadius: 12,
-  background: "#fff",
-  overflow: "hidden",
-  position: "sticky",
-  top: 16,
-  maxHeight: "calc(100vh - 48px)",
-  display: "grid",
-  gridTemplateRows: "auto 1fr",
-};
+function sidebarStyle(isMobile, theme) {
+  return {
+    border: `1px solid ${theme.panelBorder}`,
+    borderRadius: 12,
+    background: theme.panelBg,
+    overflow: "hidden",
+    position: isMobile ? "static" : "sticky",
+    top: isMobile ? "auto" : 16,
+    maxHeight: isMobile ? "none" : "calc(100vh - 48px)",
+    display: "grid",
+    gridTemplateRows: "auto 1fr",
+    minWidth: 0,
+  };
+}
 
-const toolbarStyle = {
+const toolbarStyle = (theme) => ({
   padding: 12,
-  borderBottom: "1px solid #eee",
+  borderBottom: `1px solid ${theme.cardBorder}`,
   display: "grid",
   gap: 10,
+});
+
+function topActionRowStyle(isMobile) {
+  return {
+    display: "flex",
+    gap: 8,
+    flexWrap: "wrap",
+    alignItems: "center",
+    justifyContent: isMobile ? "space-between" : "flex-start",
+  };
+}
+
+function searchRowStyle(isMobile) {
+  return {
+    display: "flex",
+    gap: 8,
+    flexDirection: isMobile ? "column" : "row",
+  };
+}
+
+function listAreaStyle(isMobile) {
+  return {
+    maxHeight: isMobile ? "50vh" : "calc(100vh - 160px)",
+    overflowY: "auto",
+  };
+}
+
+function contentStyle(isMobile, theme) {
+  return {
+    border: `1px solid ${theme.panelBorder}`,
+    borderRadius: 12,
+    background: theme.panelBg,
+    padding: isMobile ? 14 : 20,
+    minHeight: 400,
+    minWidth: 0,
+    color: theme.pageText,
+  };
+}
+
+const mobileTopBarStyle = {
+  display: "flex",
+  gap: 8,
+  flexWrap: "wrap",
+  marginBottom: 12,
 };
 
-const contentStyle = {
-  border: "1px solid #ddd",
-  borderRadius: 12,
-  background: "#fff",
-  padding: 20,
-  minHeight: 400,
-};
-
-const messageStyle = {
+const messageStyle = (theme) => ({
   marginBottom: 12,
   fontSize: 14,
-};
+  color: theme.subText,
+});
 
-const newButtonStyle = {
-  border: "1px solid #111",
-  background: "#111",
-  color: "#fff",
+const newButtonStyle = (theme) => ({
+  border: `1px solid ${theme.primaryBorder}`,
+  background: theme.primaryBg,
+  color: theme.primaryText,
   borderRadius: 8,
   padding: "10px 12px",
   cursor: "pointer",
-};
+  whiteSpace: "nowrap",
+  fontWeight: 700,
+});
 
-const searchInputStyle = {
+const subButtonStyle = (theme) => ({
+  border: `1px solid ${theme.inputBorder}`,
+  background: theme.inputBg,
+  color: theme.text,
+  borderRadius: 8,
+  padding: "10px 12px",
+  cursor: "pointer",
+  whiteSpace: "nowrap",
+  fontWeight: 700,
+});
+
+const searchInputStyle = (theme) => ({
   flex: 1,
   width: "100%",
-  border: "1px solid #ccc",
+  border: `1px solid ${theme.inputBorder}`,
   borderRadius: 8,
   padding: "10px 12px",
   fontSize: 14,
-};
+  minWidth: 0,
+  boxSizing: "border-box",
+  background: theme.inputBg,
+  color: theme.inputText,
+});
 
-const searchButtonStyle = {
-  border: "1px solid #ccc",
-  background: "#f7f7f7",
-  borderRadius: 8,
-  padding: "10px 12px",
-  cursor: "pointer",
-};
+function searchButtonStyle(isMobile, theme) {
+  return {
+    border: `1px solid ${theme.secondaryBorder}`,
+    background: theme.secondaryBg,
+    color: theme.secondaryText,
+    borderRadius: 8,
+    padding: "10px 12px",
+    cursor: "pointer",
+    width: isMobile ? "100%" : "auto",
+    whiteSpace: "nowrap",
+    fontWeight: 700,
+  };
+}
+
+const loadingTextStyle = (theme) => ({
+  color: theme.subText,
+});

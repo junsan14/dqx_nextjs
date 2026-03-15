@@ -5,6 +5,7 @@ import { fetchItems } from "@/lib/items";
 import { fetchAccessories } from "@/lib/accessories";
 import { fetchOrbs } from "@/lib/orbs";
 import { fetchEquipments } from "@/lib/equipments";
+import { applyMonsterThemeToStyleTree } from "../theme";
 
 const TAB_ITEMS = "items";
 const TAB_ORBS = "orbs";
@@ -86,15 +87,14 @@ function normalizeOptions(rows = [], type) {
     }));
   }
 
-
   if (type === "equipment") {
-  return rows.map((row) => ({
-    id: row.id,
-    name: row.itemName ?? row.item_name ?? row.name ?? "",
-    rawCategory: row.slot ?? "",
-    category: row.slot ?? "",
-  }));
-}
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.itemName ?? row.item_name ?? row.name ?? "",
+      rawCategory: row.slot ?? "",
+      category: row.slot ?? "",
+    }));
+  }
 
   if (type === "accessory") {
     return rows.map((row) => ({
@@ -155,6 +155,7 @@ function SuggestInput({
   onSelect,
   placeholder = "名前で検索",
   loading = false,
+  styles,
 }) {
   return (
     <div style={styles.addComposer}>
@@ -165,6 +166,7 @@ function SuggestInput({
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
           placeholder={placeholder}
+          className="monster-drops-editor-input"
           style={styles.input}
         />
       </label>
@@ -177,7 +179,10 @@ function SuggestInput({
         ) : suggestions.length === 0 ? (
           <div style={styles.emptySuggest}>候補なし</div>
         ) : (
-          <div style={styles.suggestList}>
+          <div
+            className="monster-drops-editor-suggest-list"
+            style={styles.suggestList}
+          >
             {suggestions.map((option) => {
               const isActive =
                 selected &&
@@ -190,6 +195,7 @@ function SuggestInput({
                   key={`${option.source_type ?? "default"}-${option.id}`}
                   type="button"
                   onClick={() => onSelect(option)}
+                  className="monster-drops-editor-suggest-item"
                   style={{
                     ...styles.suggestItem,
                     ...(isActive ? styles.suggestItemActive : {}),
@@ -211,7 +217,8 @@ function SuggestInput({
   );
 }
 
-export default function MonsterDropsEditor({ drops = [], onChange }) {
+export default function MonsterDropsEditor({ drops = [], onChange, theme }) {
+  const styles = useMemo(() => getComponentStyles(theme), [theme]);
   const [activeTab, setActiveTab] = useState(TAB_ITEMS);
 
   const [normalCategory, setNormalCategory] = useState("scout");
@@ -470,11 +477,15 @@ export default function MonsterDropsEditor({ drops = [], onChange }) {
     }
 
     return (
-      <div style={styles.tagWrap}>
+      <div className="monster-drops-editor-tag-wrap" style={styles.tagWrap}>
         {sectionDrops.map((drop) => {
           const dropKey = getDropKey(drop);
           return (
-            <div key={`tag-${dropKey}`} style={styles.tag}>
+            <div
+              key={`tag-${dropKey}`}
+              className="monster-drops-editor-tag"
+              style={styles.tag}
+            >
               <span style={styles.tagText}>{drop?.target_name || "未選択"}</span>
               <button
                 type="button"
@@ -495,14 +506,22 @@ export default function MonsterDropsEditor({ drops = [], onChange }) {
   function renderItemsTab() {
     return (
       <div style={styles.panel}>
-        <div style={styles.section}>
+        <div className="monster-drops-editor-section" style={styles.section}>
           <div style={styles.sectionHeader}>
-            <h3 style={styles.sectionTitle}>通常ドロップ</h3>
+            <h3
+              className="monster-drops-editor-section-title"
+              style={styles.sectionTitle}
+            >
+              通常ドロップ
+            </h3>
           </div>
 
           {renderTagList(normalItems)}
 
-          <div style={styles.categoryRow}>
+          <div
+            className="monster-drops-editor-category-row"
+            style={styles.categoryRow}
+          >
             <label style={styles.field}>
               <span style={styles.label}>種別</span>
               <select
@@ -512,6 +531,7 @@ export default function MonsterDropsEditor({ drops = [], onChange }) {
                   setNormalQuery("");
                   setNormalSelected(null);
                 }}
+                className="monster-drops-editor-select"
                 style={styles.input}
               >
                 {NORMAL_ITEM_CATEGORIES.map((option) => (
@@ -538,17 +558,26 @@ export default function MonsterDropsEditor({ drops = [], onChange }) {
               handleImmediateAddNormal(option);
             }}
             placeholder="名前で検索"
+            styles={styles}
           />
         </div>
 
-        <div style={styles.section}>
+        <div className="monster-drops-editor-section" style={styles.section}>
           <div style={styles.sectionHeader}>
-            <h3 style={styles.sectionTitle}>レアドロップ</h3>
+            <h3
+              className="monster-drops-editor-section-title"
+              style={styles.sectionTitle}
+            >
+              レアドロップ
+            </h3>
           </div>
 
           {renderTagList(rareItems)}
 
-          <div style={styles.categoryRow}>
+          <div
+            className="monster-drops-editor-category-row"
+            style={styles.categoryRow}
+          >
             <label style={styles.field}>
               <span style={styles.label}>種別</span>
               <select
@@ -558,6 +587,7 @@ export default function MonsterDropsEditor({ drops = [], onChange }) {
                   setRareQuery("");
                   setRareSelected(null);
                 }}
+                className="monster-drops-editor-select"
                 style={styles.input}
               >
                 {RARE_ITEM_CATEGORIES.map((option) => (
@@ -584,6 +614,7 @@ export default function MonsterDropsEditor({ drops = [], onChange }) {
               handleImmediateAddRare(option);
             }}
             placeholder="名前で検索"
+            styles={styles}
           />
         </div>
       </div>
@@ -593,14 +624,22 @@ export default function MonsterDropsEditor({ drops = [], onChange }) {
   function renderOrbsTab() {
     return (
       <div style={styles.panel}>
-        <div style={styles.section}>
+        <div className="monster-drops-editor-section" style={styles.section}>
           <div style={styles.sectionHeader}>
-            <h3 style={styles.sectionTitle}>宝珠</h3>
+            <h3
+              className="monster-drops-editor-section-title"
+              style={styles.sectionTitle}
+            >
+              宝珠
+            </h3>
           </div>
 
           {renderTagList(orbDrops)}
 
-          <div style={styles.categoryRow}>
+          <div
+            className="monster-drops-editor-category-row"
+            style={styles.categoryRow}
+          >
             <label style={styles.field}>
               <span style={styles.label}>種別</span>
               <select
@@ -610,6 +649,7 @@ export default function MonsterDropsEditor({ drops = [], onChange }) {
                   setOrbQuery("");
                   setOrbSelected(null);
                 }}
+                className="monster-drops-editor-select"
                 style={styles.input}
               >
                 {ORB_CATEGORIES.map((option) => (
@@ -636,6 +676,7 @@ export default function MonsterDropsEditor({ drops = [], onChange }) {
               handleImmediateAddOrb(option);
             }}
             placeholder="名前で検索"
+            styles={styles}
           />
         </div>
       </div>
@@ -645,14 +686,22 @@ export default function MonsterDropsEditor({ drops = [], onChange }) {
   function renderEquipmentsTab() {
     return (
       <div style={styles.panel}>
-        <div style={styles.section}>
+        <div className="monster-drops-editor-section" style={styles.section}>
           <div style={styles.sectionHeader}>
-            <h3 style={styles.sectionTitle}>装備</h3>
+            <h3
+              className="monster-drops-editor-section-title"
+              style={styles.sectionTitle}
+            >
+              装備
+            </h3>
           </div>
 
           {renderTagList(equipmentDrops)}
 
-          <div style={styles.categoryRow}>
+          <div
+            className="monster-drops-editor-category-row"
+            style={styles.categoryRow}
+          >
             <label style={styles.field}>
               <span style={styles.label}>種別</span>
               <select
@@ -662,6 +711,7 @@ export default function MonsterDropsEditor({ drops = [], onChange }) {
                   setEquipmentQuery("");
                   setEquipmentSelected(null);
                 }}
+                className="monster-drops-editor-select"
                 style={styles.input}
               >
                 {EQUIPMENT_CATEGORIES.map((option) => (
@@ -688,6 +738,7 @@ export default function MonsterDropsEditor({ drops = [], onChange }) {
               handleImmediateAddEquipment(option);
             }}
             placeholder="名前で検索"
+            styles={styles}
           />
         </div>
       </div>
@@ -790,10 +841,7 @@ export default function MonsterDropsEditor({ drops = [], onChange }) {
           </h2>
         </div>
 
-        <div
-          className="monster-drops-editor-tabbar"
-          style={styles.tabBar}
-        >
+        <div className="monster-drops-editor-tabbar" style={styles.tabBar}>
           <button
             type="button"
             onClick={() => setActiveTab(TAB_ITEMS)}
@@ -841,7 +889,7 @@ export default function MonsterDropsEditor({ drops = [], onChange }) {
   );
 }
 
-const styles = {
+const baseStyles = {
   wrapper: {
     display: "flex",
     flexDirection: "column",
@@ -1045,3 +1093,7 @@ const styles = {
     flexShrink: 0,
   },
 };
+
+function getComponentStyles(theme) {
+  return applyMonsterThemeToStyleTree(baseStyles, theme);
+}

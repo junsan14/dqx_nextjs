@@ -123,3 +123,24 @@ export async function deleteMonster(id) {
     throw new Error("モンスター削除失敗");
   }
 }
+export async function fetchMonstersAroundDisplayOrder(
+  displayOrder,
+  { range = 5, excludeId = null } = {}
+) {
+  try {
+    const res = await api.get(`${API_URL}/api/monsters/around-display-order`, {
+      params: {
+        display_order: displayOrder,
+        range,
+        ...(excludeId ? { exclude_id: excludeId } : {}),
+      },
+    });
+
+    const rows = res.data?.data ?? [];
+
+    return Array.isArray(rows) ? rows : [];
+  } catch (error) {
+    console.error(error);
+    throw new Error("前後モンスター取得失敗");
+  }
+}

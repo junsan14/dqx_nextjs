@@ -1,14 +1,11 @@
+import { mochiy } from "@/app/fonts";
+
 export default function MonsterSearchHero() {
   return (
     <section style={styles.hero}>
       <div style={styles.heroGlow} />
       <p style={styles.kicker}>DQX MONSTER DATABASE</p>
       <h1 style={styles.title}>モンスター検索</h1>
-      <p style={styles.lead}>
-        モンスター名、オーブ、アイテム、装備名から
-        <br />
-        関連モンスターをすばやく探せる
-      </p>
     </section>
   );
 }

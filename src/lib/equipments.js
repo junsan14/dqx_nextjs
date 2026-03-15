@@ -27,41 +27,60 @@ function makeRowKey(row = {}) {
 
 function normalizeEquipment(row = {}) {
   return {
-    __key: row?.__key ?? makeRowKey(row),
+    __key: row?.id ?? crypto.randomUUID?.() ?? String(Math.random()),
     id: row?.id ?? null,
     itemId: row?.item_id ?? "",
     itemName: row?.item_name ?? "",
-    equipmentTypeId:
-      row?.equipment_type_id == null ? "" : String(row.equipment_type_id),
+    equipmentTypeId: row?.equipment_type_id ?? null,
     jobOverrideMode: row?.job_override_mode ?? "inherit",
-    craftLevel: row?.craft_level ?? "",
-    equipLevel: row?.equip_level ?? "",
+    craftLevel: row?.craft_level ?? null,
+    equipLevel: row?.equip_level ?? null,
     recipeBook: row?.recipe_book ?? "",
     recipePlace: row?.recipe_place ?? "",
     description: row?.description ?? "",
     slot: row?.slot ?? "",
     slotGridType: row?.slot_grid_type ?? "",
-    slotGridCols: row?.slot_grid_cols ?? "",
+    slotGridCols: row?.slot_grid_cols ?? null,
     groupKind: row?.group_kind ?? "",
     groupId: row?.group_id ?? "",
     groupName: row?.group_name ?? "",
-    equipmentType: row?.equipment_type ?? null,
-    equipmentTypeName: row?.equipment_type?.name ?? "",
-    overrideJobsJson: Array.isArray(row?.override_jobs_json)
-      ? row.override_jobs_json
-      : [],
-    materialsJson: normalizeArrayJson(row?.materials_json, []),
-    slotGridJson:
-      row?.slot_grid_json != null &&
-      (Array.isArray(row.slot_grid_json) ||
-        typeof row.slot_grid_json === "object")
-        ? row.slot_grid_json
-        : null,
+    materialsJson: row?.materials_json ?? [],
+    slotGridJson: row?.slot_grid_json ?? null,
     sourceUrl: row?.source_url ?? "",
     detailUrl: row?.detail_url ?? "",
-    effectsJson: normalizeArrayJson(row?.effects_json, []),
+    effectsJson: row?.effects_json ?? [],
     createdAt: row?.created_at ?? null,
     updatedAt: row?.updated_at ?? null,
+
+    equipmentType: row?.equipment_type
+      ? {
+          id: row.equipment_type.id ?? null,
+          key: row.equipment_type.key ?? "",
+          name: row.equipment_type.name ?? "",
+          kind: row.equipment_type.kind ?? "",
+          craftTypeId: row.equipment_type.craft_type_id ?? null,
+          craftType: row.equipment_type.craft_type
+            ? {
+                id: row.equipment_type.craft_type.id ?? null,
+                name: row.equipment_type.craft_type.name ?? "",
+              }
+            : null,
+          equipableTypes: Array.isArray(row.equipment_type.equipable_types)
+            ? row.equipment_type.equipable_types.map((et) => ({
+                id: et?.id ?? null,
+                gameJobId: et?.game_job_id ?? null,
+                equipmentTypeId: et?.equipment_type_id ?? null,
+                gameJob: et?.game_job
+                  ? {
+                      id: et.game_job.id ?? null,
+                      name: et.game_job.name ?? "",
+                      key: et.game_job.key ?? "",
+                    }
+                  : null,
+              }))
+            : [],
+        }
+      : null,
   };
 }
 

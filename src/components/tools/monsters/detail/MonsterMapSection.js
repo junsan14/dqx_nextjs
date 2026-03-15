@@ -49,6 +49,7 @@ function buildTabLabel(group, index, isMobile) {
 export default function MonsterMapSection({ maps = [] }) {
   const isMobile = useIsMobile();
   const contentScrollerRef = useRef(null);
+  const tabScrollerRef = useRef(null);
   const tabRefs = useRef({});
   const isProgrammaticScrollRef = useRef(false);
 
@@ -73,14 +74,17 @@ export default function MonsterMapSection({ maps = [] }) {
   }, [pagedMaps, activeTab]);
 
   useEffect(() => {
+    const scroller = tabScrollerRef.current;
     const target = tabRefs.current[activeTab];
-    if (target && typeof target.scrollIntoView === "function") {
-      target.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest",
-        inline: "center",
-      });
-    }
+    if (!scroller || !target) return;
+
+    const nextLeft =
+      target.offsetLeft - (scroller.clientWidth - target.offsetWidth) / 2;
+
+    scroller.scrollTo({
+      left: Math.max(0, nextLeft),
+      behavior: "smooth",
+    });
   }, [activeTab]);
 
   useEffect(() => {
@@ -142,29 +146,27 @@ export default function MonsterMapSection({ maps = [] }) {
         <h2 style={styles.title}>出現場所</h2>
       </div>
 
-      <div style={styles.tabScroller}>
-        <div style={styles.tabList}>
-          {pagedMaps.map((group, index) => {
-            const isActive = index === activeTab;
+      <div ref={tabScrollerRef} style={styles.tabScroller}>
+        {pagedMaps.map((group, index) => {
+          const isActive = index === activeTab;
 
-            return (
-              <button
-                key={`tab-${index}`}
-                ref={(el) => {
-                  tabRefs.current[index] = el;
-                }}
-                type="button"
-                onClick={() => setActiveTab(index)}
-                style={{
-                  ...styles.tabButton,
-                  ...(isActive ? styles.tabButtonActive : {}),
-                }}
-              >
-                {buildTabLabel(group, index, isMobile)}
-              </button>
-            );
-          })}
-        </div>
+          return (
+            <button
+              key={`tab-${index}`}
+              ref={(el) => {
+                tabRefs.current[index] = el;
+              }}
+              type="button"
+              onClick={() => setActiveTab(index)}
+              style={{
+                ...styles.tabButton,
+                ...(isActive ? styles.tabButtonActive : {}),
+              }}
+            >
+              {buildTabLabel(group, index, isMobile)}
+            </button>
+          );
+        })}
       </div>
 
       {isMobile ? (
@@ -173,10 +175,12 @@ export default function MonsterMapSection({ maps = [] }) {
             <div key={`page-${groupIndex}`} style={styles.mobilePage}>
               <div style={styles.mobilePageInner}>
                 {group.map((mapItem, index) => (
-                  <MonsterMapCard
+                  <div
                     key={mapItem.id ?? `${mapItem.name}-${groupIndex}-${index}`}
-                    mapItem={mapItem}
-                  />
+                    style={styles.mobileCardWrap}
+                  >
+                    <MonsterMapCard mapItem={mapItem} />
+                  </div>
                 ))}
               </div>
             </div>
@@ -185,10 +189,12 @@ export default function MonsterMapSection({ maps = [] }) {
       ) : (
         <div style={styles.desktopGrid}>
           {(pagedMaps[activeTab] ?? []).map((mapItem, index) => (
-            <MonsterMapCard
+            <div
               key={mapItem.id ?? `${mapItem.name}-${activeTab}-${index}`}
-              mapItem={mapItem}
-            />
+              style={styles.desktopCardWrap}
+            >
+              <MonsterMapCard mapItem={mapItem} />
+            </div>
           ))}
         </div>
       )}
@@ -199,9 +205,15 @@ export default function MonsterMapSection({ maps = [] }) {
 const styles = {
   section: {
     marginTop: "8px",
+    width: "100%",
+    maxWidth: "100%",
+    minWidth: 0,
+    overflowX: "clip",
+    boxSizing: "border-box",
   },
   header: {
     marginBottom: "12px",
+    minWidth: 0,
   },
   title: {
     margin: 0,
@@ -210,18 +222,19 @@ const styles = {
     color: "#111827",
   },
   tabScroller: {
+    display: "flex",
+    gap: "8px",
+    width: "100%",
+    maxWidth: "100%",
+    minWidth: 0,
     overflowX: "auto",
     overflowY: "hidden",
     WebkitOverflowScrolling: "touch",
+    overscrollBehaviorX: "contain",
     marginBottom: "14px",
     paddingBottom: "4px",
+    boxSizing: "border-box",
     scrollbarWidth: "thin",
-  },
-  tabList: {
-    display: "inline-flex",
-    gap: "8px",
-    minWidth: "100%",
-    whiteSpace: "nowrap",
   },
   tabButton: {
     appearance: "none",
@@ -237,6 +250,9 @@ const styles = {
     transition: "all 0.2s ease",
     whiteSpace: "nowrap",
     flex: "0 0 auto",
+    flexShrink: 0,
+    boxSizing: "border-box",
+    maxWidth: "100%",
   },
   tabButtonActive: {
     background: "#2563eb",
@@ -248,35 +264,62 @@ const styles = {
     display: "grid",
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
     gap: "16px",
-    alignItems: "start",
+    alignItems: "stretch",
+    width: "100%",
+    maxWidth: "100%",
+    minWidth: 0,
+  },
+  desktopCardWrap: {
+    width: "100%",
+    maxWidth: "100%",
+    minWidth: 0,
+    display: "flex",
+    alignItems: "stretch",
   },
   mobileContentScroller: {
-  display: "flex",
-  overflowX: "auto",
-  overflowY: "hidden",
-  scrollSnapType: "x mandatory",
-  WebkitOverflowScrolling: "touch",
-  scrollbarWidth: "thin",
-  gap: 0,
-  overscrollBehaviorX: "contain",
-  overscrollBehaviorY: "none",
-  touchAction: "pan-x",
-},
+    display: "flex",
+    width: "100%",
+    maxWidth: "100%",
+    minWidth: 0,
+    overflowX: "auto",
+    overflowY: "hidden",
+    scrollSnapType: "x mandatory",
+    WebkitOverflowScrolling: "touch",
+    scrollbarWidth: "thin",
+    gap: 0,
+    overscrollBehaviorX: "contain",
+    overscrollBehaviorY: "auto",
+    touchAction: "pan-x",
+    boxSizing: "border-box",
+  },
   mobilePage: {
-  flex: "0 0 100%",
-  width: "100%",
-  minWidth: "100%",
-  scrollSnapAlign: "start",
-  scrollSnapStop: "always",
-  boxSizing: "border-box",
-},
+    flex: "0 0 100%",
+    width: "100%",
+    maxWidth: "100%",
+    minWidth: "100%",
+    scrollSnapAlign: "start",
+    scrollSnapStop: "always",
+    boxSizing: "border-box",
+    overflow: "hidden",
+  },
   mobilePageInner: {
-  display: "grid",
-  gridTemplateColumns: "minmax(0, 1fr)",
-  gap: "16px",
-  paddingInline: "2px",
-  boxSizing: "border-box",
-},
+    display: "grid",
+    gridTemplateColumns: "minmax(0, 1fr)",
+    gap: "16px",
+    paddingInline: 0,
+    width: "100%",
+    maxWidth: "100%",
+    minWidth: 0,
+    boxSizing: "border-box",
+  },
+  mobileCardWrap: {
+    width: "100%",
+    maxWidth: "100%",
+    minWidth: 0,
+    overflow: "hidden",
+    display: "flex",
+    alignItems: "stretch",
+  },
   emptyCard: {
     background: "#fff",
     border: "1px solid #e5e7eb",
@@ -284,5 +327,9 @@ const styles = {
     padding: "20px",
     fontSize: "13px",
     color: "#94a3b8",
+    width: "100%",
+    maxWidth: "100%",
+    minWidth: 0,
+    boxSizing: "border-box",
   },
 };

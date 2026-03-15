@@ -15,7 +15,7 @@ const Login = () => {
 
     const { login } = useAuth({
         middleware: 'guest',
-        redirectIfAuthenticated: '/tools',
+        redirectIfAuthenticated: '/tool-editor',
     })
 
     const [email, setEmail] = useState('')
@@ -46,12 +46,31 @@ const Login = () => {
 
     return (
         <>
+            <div style={{ marginBottom: '20px' }}>
+                <h2
+                    style={{
+                        margin: 0,
+                        fontSize: '1.8rem',
+                        fontWeight: 800,
+                        color: '#0f172a',
+                    }}>
+                    Login
+                </h2>
+                <p
+                    style={{
+                        marginTop: '8px',
+                        color: '#475569',
+                        lineHeight: 1.7,
+                    }}>
+                    メールアドレスとパスワードを入力してログイン
+                </p>
+            </div>
+
             <AuthSessionStatus className="mb-4" status={status} />
+
             <form onSubmit={submitForm}>
-                {/* Email Address */}
                 <div>
                     <Label htmlFor="email">Email</Label>
-
                     <Input
                         id="email"
                         type="email"
@@ -61,14 +80,11 @@ const Login = () => {
                         required
                         autoFocus
                     />
-
                     <InputError messages={errors.email} className="mt-2" />
                 </div>
 
-                {/* Password */}
                 <div className="mt-4">
                     <Label htmlFor="password">Password</Label>
-
                     <Input
                         id="password"
                         type="password"
@@ -78,14 +94,12 @@ const Login = () => {
                         required
                         autoComplete="current-password"
                     />
-
                     <InputError
                         messages={errors.password}
                         className="mt-2"
                     />
                 </div>
 
-                {/* Remember Me */}
                 <div className="block mt-4">
                     <label
                         htmlFor="remember_me"
@@ -99,7 +113,6 @@ const Login = () => {
                                 setShouldRemember(event.target.checked)
                             }
                         />
-
                         <span className="ml-2 text-sm text-gray-600">
                             Remember me
                         </span>

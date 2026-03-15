@@ -1,44 +1,31 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { stringifyCoords } from "./monsterEditorHelpers";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { normalizeMapRow } from "@/lib/monsterMapSpawns";
+import { applyMonsterThemeToStyleTree } from "../theme";
 
 const COLS_8 = ["A", "B", "C", "D", "E", "F", "G", "H"];
 const ROWS_8 = [1, 2, 3, 4, 5, 6, 7, 8];
 
-const COLS_4 = ["A-B", "C-D", "E-F", "G-H"];
+const COLS_4 = ["A", "B", "C", "D"];
 const ROWS_4 = [1, 2, 3, 4];
 
 const SPAWN_TIME_OPTIONS = [
   { value: "normal", label: "通常" },
-  { value: "day", label: "昼" },
-  { value: "night", label: "夜" },
+  { value: "day", label: "昼のみ" },
+  { value: "night", label: "夜のみ" },
   { value: "always", label: "常時" },
-  { value: "unknown", label: "不明" },
 ];
-
-function getApiUrl() {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-  return apiUrl.replace(/\/$/, "");
-}
-
-const API_URL = getApiUrl();
-
-function resolveImageUrl(path = "") {
-  const value = String(path ?? "").trim();
-  if (!value) return "";
-
-  if (/^https?:\/\//i.test(value)) return value;
-  if (value.startsWith("/")) return `${API_URL}${value}`;
-  return `${API_URL}/${value}`;
-}
 
 function makeSpawn() {
   return {
     id: null,
-    __key: `new-spawn-${Date.now()}-${Math.random()}`,
+    __key: `new-spawn-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    monster_id: null,
     map_id: "",
+    map_layer_id: "",
     map_name: "",
+    map_layer_name: "",
     map_image_url: "",
     area: "[]",
     coords: [],
@@ -48,114 +35,87 @@ function makeSpawn() {
   };
 }
 
-function normalizeMapRow(row = {}) {
-  const rawImagePath =
-    row?.image_path ??
-    row?.image_url ??
-    row?.map_image_url ??
-    row?.map_image_path ??
-    "";
-
-  return {
-    id: row?.id ?? null,
-    name: row?.name ?? row?.map_name ?? "",
-    image_path: rawImagePath,
-    image_url: resolveImageUrl(rawImagePath),
-  };
+function stringifyCoords(coords = []) {
+  return JSON.stringify(coords);
 }
 
-function sortCoords(coords = []) {
-  return [...coords].sort((a, b) => {
-    const colA = String(a).charCodeAt(0);
-    const colB = String(b).charCodeAt(0);
-    if (colA !== colB) return colA - colB;
-
-    const rowA = Number(String(a).slice(1));
-    const rowB = Number(String(b).slice(1));
-    return rowA - rowB;
-  });
-}
-
-function toggleCoordSet(currentCoords = [], targetCoords = []) {
-  const current = new Set(currentCoords);
-  const targets = targetCoords.filter(Boolean);
-
-  if (targets.length === 0) {
-    return sortCoords(Array.from(current));
-  }
-
-  const allSelected = targets.every((coord) => current.has(coord));
-
-  if (allSelected) {
-    targets.forEach((coord) => current.delete(coord));
-  } else {
-    targets.forEach((coord) => current.add(coord));
-  }
-
-  return sortCoords(Array.from(current));
-}
-
-function getCoordsFor4x4Cell(colIndex, rowIndex) {
-  const leftCol = COLS_8[colIndex * 2];
-  const rightCol = COLS_8[colIndex * 2 + 1];
-  const topRow = rowIndex * 2 + 1;
-  const bottomRow = rowIndex * 2 + 2;
-
+function uniqCoords(coords = []) {
   return [
-    `${leftCol}${topRow}`,
-    `${leftCol}${bottomRow}`,
-    `${rightCol}${topRow}`,
-    `${rightCol}${bottomRow}`,
+    ...new Set(
+      (coords ?? []).map((value) => String(value ?? "").trim()).filter(Boolean)
+    ),
   ];
 }
 
-function is4x4CellActive(coords = [], colIndex, rowIndex) {
-  const targetCoords = getCoordsFor4x4Cell(colIndex, rowIndex);
-  return targetCoords.every((coord) => coords.includes(coord));
+function toggleCoordSet(currentCoords = [], targetCoords = []) {
+  const current = uniqCoords(currentCoords);
+  const targets = uniqCoords(targetCoords);
+
+  const hasAll = targets.every((coord) => current.includes(coord));
+
+  if (hasAll) {
+    return current.filter((coord) => !targets.includes(coord));
+  }
+
+  return uniqCoords([...current, ...targets]);
 }
 
-function cellLabel8(col, row) {
-  return `${col}${row}`;
-}
+function getCoordsFor4x4Cell(colIndex, rowIndex) {
+  const startCol = colIndex * 2;
+  const startRow = rowIndex * 2;
+  const coords = [];
 
-function SpawnMapGrid({ mapImageUrl = "", coords = [], onToggle, gridMode = "block" }) {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    function updateViewportMode() {
-      setIsMobile(window.innerWidth <= 640);
+  for (let y = startRow; y < startRow + 2; y += 1) {
+    for (let x = startCol; x < startCol + 2; x += 1) {
+      coords.push(`${COLS_8[x]}${ROWS_8[y]}`);
     }
+  }
 
-    updateViewportMode();
-    window.addEventListener("resize", updateViewportMode);
-    return () => window.removeEventListener("resize", updateViewportMode);
-  }, []);
+  return coords;
+}
 
-  const useSingleGrid = gridMode === "single";
+function get4x4CellMiniMap(coords = [], colIndex, rowIndex) {
+  const activeSet = new Set(uniqCoords(coords));
+  const blockCoords = getCoordsFor4x4Cell(colIndex, rowIndex);
 
-  const overlayStyle = useSingleGrid
-    ? isMobile
-      ? styles.gridOverlaySingleMobile
-      : styles.gridOverlaySingle
-    : isMobile
-      ? styles.gridOverlayMobile
-      : styles.gridOverlay;
+  return blockCoords.map((coord) => ({
+    coord,
+    active: activeSet.has(coord),
+  }));
+}
+
+function isMobileViewport() {
+  if (typeof window === "undefined") return false;
+  return window.innerWidth <= 768;
+}
+
+function SpawnMapGrid({
+  mapImageUrl = "",
+  coords = [],
+  onToggle,
+  gridMode = "block",
+  styles,
+}) {
+  const activeSet = useMemo(() => new Set(uniqCoords(coords)), [coords]);
+  const isMobile = isMobileViewport();
+  const overlayStyle =
+    gridMode === "single" ? styles.singleOverlay : styles.gridOverlay;
 
   return (
-    <div style={styles.mapCard}>
+    <div style={styles.mapBoardWrap}>
       <div className="monster-spawns-map-board" style={styles.mapBoard}>
         {mapImageUrl ? (
           <img src={mapImageUrl} alt="map" style={styles.mapImage} />
         ) : (
-          <div style={styles.mapEmpty}>マップ画像なし</div>
+          <div style={styles.mapPlaceholder}>マップ画像なし</div>
         )}
 
-        {useSingleGrid ? (
+        {gridMode === "single" ? (
           <div style={overlayStyle}>
             {ROWS_8.map((row) =>
               COLS_8.map((col) => {
-                const label = cellLabel8(col, row);
-                const active = coords.includes(label);
+                const label = `${col}${row}`;
+                const active = activeSet.has(label);
 
                 return (
                   <button
@@ -186,7 +146,8 @@ function SpawnMapGrid({ mapImageUrl = "", coords = [], onToggle, gridMode = "blo
             {ROWS_4.map((row, rowIndex) =>
               COLS_4.map((colLabel, colIndex) => {
                 const blockCoords = getCoordsFor4x4Cell(colIndex, rowIndex);
-                const active = is4x4CellActive(coords, colIndex, rowIndex);
+                const miniCells = get4x4CellMiniMap(coords, colIndex, rowIndex);
+                const hasAnyActive = miniCells.some((cell) => cell.active);
                 const label = `${colLabel}${row}`;
 
                 return (
@@ -196,10 +157,22 @@ function SpawnMapGrid({ mapImageUrl = "", coords = [], onToggle, gridMode = "blo
                     onClick={() => onToggle(blockCoords)}
                     style={{
                       ...styles.gridCell,
-                      ...(active ? styles.gridCellActive : {}),
+                      ...(hasAnyActive ? styles.gridCellPartialActive : {}),
                     }}
                     title={`${label} → ${blockCoords.join(", ")}`}
                   >
+                    <div style={styles.gridCellMiniMap}>
+                      {miniCells.map((cell) => (
+                        <span
+                          key={cell.coord}
+                          style={{
+                            ...styles.gridCellMini,
+                            ...(cell.active ? styles.gridCellMiniActive : {}),
+                          }}
+                        />
+                      ))}
+                    </div>
+
                     <span
                       style={{
                         ...styles.gridCellLabel,
@@ -219,28 +192,246 @@ function SpawnMapGrid({ mapImageUrl = "", coords = [], onToggle, gridMode = "blo
   );
 }
 
-function SpawnCard({ spawn, maps, onChange, onRemove }) {
+function getLayerLabel(layer = {}, index = 0) {
+  const explicit = String(layer?.layer_name ?? "").trim();
+  if (explicit) return explicit;
+
+  if (layer?.floor_no !== null && layer?.floor_no !== undefined) {
+    const floorNo = Number(layer.floor_no);
+    if (floorNo === 0) return "地上";
+    if (floorNo < 0) return `地下${Math.abs(floorNo)}階`;
+    return `${floorNo}階`;
+  }
+
+  return `階層${index + 1}`;
+}
+
+function normalizeLayerDisplayName(name = "") {
+  return String(name ?? "").trim();
+}
+
+function getDisplayLayerNamesForMap(map = null) {
+  const layers = Array.isArray(map?.layers) ? map.layers : [];
+
+  const uniqueNames = [
+    ...new Set(
+      layers
+        .map((layer, index) => getLayerLabel(layer, index))
+        .map(normalizeLayerDisplayName)
+        .filter(Boolean)
+    ),
+  ];
+
+  if (uniqueNames.length === 0) return [];
+  if (uniqueNames.length === 1 && uniqueNames[0] === "地上") return [];
+
+  return uniqueNames;
+}
+
+function shouldHideLayerSelect(map = null) {
+  const layers = Array.isArray(map?.layers) ? map.layers : [];
+  if (layers.length === 0) return true;
+
+  const displayNames = getDisplayLayerNamesForMap(map);
+  return displayNames.length === 0;
+}
+
+function getDefaultLayerForMap(map = null) {
+  const layers = Array.isArray(map?.layers) ? map.layers : [];
+  if (layers.length === 0) return null;
+  return layers[0] ?? null;
+}
+
+function MapSearchInput({
+  maps = [],
+  selectedContinent = "",
+  selectedMap = null,
+  onSelect,
+  styles,
+}) {
+  const [keyword, setKeyword] = useState("");
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (!wrapRef.current) return;
+      if (!wrapRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  useEffect(() => {
+    setKeyword("");
+    setOpen(false);
+  }, [selectedContinent]);
+
+  useEffect(() => {
+    if (selectedMap?.name) {
+      setKeyword(selectedMap.name);
+    } else {
+      setKeyword("");
+    }
+  }, [selectedMap]);
+
+  const continentMaps = useMemo(() => {
+    const list = Array.isArray(maps) ? maps : [];
+    if (!selectedContinent) return [];
+    return list.filter(
+      (map) => String(map?.continent ?? "") === String(selectedContinent)
+    );
+  }, [maps, selectedContinent]);
+
+  const filteredMaps = useMemo(() => {
+    const q = keyword.trim().toLowerCase();
+
+    return continentMaps
+      .filter((map) => {
+        if (String(map?.map_type ?? "") === "town") return false;
+
+        const name = String(map?.name ?? "").toLowerCase();
+        if (!q) return true;
+
+        return name.includes(q);
+      })
+      .slice(0, 30);
+  }, [continentMaps, keyword]);
+
+  return (
+    <div ref={wrapRef} style={styles.mapSearchWrap}>
+      <input
+        type="text"
+        value={keyword}
+        placeholder={
+          selectedContinent ? "その大陸の地名を入力" : "先に大陸を選択"
+        }
+        onChange={(e) => {
+          if (!selectedContinent) return;
+          setKeyword(e.target.value);
+          setOpen(true);
+        }}
+        onFocus={() => {
+          if (selectedContinent) setOpen(true);
+        }}
+        style={{
+          ...styles.input,
+          ...(!selectedContinent ? styles.inputDisabled : {}),
+        }}
+        disabled={!selectedContinent}
+      />
+
+      {open && selectedContinent ? (
+        <div style={styles.mapSearchDropdown}>
+          {filteredMaps.length > 0 ? (
+            filteredMaps.map((map) => (
+              <button
+                key={map.id}
+                type="button"
+                onClick={() => {
+                  onSelect(map);
+                  setKeyword(map.name ?? "");
+                  setOpen(false);
+                }}
+                style={styles.mapSearchItem}
+              >
+                <div style={styles.mapSearchItemName}>{map.name}</div>
+              </button>
+            ))
+          ) : (
+            <div style={styles.mapSearchEmpty}>見つからない</div>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function SpawnCard({
+  spawn,
+  maps,
+  onChange,
+  onRemove,
+  layerNamesForMap = [],
+  styles,
+}) {
   const selectedMap = useMemo(() => {
     return maps.find((row) => Number(row.id) === Number(spawn?.map_id)) ?? null;
   }, [maps, spawn?.map_id]);
+
+  const [selectedContinent, setSelectedContinent] = useState(
+    selectedMap?.continent ?? ""
+  );
+
+  useEffect(() => {
+    if (selectedMap?.continent) {
+      setSelectedContinent(selectedMap.continent);
+    }
+  }, [selectedMap?.continent]);
+
+  const continentOptions = useMemo(() => {
+    const values = [
+      ...new Set(
+        (maps ?? [])
+          .map((map) => String(map?.continent ?? "").trim())
+          .filter(Boolean)
+      ),
+    ];
+
+    return values.sort((a, b) => a.localeCompare(b, "ja"));
+  }, [maps]);
+
+  const selectedLayer = useMemo(() => {
+    const layers = selectedMap?.layers ?? [];
+    if (!layers.length) return null;
+
+    if (spawn?.map_layer_id) {
+      const matched =
+        layers.find((row) => Number(row.id) === Number(spawn.map_layer_id)) ??
+        null;
+      if (matched) return matched;
+    }
+
+    return getDefaultLayerForMap(selectedMap);
+  }, [selectedMap, spawn?.map_layer_id]);
+
+  const hideLayerSelect = useMemo(
+    () => shouldHideLayerSelect(selectedMap),
+    [selectedMap]
+  );
 
   useEffect(() => {
     if (!selectedMap) return;
 
     const nextName = selectedMap.name ?? "";
-    const nextImage = selectedMap.image_url ?? "";
+    const nextLayerId = selectedLayer?.id ?? "";
+    const nextLayerName = selectedLayer ? getLayerLabel(selectedLayer) : "";
+    const nextImage =
+      selectedLayer?.image_url ??
+      selectedMap?.image_url ??
+      spawn?.map_image_url ??
+      "";
 
     if (
       nextName !== (spawn?.map_name ?? "") ||
+      String(nextLayerId ?? "") !== String(spawn?.map_layer_id ?? "") ||
+      nextLayerName !== (spawn?.map_layer_name ?? "") ||
       nextImage !== (spawn?.map_image_url ?? "")
     ) {
       onChange({
         ...spawn,
         map_name: nextName,
+        map_layer_id: nextLayerId || "",
+        map_layer_name: nextLayerName,
         map_image_url: nextImage,
       });
     }
-  }, [selectedMap, spawn, onChange]);
+  }, [selectedMap, selectedLayer, spawn, onChange]);
 
   function setField(key, value) {
     onChange({
@@ -266,10 +457,51 @@ function SpawnCard({ spawn, maps, onChange, onRemove }) {
     });
   }
 
+  function handleChangeContinent(nextContinent) {
+    setSelectedContinent(nextContinent);
+
+    const currentMapContinent = selectedMap?.continent ?? "";
+
+    if (!nextContinent) {
+      onChange({
+        ...spawn,
+        map_id: "",
+        map_name: "",
+        map_layer_id: "",
+        map_layer_name: "",
+        map_image_url: "",
+      });
+      return;
+    }
+
+    if (currentMapContinent && currentMapContinent !== nextContinent) {
+      onChange({
+        ...spawn,
+        map_id: "",
+        map_name: "",
+        map_layer_id: "",
+        map_layer_name: "",
+        map_image_url: "",
+      });
+    }
+  }
+
   return (
     <div className="monster-spawns-card" style={styles.spawnCard}>
       <div style={styles.spawnCardHeader}>
-        <h3 style={styles.spawnTitle}>{spawn?.map_name || "生息地"}</h3>
+        <div style={styles.spawnHeaderMain}>
+          <h3 style={styles.spawnTitle}>{spawn?.map_name || "生息地"}</h3>
+
+          {layerNamesForMap.length > 0 ? (
+            <div style={styles.layerListWrap}>
+              {layerNamesForMap.map((name) => (
+                <span key={name} style={styles.layerBadge}>
+                  {name}
+                </span>
+              ))}
+            </div>
+          ) : null}
+        </div>
 
         <button type="button" onClick={onRemove} style={styles.removeButton}>
           削除
@@ -306,29 +538,85 @@ function SpawnCard({ spawn, maps, onChange, onRemove }) {
 
       <div className="monster-spawns-form-grid" style={styles.formGrid}>
         <label style={styles.field}>
-          <span style={styles.label}>マップ</span>
+          <span style={styles.label}>大陸</span>
           <select
-            value={spawn?.map_id ?? ""}
-            onChange={(e) => {
-              const nextId = e.target.value;
-              const nextMap =
-                maps.find((row) => String(row.id) === String(nextId)) ?? null;
-
-              onChange({
-                ...spawn,
-                map_id: nextId ? Number(nextId) : "",
-                map_name: nextMap?.name ?? "",
-                map_image_url: nextMap?.image_url ?? "",
-              });
-            }}
+            value={selectedContinent}
+            onChange={(e) => handleChangeContinent(e.target.value)}
             style={styles.input}
           >
             <option value="">選択してください</option>
-            {maps.map((map) => (
-              <option key={map.id} value={map.id}>
-                {map.name}
+            {continentOptions.map((continent) => (
+              <option key={continent} value={continent}>
+                {continent}
               </option>
             ))}
+          </select>
+        </label>
+
+        <label style={styles.field}>
+          <span style={styles.label}>地名</span>
+
+          <MapSearchInput
+            maps={maps}
+            selectedContinent={selectedContinent}
+            selectedMap={selectedMap}
+            onSelect={(nextMap) => {
+              const firstLayer = getDefaultLayerForMap(nextMap);
+
+              onChange({
+                ...spawn,
+                map_id: nextMap?.id ?? "",
+                map_name: nextMap?.name ?? "",
+                map_layer_id: firstLayer?.id ?? "",
+                map_layer_name: firstLayer ? getLayerLabel(firstLayer, 0) : "",
+                map_image_url:
+                  firstLayer?.image_url ?? nextMap?.image_url ?? "",
+              });
+            }}
+            styles={styles}
+          />
+        </label>
+
+        <label style={styles.field}>
+          <span style={styles.label}>階層</span>
+          <select
+            value={spawn?.map_layer_id ?? ""}
+            onChange={(e) => {
+              const nextLayerId = e.target.value;
+              const nextLayer =
+                selectedMap?.layers?.find(
+                  (row) => String(row.id) === String(nextLayerId)
+                ) ?? null;
+
+              onChange({
+                ...spawn,
+                map_layer_id: nextLayerId ? Number(nextLayerId) : "",
+                map_layer_name: nextLayer ? getLayerLabel(nextLayer) : "",
+                map_image_url:
+                  nextLayer?.image_url ?? selectedMap?.image_url ?? "",
+              });
+            }}
+            style={{
+              ...styles.input,
+              ...(hideLayerSelect ? styles.inputDisabled : {}),
+            }}
+            disabled={
+              !selectedMap ||
+              !(selectedMap?.layers?.length > 0) ||
+              hideLayerSelect
+            }
+          >
+            {!selectedMap ? (
+              <option value="">先に地名を選択</option>
+            ) : hideLayerSelect ? (
+              <option value="">階層なし</option>
+            ) : (
+              (selectedMap.layers ?? []).map((layer, index) => (
+                <option key={layer.id} value={layer.id}>
+                  {getLayerLabel(layer, index)}
+                </option>
+              ))
+            )}
           </select>
         </label>
 
@@ -349,7 +637,7 @@ function SpawnCard({ spawn, maps, onChange, onRemove }) {
       </div>
 
       <label style={styles.field}>
-        <span style={styles.label}>coords</span>
+        <span style={styles.label}>生息エリア</span>
         <textarea
           value={JSON.stringify(spawn?.coords ?? [])}
           readOnly
@@ -372,6 +660,7 @@ function SpawnCard({ spawn, maps, onChange, onRemove }) {
         coords={spawn?.coords ?? []}
         onToggle={handleToggleCoords}
         gridMode={spawn?.grid_mode ?? "block"}
+        styles={styles}
       />
     </div>
   );
@@ -381,11 +670,26 @@ export default function MonsterSpawnsEditor({
   spawns = [],
   maps = [],
   onChange,
+  theme,
 }) {
+  const styles = useMemo(() => getComponentStyles(theme), [theme]);
   const mapOptions = useMemo(
     () => (Array.isArray(maps) ? maps.map(normalizeMapRow) : []),
     [maps]
   );
+
+  const displayLayerNamesByMapId = useMemo(() => {
+    const grouped = new Map();
+
+    for (const map of mapOptions) {
+      const mapId = String(map?.id ?? "").trim();
+      if (!mapId) continue;
+
+      grouped.set(mapId, getDisplayLayerNamesForMap(map));
+    }
+
+    return grouped;
+  }, [mapOptions]);
 
   function setNextSpawns(nextSpawns) {
     onChange(nextSpawns);
@@ -435,9 +739,7 @@ export default function MonsterSpawnsEditor({
         <div style={styles.header}>
           <div>
             <h2 style={styles.title}>生息地編集</h2>
-            <p style={styles.desc}>
-              基本は4マス、必要なときだけ1マスで精密選択する
-            </p>
+            <p style={styles.desc}>先に大陸を選んでから地名を検索する</p>
           </div>
 
           <button type="button" onClick={addSpawn} style={styles.addButton}>
@@ -454,8 +756,12 @@ export default function MonsterSpawnsEditor({
                 key={spawn.__key}
                 spawn={spawn}
                 maps={mapOptions}
+                layerNamesForMap={
+                  displayLayerNamesByMapId.get(String(spawn?.map_id ?? "")) ?? []
+                }
                 onChange={(nextSpawn) => updateSpawn(spawn.__key, nextSpawn)}
                 onRemove={() => removeSpawn(spawn.__key)}
+                styles={styles}
               />
             ))}
           </div>
@@ -465,7 +771,7 @@ export default function MonsterSpawnsEditor({
   );
 }
 
-const styles = {
+const baseStyles = {
   wrapper: {
     background: "#ffffff",
     border: "1px solid #e5e7eb",
@@ -516,33 +822,63 @@ const styles = {
   spawnCard: {
     border: "1px solid #e5e7eb",
     borderRadius: 14,
-    padding: 16,
-    background: "#f8fafc",
+    padding: 18,
     display: "flex",
     flexDirection: "column",
     gap: 14,
+    background: "#ffffff",
   },
   spawnCardHeader: {
     display: "flex",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
-    gap: 10,
-    flexWrap: "wrap",
+    gap: 12,
+  },
+  spawnHeaderMain: {
+    minWidth: 0,
+    display: "flex",
+    flexDirection: "column",
+    gap: 4,
   },
   spawnTitle: {
     margin: 0,
     fontSize: 18,
-    color: "#0f172a",
+    color: "#111827",
+    wordBreak: "break-word",
+  },
+  spawnLayerText: {
+    marginTop: 4,
+    fontSize: 13,
+    color: "#64748b",
+  },
+  layerListWrap: {
+    marginTop: 2,
+    display: "flex",
+    gap: 6,
+    flexWrap: "wrap",
+  },
+  layerBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    minHeight: 24,
+    padding: "4px 8px",
+    borderRadius: 999,
+    background: "#eef2ff",
+    color: "#4338ca",
+    fontSize: 12,
+    fontWeight: 700,
+    lineHeight: 1.2,
   },
   removeButton: {
-    border: "1px solid #ef4444",
-    background: "#ffffff",
+    border: "1px solid #fecaca",
+    background: "#fff1f2",
     color: "#b91c1c",
     borderRadius: 10,
     padding: "8px 12px",
     cursor: "pointer",
     fontWeight: 700,
     minHeight: 38,
+    flexShrink: 0,
   },
   modeRow: {
     display: "flex",
@@ -552,216 +888,233 @@ const styles = {
     flexWrap: "wrap",
   },
   modeLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 700,
     color: "#334155",
   },
   modeButtons: {
-    display: "inline-flex",
+    display: "flex",
     gap: 8,
     flexWrap: "wrap",
   },
   modeButton: {
     border: "1px solid #cbd5e1",
     background: "#ffffff",
-    color: "#0f172a",
-    borderRadius: 10,
+    color: "#334155",
+    borderRadius: 999,
     padding: "8px 12px",
     cursor: "pointer",
     fontWeight: 700,
-    minHeight: 38,
+    minHeight: 36,
   },
   modeButtonActive: {
-    border: "1px solid #2563eb",
-    background: "#dbeafe",
-    color: "#1d4ed8",
+    borderColor: "#111827",
+    background: "#111827",
+    color: "#ffffff",
   },
   formGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-    gap: 14,
+    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+    gap: 12,
   },
   field: {
     display: "flex",
     flexDirection: "column",
-    gap: 8,
+    gap: 6,
     minWidth: 0,
   },
   label: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 700,
     color: "#334155",
   },
   input: {
     width: "100%",
-    padding: "10px 12px",
+    minHeight: 42,
     borderRadius: 10,
     border: "1px solid #cbd5e1",
+    padding: "0 12px",
     background: "#ffffff",
-    color: "#0f172a",
+    color: "#111827",
+    outline: "none",
     boxSizing: "border-box",
+  },
+  inputDisabled: {
+    background: "#f8fafc",
+    color: "#94a3b8",
+    cursor: "not-allowed",
   },
   textarea: {
     width: "100%",
-    minHeight: 80,
-    padding: "10px 12px",
     borderRadius: 10,
     border: "1px solid #cbd5e1",
+    padding: 12,
     background: "#ffffff",
-    color: "#0f172a",
-    boxSizing: "border-box",
+    color: "#111827",
+    outline: "none",
     resize: "vertical",
+    minHeight: 84,
+    boxSizing: "border-box",
   },
   textareaReadonly: {
     width: "100%",
-    minHeight: 72,
-    padding: "10px 12px",
     borderRadius: 10,
-    border: "1px solid #cbd5e1",
+    border: "1px solid #e2e8f0",
+    padding: 12,
     background: "#f8fafc",
-    color: "#0f172a",
-    boxSizing: "border-box",
+    color: "#334155",
+    outline: "none",
     resize: "vertical",
+    minHeight: 56,
+    boxSizing: "border-box",
   },
-  mapCard: {
+  mapBoardWrap: {
     display: "flex",
     flexDirection: "column",
-    gap: 10,
+    gap: 8,
   },
   mapBoard: {
     position: "relative",
     width: "100%",
     aspectRatio: "1 / 1",
-    borderRadius: 14,
+    borderRadius: 16,
     overflow: "hidden",
     border: "1px solid #cbd5e1",
-    background: "#e2e8f0",
+    background: "#f8fafc",
   },
   mapImage: {
-    position: "absolute",
-    inset: 0,
+    display: "block",
     width: "100%",
     height: "100%",
     objectFit: "cover",
-    display: "block",
-    objectPosition: "center 90%",
   },
-  mapEmpty: {
-    position: "absolute",
-    inset: 0,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
+  mapPlaceholder: {
+    width: "100%",
+    height: "100%",
+    display: "grid",
+    placeItems: "center",
     color: "#64748b",
-    fontWeight: 700,
+    fontSize: 14,
   },
-
-  // 4マスモード PC
   gridOverlay: {
     position: "absolute",
-    top: "28px",
-    left: "21px",
-    right: "0px",
-    bottom: "0px",
+    inset: 0,
     display: "grid",
     gridTemplateColumns: "repeat(4, 1fr)",
     gridTemplateRows: "repeat(4, 1fr)",
   },
-
-  // 4マスモード SP
-  gridOverlayMobile: {
+  singleOverlay: {
     position: "absolute",
-    top: "13px",
-    left: "11px",
-    right: "0px",
-    bottom: "0px",
-    display: "grid",
-    gridTemplateColumns: "repeat(4, 1fr)",
-    gridTemplateRows: "repeat(4, 1fr)",
-  },
-
-  // 1マスモード PC
-  gridOverlaySingle: {
-    position: "absolute",
-    top: "28px",
-    left: "21px",
-    right: "0px",
-    bottom: "0px",
+    inset: 0,
     display: "grid",
     gridTemplateColumns: "repeat(8, 1fr)",
     gridTemplateRows: "repeat(8, 1fr)",
   },
-
-  // 1マスモード SP
-  gridOverlaySingleMobile: {
-    position: "absolute",
-    top: "18px",
-    left: "12px",
-    right: "4px",
-    bottom: "4px",
-    display: "grid",
-    gridTemplateColumns: "repeat(8, 1fr)",
-    gridTemplateRows: "repeat(8, 1fr)",
-  },
-
   gridCell: {
-    border: "1px solid rgba(255,255,255,0.35)",
-    background: "rgba(255,255,255,0.10)",
-    cursor: "pointer",
-    padding: 0,
-    margin: 0,
-    outline: "none",
     position: "relative",
-    transition: "background 0.15s ease, box-shadow 0.15s ease",
-    minWidth: 0,
-    minHeight: 0,
-    touchAction: "manipulation",
+    border: "1px solid rgba(255,255,255,0.65)",
+    background: "rgba(255,255,255,0.06)",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
+    padding: 6,
+    cursor: "pointer",
   },
   gridCellSingle: {
-    border: "1px solid rgba(255,255,255,0.28)",
-    background: "rgba(255,255,255,0.06)",
-    cursor: "pointer",
-    padding: 0,
-    margin: 0,
-    outline: "none",
     position: "relative",
-    transition: "background 0.15s ease, box-shadow 0.15s ease",
-    minWidth: 0,
-    minHeight: 0,
-    touchAction: "manipulation",
+    border: "1px solid rgba(255,255,255,0.5)",
+    background: "rgba(255,255,255,0.04)",
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "flex-start",
+    padding: 2,
+    cursor: "pointer",
   },
   gridCellActive: {
-    background: "rgba(37, 99, 235, 0.38)",
-    boxShadow: "inset 0 0 0 2px rgba(255,255,255,0.75)",
+    background: "rgba(37, 99, 235, 0.35)",
+  },
+  gridCellPartialActive: {
+    background: "rgba(37, 99, 235, 0.2)",
+  },
+  gridCellMiniMap: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, 1fr)",
+    gridTemplateRows: "repeat(2, 1fr)",
+    gap: 2,
+    width: 24,
+    height: 24,
+    background: "rgba(255,255,255,0.2)",
+    borderRadius: 6,
+    padding: 2,
+  },
+  gridCellMini: {
+    borderRadius: 2,
+    background: "rgba(255,255,255,0.45)",
+  },
+  gridCellMiniActive: {
+    background: "rgba(37, 99, 235, 0.9)",
   },
   gridCellLabel: {
-    position: "absolute",
-    top: 6,
-    left: 6,
-    fontSize: 11,
-    fontWeight: 800,
-    color: "#ffffff",
-    textShadow: "0 1px 2px rgba(0,0,0,0.45)",
-    pointerEvents: "none",
+    alignSelf: "flex-end",
+    fontSize: 12,
+    fontWeight: 700,
+    color: "#0f172a",
+    background: "rgba(255,255,255,0.78)",
+    padding: "2px 6px",
+    borderRadius: 999,
   },
   gridCellLabelMobile: {
-    top: 4,
-    left: 4,
     fontSize: 11,
+    padding: "1px 5px",
   },
   gridCellLabelSingle: {
-    position: "absolute",
-    top: 3,
-    left: 3,
-    fontSize: 9,
-    fontWeight: 800,
-    color: "#ffffff",
-    textShadow: "0 1px 2px rgba(0,0,0,0.45)",
-    pointerEvents: "none",
+    fontSize: 10,
+    fontWeight: 700,
+    color: "#0f172a",
+    background: "rgba(255,255,255,0.78)",
+    padding: "1px 4px",
+    borderRadius: 999,
   },
   gridCellLabelSingleMobile: {
-    top: 2,
-    left: 2,
-    fontSize: 8,
+    fontSize: 9,
+    padding: "1px 3px",
+  },
+  mapSearchWrap: {
+    position: "relative",
+  },
+  mapSearchDropdown: {
+    position: "absolute",
+    top: "calc(100% + 6px)",
+    left: 0,
+    right: 0,
+    zIndex: 30,
+    background: "#ffffff",
+    border: "1px solid #cbd5e1",
+    borderRadius: 10,
+    boxShadow: "0 10px 30px rgba(15, 23, 42, 0.12)",
+    maxHeight: 240,
+    overflow: "auto",
+  },
+  mapSearchItem: {
+    width: "100%",
+    border: "none",
+    borderBottom: "1px solid #e2e8f0",
+    background: "#ffffff",
+    padding: "10px 12px",
+    textAlign: "left",
+    cursor: "pointer",
+  },
+  mapSearchItemName: {
+    fontSize: 14,
+    color: "#111827",
+  },
+  mapSearchEmpty: {
+    padding: 12,
+    color: "#64748b",
+    fontSize: 14,
   },
 };
+
+function getComponentStyles(theme) {
+  return applyMonsterThemeToStyleTree(baseStyles, theme);
+}

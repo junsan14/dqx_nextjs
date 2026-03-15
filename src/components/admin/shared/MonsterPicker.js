@@ -11,6 +11,29 @@ function makeTempKey() {
   return `tmp_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 }
 
+function usePrefersDarkMode() {
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const update = () => setIsDark(media.matches);
+
+    update();
+
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", update);
+      return () => media.removeEventListener("change", update);
+    }
+
+    media.addListener(update);
+    return () => media.removeListener(update);
+  }, []);
+
+  return isDark;
+}
+
 export default function MonsterPicker({
   value = [],
   onChange,
@@ -18,7 +41,14 @@ export default function MonsterPicker({
   dropTypeOptions = [],
   enableDropTypeSelect = true,
   titleWhenEmpty = "まだモンスターが登録されていない",
+  theme,
 }) {
+  const prefersDark = usePrefersDarkMode();
+  const pickerTheme = useMemo(
+    () => normalizeMonsterPickerTheme(theme, prefersDark),
+    [theme, prefersDark]
+  );
+
   const [keyword, setKeyword] = useState("");
   const [candidates, setCandidates] = useState([]);
   const [searching, setSearching] = useState(false);
@@ -168,22 +198,6 @@ export default function MonsterPicker({
     );
   }
 
-  function moveMonster(targetKey, direction) {
-    const current = [...(Array.isArray(value) ? value : [])];
-    const index = current.findIndex(
-      (row) => (row.id ?? row._tmpKey) === targetKey
-    );
-
-    if (index < 0) return;
-
-    const targetIndex = direction === "up" ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= current.length) return;
-
-    [current[index], current[targetIndex]] = [current[targetIndex], current[index]];
-
-    onChange(normalizeRows(current));
-  }
-
   function updateDropType(targetKey, nextDropType) {
     const current = Array.isArray(value) ? value : [];
 
@@ -197,107 +211,83 @@ export default function MonsterPicker({
       )
     );
   }
-console.log(rows)
+
   return (
     <div style={wrapStyle}>
       <input
         value={keyword}
         onChange={(e) => setKeyword(e.target.value)}
         placeholder="モンスター名 / 系統 / monster_no で検索"
-        style={inputStyle}
+        style={inputStyle(pickerTheme)}
       />
 
-      {searching ? <div style={mutedStyle}>検索中...</div> : null}
+      {searching ? <div style={mutedStyle(pickerTheme)}>検索中...</div> : null}
 
       {!!candidates.length && (
-        <div style={candidateWrapStyle}>
+        <div style={candidateWrapStyle(pickerTheme)}>
           {candidates.map((monster, idx) => (
             <button
               key={monster.id ?? `candidate_${idx}`}
               type="button"
-              style={candidateButtonStyle}
+              style={candidateButtonStyle(pickerTheme)}
               onClick={() => addMonster(monster)}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = pickerTheme.candidateHoverBg;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = pickerTheme.cardBg;
+              }}
             >
               <div style={candidateMainStyle}>
-                <div style={{ fontWeight: 700 }}>
+                <div style={candidateNameStyle(pickerTheme)}>
                   {monster.name || `monster_id: ${monster.id}`}
                 </div>
-                <div style={metaStyle}>
-                  No:{monster.monster_no ?? "-"} / {monster.system_type || "系統なし"}
-                </div>
               </div>
-              <div style={addLabelStyle}>追加</div>
+              <div style={addLabelStyle(pickerTheme)}>追加</div>
             </button>
           ))}
         </div>
       )}
 
       {!rows.length ? (
-        <div style={mutedStyle}>{titleWhenEmpty}</div>
+        <div style={mutedStyle(pickerTheme)}>{titleWhenEmpty}</div>
       ) : (
         <div style={listStyle}>
-          {rows.map((row, index) => {
+          {rows.map((row) => {
             const targetKey = rowKey(row);
-            const monsterName = row.monster?.name || row.name || `monster_id: ${row.monster_id}`;
-            const monsterNo = row.monster?.monster_no ?? "-";
-            const systemType = row.monster?.system_type || "系統なし";
+            const monsterName =
+              row.monster?.name || row.name || `monster_id: ${row.monster_id}`;
 
             return (
-              <div key={targetKey} style={dropItemStyle}>
-                <div style={dropInfoStyle}>
-                  <div style={{ fontWeight: 700 }}>{monsterName}</div>
-                  <div style={metaStyle}>
-                    No:{monsterNo} / {systemType}
-                  </div>
-                </div>
+              <div key={targetKey} style={dropItemStyle(pickerTheme)}>
+                <div style={monsterNameStyle(pickerTheme)}>{monsterName}</div>
 
                 <div style={controlAreaStyle}>
                   {enableDropTypeSelect ? (
-                    <label style={selectWrapStyle}>
-                      <span style={controlLabelStyle}>ドロップ種別</span>
-                      <select
-                        value={row.drop_type || defaultDropType}
-                        onChange={(e) => updateDropType(targetKey, e.target.value)}
-                        style={selectStyle}
-                      >
-                        {dropTypeOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                    <select
+                      value={row.drop_type || defaultDropType}
+                      onChange={(e) => updateDropType(targetKey, e.target.value)}
+                      style={selectStyle(pickerTheme)}
+                    >
+                      {dropTypeOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
                   ) : (
-                    <div style={fixedTypeBadgeStyle}>
+                    <div style={fixedTypeBadgeStyle(pickerTheme)}>
                       {row.drop_type || defaultDropType}
                     </div>
                   )}
 
-                  <div style={dropActionStyle}>
-                    <button
-                      type="button"
-                      onClick={() => moveMonster(targetKey, "up")}
-                      disabled={index === 0}
-                      style={miniButtonStyle}
-                    >
-                      ↑
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => moveMonster(targetKey, "down")}
-                      disabled={index === rows.length - 1}
-                      style={miniButtonStyle}
-                    >
-                      ↓
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => removeMonster(targetKey)}
-                      style={removeButtonStyle}
-                    >
-                      削除
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeMonster(targetKey)}
+                    style={removeButtonStyle(pickerTheme)}
+                  >
+                    削除
+                  </button>
                 </div>
               </div>
             );
@@ -308,137 +298,204 @@ console.log(rows)
   );
 }
 
+function normalizeMonsterPickerTheme(theme, prefersDark = false) {
+  const fallback = prefersDark
+    ? {
+        inputBg: "#0f172a",
+        inputBorder: "#475569",
+        inputText: "#f8fafc",
+        mutedText: "#94a3b8",
+        cardBg: "#111827",
+        cardBorder: "#374151",
+        text: "#e5e7eb",
+        subText: "#cbd5e1",
+        actionText: "#93c5fd",
+        selectedBg: "#1e293b",
+        selectedBorder: "#60a5fa",
+        tagBg: "#1e293b",
+        tagBorder: "#475569",
+        tagText: "#e2e8f0",
+        dangerBg: "#111827",
+        dangerBorder: "#ef4444",
+        dangerText: "#fca5a5",
+        candidateHoverBg: "#1f2937",
+      }
+    : {
+        inputBg: "#ffffff",
+        inputBorder: "#cccccc",
+        inputText: "#111827",
+        mutedText: "#666666",
+        cardBg: "#ffffff",
+        cardBorder: "#dddddd",
+        text: "#111827",
+        subText: "#475569",
+        actionText: "#1976d2",
+        selectedBg: "#eff6ff",
+        selectedBorder: "#2563eb",
+        tagBg: "#f7f7f7",
+        tagBorder: "#dddddd",
+        tagText: "#555555",
+        dangerBg: "#ffffff",
+        dangerBorder: "#c62828",
+        dangerText: "#c62828",
+        candidateHoverBg: "#f8fafc",
+      };
+
+  return {
+    inputBg: theme?.inputBg ?? fallback.inputBg,
+    inputBorder: theme?.inputBorder ?? fallback.inputBorder,
+    inputText: theme?.inputText ?? theme?.text ?? fallback.inputText,
+    mutedText: theme?.mutedText ?? theme?.subText ?? fallback.mutedText,
+    cardBg: theme?.cardBg ?? theme?.panelBg ?? fallback.cardBg,
+    cardBorder: theme?.cardBorder ?? theme?.panelBorder ?? fallback.cardBorder,
+    text: theme?.text ?? theme?.pageText ?? fallback.text,
+    subText: theme?.subText ?? fallback.subText,
+    actionText: theme?.secondaryText ?? fallback.actionText,
+    selectedBg: theme?.selectedBg ?? fallback.selectedBg,
+    selectedBorder: theme?.selectedBorder ?? fallback.selectedBorder,
+    tagBg: theme?.tagBg ?? fallback.tagBg,
+    tagBorder: theme?.tagBorder ?? fallback.tagBorder,
+    tagText: theme?.tagText ?? fallback.tagText,
+    dangerBg: theme?.dangerBg ?? fallback.dangerBg,
+    dangerBorder: theme?.dangerBorder ?? fallback.dangerBorder,
+    dangerText: theme?.dangerText ?? fallback.dangerText,
+    candidateHoverBg: fallback.candidateHoverBg,
+  };
+}
+
 const wrapStyle = {
   display: "grid",
   gap: 10,
+  minWidth: 0,
 };
 
-const inputStyle = {
+const inputStyle = (theme) => ({
   width: "100%",
-  border: "1px solid #ccc",
+  border: `1px solid ${theme.inputBorder}`,
   borderRadius: 8,
   padding: "10px 12px",
   fontSize: 16,
   boxSizing: "border-box",
-};
+  background: theme.inputBg,
+  color: theme.inputText,
+  minWidth: 0,
+});
 
-const mutedStyle = {
+const mutedStyle = (theme) => ({
   fontSize: 14,
-  color: "#666",
-};
+  color: theme.mutedText,
+});
 
-const metaStyle = {
-  fontSize: 12,
-  color: "#666",
-};
-
-const candidateWrapStyle = {
-  border: "1px solid #ddd",
-  borderRadius: 8,
+const candidateWrapStyle = (theme) => ({
+  border: `1px solid ${theme.cardBorder}`,
+  borderRadius: 10,
   overflow: "hidden",
   display: "grid",
-};
+  background: theme.cardBg,
+});
 
-const candidateButtonStyle = {
+const candidateButtonStyle = (theme) => ({
   border: "none",
-  borderBottom: "1px solid #eee",
-  background: "#fff",
-  padding: 10,
+  borderBottom: `1px solid ${theme.cardBorder}`,
+  background: theme.cardBg,
+  padding: 12,
   textAlign: "left",
   cursor: "pointer",
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
   gap: 12,
-};
+  width: "100%",
+  color: theme.text,
+  transition: "background-color 0.15s ease",
+});
 
 const candidateMainStyle = {
-  display: "grid",
-  gap: 4,
+  minWidth: 0,
+  flex: 1,
 };
 
-const addLabelStyle = {
+const candidateNameStyle = (theme) => ({
+  fontWeight: 700,
+  fontSize: 15,
+  lineHeight: 1.4,
+  wordBreak: "break-word",
+  color: theme.text,
+});
+
+const addLabelStyle = (theme) => ({
   fontSize: 12,
-  color: "#1976d2",
+  color: theme.actionText,
   whiteSpace: "nowrap",
-};
+  flexShrink: 0,
+  fontWeight: 700,
+});
 
 const listStyle = {
   display: "grid",
   gap: 8,
+  minWidth: 0,
 };
 
-const dropItemStyle = {
-  border: "1px solid #ddd",
-  borderRadius: 8,
+const dropItemStyle = (theme) => ({
+  border: `1px solid ${theme.cardBorder}`,
+  borderRadius: 10,
   padding: 12,
   display: "flex",
-  justifyContent: "space-between",
-  gap: 16,
   alignItems: "center",
-};
-
-const dropInfoStyle = {
+  justifyContent: "space-between",
+  gap: 12,
+  background: theme.cardBg,
+  flexWrap: "nowrap",
   minWidth: 0,
-  display: "grid",
-  gap: 4,
+});
+
+const monsterNameStyle = (theme) => ({
+  minWidth: 0,
   flex: 1,
-};
+  fontWeight: 700,
+  fontSize: 15,
+  lineHeight: 1.4,
+  wordBreak: "break-word",
+  color: theme.text,
+});
 
 const controlAreaStyle = {
   display: "flex",
-  gap: 12,
   alignItems: "center",
+  gap: 8,
+  flexShrink: 0,
   flexWrap: "wrap",
-  justifyContent: "flex-end",
 };
 
-const selectWrapStyle = {
-  display: "grid",
-  gap: 4,
-};
-
-const controlLabelStyle = {
-  fontSize: 12,
-  color: "#666",
-};
-
-const selectStyle = {
-  border: "1px solid #ccc",
-  background: "#fff",
-  borderRadius: 6,
-  padding: "6px 10px",
+const selectStyle = (theme) => ({
+  border: `1px solid ${theme.inputBorder}`,
+  background: theme.inputBg,
+  color: theme.inputText,
+  borderRadius: 8,
+  padding: "8px 10px",
   fontSize: 14,
-};
+  minWidth: 96,
+});
 
-const fixedTypeBadgeStyle = {
+const fixedTypeBadgeStyle = (theme) => ({
   fontSize: 12,
-  color: "#555",
-  border: "1px solid #ddd",
+  color: theme.tagText,
+  border: `1px solid ${theme.tagBorder}`,
   borderRadius: 999,
   padding: "6px 10px",
-  background: "#f7f7f7",
-};
+  background: theme.tagBg,
+  whiteSpace: "nowrap",
+  fontWeight: 700,
+});
 
-const dropActionStyle = {
-  display: "flex",
-  gap: 6,
-  alignItems: "center",
-};
-
-const miniButtonStyle = {
-  border: "1px solid #ccc",
-  background: "#fff",
-  borderRadius: 6,
-  padding: "6px 10px",
+const removeButtonStyle = (theme) => ({
+  border: `1px solid ${theme.dangerBorder}`,
+  background: theme.dangerBg,
+  color: theme.dangerText,
+  borderRadius: 8,
+  padding: "8px 12px",
   cursor: "pointer",
-};
-
-const removeButtonStyle = {
-  border: "1px solid #c62828",
-  background: "#fff",
-  color: "#c62828",
-  borderRadius: 6,
-  padding: "6px 10px",
-  cursor: "pointer",
-};
+  whiteSpace: "nowrap",
+  fontWeight: 700,
+});

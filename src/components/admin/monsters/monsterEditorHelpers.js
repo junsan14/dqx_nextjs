@@ -89,22 +89,31 @@ export function normalizeMonster(row = {}) {
         id: spawn?.id ?? null,
         __key: makeSpawnKey(spawn, index),
         monster_id: spawn?.monster_id ?? row?.id ?? null,
-        map_id: spawn?.map_id ?? null,
-        map_name:
-          spawn?.map?.name ??
-          spawn?.map_name ??
+        map_id: spawn?.map_id ?? spawn?.map?.id ?? null,
+        map_layer_id: spawn?.map_layer_id ?? spawn?.map_layer?.id ?? null,
+        map_name: spawn?.map?.name ?? spawn?.map_name ?? "",
+        map_layer_name:
+          spawn?.map_layer_name ??
+          spawn?.layer_name ??
+          spawn?.map_layer?.layer_name ??
           "",
         map_image_url:
+          spawn?.map_layer?.image_url ??
+          spawn?.map_layer?.image_path ??
           spawn?.map?.image_url ??
           spawn?.map?.image_path ??
           spawn?.map_image_url ??
           spawn?.image_url ??
           spawn?.image_path ??
           "",
-        area: typeof spawn?.area === "string" ? spawn.area : stringifyCoords(coords),
+        area:
+          typeof spawn?.area === "string"
+            ? spawn.area
+            : stringifyCoords(coords),
         coords,
         spawn_time: spawn?.spawn_time ?? "normal",
         note: spawn?.note ?? "",
+        grid_mode: spawn?.grid_mode ?? "block",
       };
     }),
   };
@@ -129,8 +138,12 @@ export function buildMonsterPayload(monster = {}) {
       ? monster.spawns.map((spawn) => ({
           id: spawn?.id ?? null,
           map_id: Number(spawn?.map_id ?? 0) || null,
-          area: stringifyCoords(spawn?.coords ?? parseAreaToCoords(spawn?.area)),
-          spawn_time: String(spawn?.spawn_time ?? "normal").trim() || "normal",
+          map_layer_id: Number(spawn?.map_layer_id ?? 0) || null,
+          area: stringifyCoords(
+            spawn?.coords ?? parseAreaToCoords(spawn?.area)
+          ),
+          spawn_time:
+            String(spawn?.spawn_time ?? "normal").trim() || "normal",
           note: String(spawn?.note ?? "").trim(),
         }))
       : [],

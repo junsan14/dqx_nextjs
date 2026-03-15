@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ItemFormFields from "./ItemFormFields";
 import { createItem, deleteItem, updateItem } from "@/lib/items";
 
@@ -10,7 +10,10 @@ export default function ItemForm({
   categories = [],
   onSaved,
   onDeleted,
+  theme,
 }) {
+  const mergedTheme = useMemo(() => normalizeItemTheme(theme), [theme]);
+
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [message, setMessage] = useState("");
@@ -132,13 +135,11 @@ export default function ItemForm({
     <form onSubmit={onSubmit} style={formWrapStyle}>
       <div style={headerStyle}>
         <div>
-          <h2 style={{ margin: 0, fontSize: 22 }}>
+          <h2 style={titleStyle(mergedTheme)}>
             {mode === "edit" ? "アイテム編集" : "アイテム新規追加"}
           </h2>
           {initialData?.id ? (
-            <div style={{ marginTop: 6, fontSize: 13, color: "#666" }}>
-              ID: {initialData.id}
-            </div>
+            <div style={idStyle(mergedTheme)}>ID: {initialData.id}</div>
           ) : null}
         </div>
       </div>
@@ -148,10 +149,11 @@ export default function ItemForm({
         setForm={setForm}
         errors={errors}
         categories={categories}
+        theme={theme}
       />
 
       <div style={actionsStyle}>
-        <button type="submit" disabled={saving} style={saveButtonStyle}>
+        <button type="submit" disabled={saving} style={saveButtonStyle(mergedTheme)}>
           {saving ? "保存中..." : mode === "edit" ? "更新する" : "新規追加する"}
         </button>
 
@@ -160,22 +162,38 @@ export default function ItemForm({
             type="button"
             disabled={deleting}
             onClick={onClickDelete}
-            style={deleteButtonStyle}
+            style={deleteButtonStyle(mergedTheme)}
           >
             {deleting ? "削除中..." : "削除"}
           </button>
         ) : null}
 
-        {message ? <div style={messageStyle}>{message}</div> : null}
+        {message ? <div style={messageStyle(mergedTheme)}>{message}</div> : null}
       </div>
     </form>
   );
 }
 
+function normalizeItemTheme(theme) {
+  return {
+    title: theme?.title ?? theme?.pageText ?? "#111827",
+    subText: theme?.subText ?? theme?.mutedText ?? "#64748b",
+    message: theme?.subText ?? theme?.text ?? "#334155",
+    primaryBg: theme?.primaryBg ?? "#111111",
+    primaryText: theme?.primaryText ?? "#ffffff",
+    primaryBorder: theme?.primaryBorder ?? "#111111",
+    dangerBg: theme?.dangerBg ?? "#ffffff",
+    dangerText: theme?.dangerText ?? "#c62828",
+    dangerBorder: theme?.dangerBorder ?? "#c62828",
+  };
+}
+
 const formWrapStyle = {
   display: "grid",
   gap: 20,
-  maxWidth: 960,
+  width: "100%",
+  maxWidth: "100%",
+  minWidth: 0,
 };
 
 const headerStyle = {
@@ -183,7 +201,20 @@ const headerStyle = {
   justifyContent: "space-between",
   alignItems: "center",
   gap: 12,
+  minWidth: 0,
 };
+
+const titleStyle = (theme) => ({
+  margin: 0,
+  fontSize: 22,
+  color: theme.title,
+});
+
+const idStyle = (theme) => ({
+  marginTop: 6,
+  fontSize: 13,
+  color: theme.subText,
+});
 
 const actionsStyle = {
   display: "flex",
@@ -192,24 +223,27 @@ const actionsStyle = {
   flexWrap: "wrap",
 };
 
-const saveButtonStyle = {
+const saveButtonStyle = (theme) => ({
   padding: "10px 16px",
   borderRadius: 8,
-  border: "1px solid #111",
-  background: "#111",
-  color: "#fff",
+  border: `1px solid ${theme.primaryBorder}`,
+  background: theme.primaryBg,
+  color: theme.primaryText,
   cursor: "pointer",
-};
+  fontWeight: 700,
+});
 
-const deleteButtonStyle = {
+const deleteButtonStyle = (theme) => ({
   padding: "10px 16px",
   borderRadius: 8,
-  border: "1px solid #c62828",
-  background: "#fff",
-  color: "#c62828",
+  border: `1px solid ${theme.dangerBorder}`,
+  background: theme.dangerBg,
+  color: theme.dangerText,
   cursor: "pointer",
-};
+  fontWeight: 700,
+});
 
-const messageStyle = {
+const messageStyle = (theme) => ({
   fontSize: 14,
-};
+  color: theme.message,
+});

@@ -156,6 +156,7 @@ export default function MonstersSearchClient() {
 
   return (
     <main style={styles.page}>
+ 
       <MonsterSearchHero />
 
       <section style={styles.searchSection}>

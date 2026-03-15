@@ -15,6 +15,12 @@
   --dangerBorder: #ef4444;
   --dangerText: #b91c1c;
 
+  --childCard: #ffffff;
+  --disabledBg: #e5e7eb;
+  --disabledText: #94a3b8;
+  --stickyBg: rgba(255, 255, 255, 0.92);
+  --shadowColor: rgba(15, 23, 42, 0.08);
+
   padding: 20px;
   min-height: 100vh;
   background: var(--bg);
@@ -22,6 +28,31 @@
   box-sizing: border-box;
 }
 
+@media (prefers-color-scheme: dark) {
+  .page {
+    --bg: #020617;
+    --card: #0f172a;
+    --text: #e5e7eb;
+    --border: #334155;
+    --muted: #94a3b8;
+    --soft: #111827;
+    --active: #1e293b;
+    --activeBorder: #818cf8;
+    --inputBg: #0b1220;
+    --chipBg: #312e81;
+    --preBg: #0b1220;
+    --preText: #e5e7eb;
+    --dangerBg: rgba(127, 29, 29, 0.2);
+    --dangerBorder: #f87171;
+    --dangerText: #fca5a5;
+
+    --childCard: #111827;
+    --disabledBg: #1f2937;
+    --disabledText: #64748b;
+    --stickyBg: rgba(15, 23, 42, 0.92);
+    --shadowColor: rgba(0, 0, 0, 0.35);
+  }
+}
 .title {
   margin: 0 0 16px;
   font-size: 22px;
@@ -370,8 +401,8 @@
 }
 
 .gridInputDisabled {
-  background: #e5e7eb;
-  color: #94a3b8;
+   background: var(--disabledBg);
+  color: var(--disabledText);
 }
 
 .pre {
@@ -403,13 +434,16 @@
   width: 100%;
   text-align: left;
   border: 1px solid var(--border);
-  background: #fff;
+  background: var(--childCard);
+  color: var(--text);
   border-radius: 8px;
   padding: 8px 10px;
   cursor: pointer;
   box-sizing: border-box;
 }
-
+.entryChildButton:hover {
+  background: var(--active);
+}
 .entryChildButtonActive {
   border-color: var(--activeBorder);
   background: var(--active);
@@ -619,9 +653,23 @@
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 14px;
-  background: color-mix(in srgb, var(--card) 92%, white 8%);
+  background: var(--stickyBg);
   backdrop-filter: blur(8px);
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 8px 24px var(--shadowColor);
+}
+.input:focus,
+.select:focus,
+.textarea:focus,
+.inputCompact:focus,
+.inputCompactWide:focus,
+.inputCompactXs:focus,
+.selectCompact:focus,
+.gridMiniInput:focus,
+.gridCellInputSquare:focus,
+.gridInput:focus {
+  outline: none;
+  border-color: var(--activeBorder);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--activeBorder) 22%, transparent);
 }
 
 .saveLeft {

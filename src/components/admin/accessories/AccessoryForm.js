@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   createAccessory,
   updateAccessory,
@@ -52,7 +52,11 @@ export default function AccessoryForm({
   accessoryTypes = [],
   onSaved,
   onDeleted,
+  isMobile = false,
+  theme,
 }) {
+  const mergedTheme = useMemo(() => normalizeAccessoryTheme(theme), [theme]);
+
   const [form, setForm] = useState(createEmptyForm());
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -67,7 +71,9 @@ export default function AccessoryForm({
         accessory_type: initialData.accessory_type ?? "",
         equip_level: initialData.equip_level ?? "",
         description: initialData.description ?? "",
-        effects_json: Array.isArray(initialData.effects_json) ? initialData.effects_json : [],
+        effects_json: Array.isArray(initialData.effects_json)
+          ? initialData.effects_json
+          : [],
         synthesis_effects_json: Array.isArray(initialData.synthesis_effects_json)
           ? initialData.synthesis_effects_json
           : [],
@@ -143,14 +149,18 @@ export default function AccessoryForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} style={formStyle}>
-      <div style={headerStyle}>
-        <h2 style={{ margin: 0 }}>
+    <form onSubmit={handleSubmit} style={formStyle(mergedTheme)}>
+      <div style={headerStyle(isMobile)}>
+        <h2 style={headingStyle(mergedTheme)}>
           {mode === "edit" ? "アクセサリ編集" : "アクセサリ新規作成"}
         </h2>
 
-        <div style={actionStyle}>
-          <button type="submit" disabled={saving} style={saveButtonStyle}>
+        <div style={actionStyle(isMobile)}>
+          <button
+            type="submit"
+            disabled={saving}
+            style={saveButtonStyle(isMobile, mergedTheme)}
+          >
             {saving ? "保存中..." : "保存"}
           </button>
 
@@ -159,7 +169,7 @@ export default function AccessoryForm({
               type="button"
               disabled={deleting}
               onClick={handleDelete}
-              style={deleteButtonStyle}
+              style={deleteButtonStyle(isMobile, mergedTheme)}
             >
               {deleting ? "削除中..." : "削除"}
             </button>
@@ -167,38 +177,30 @@ export default function AccessoryForm({
         </div>
       </div>
 
-      <div style={gridStyle}>
-        <Field label="item_id">
+      <div style={gridStyle(isMobile)}>
+        <Field label="アイテムID" theme={mergedTheme}>
           <input
             value={form.item_id}
             onChange={(e) => updateField("item_id", e.target.value)}
-            style={inputStyle}
+            style={inputStyle(mergedTheme)}
           />
         </Field>
 
-        <Field label="名前">
+        <Field label="名前" theme={mergedTheme}>
           <input
             value={form.name}
             onChange={(e) => updateField("name", e.target.value)}
-            style={inputStyle}
+            style={inputStyle(mergedTheme)}
           />
         </Field>
 
-        <Field label="item_kind">
-          <input
-            value={form.item_kind}
-            onChange={(e) => updateField("item_kind", e.target.value)}
-            style={inputStyle}
-          />
-        </Field>
-
-        <Field label="slot">
+        <Field label="部位" theme={mergedTheme}>
           <>
             <input
               list="accessory-slot-list"
               value={form.slot}
               onChange={(e) => updateField("slot", e.target.value)}
-              style={inputStyle}
+              style={inputStyle(mergedTheme)}
             />
             <datalist id="accessory-slot-list">
               {slots.map((slot) => (
@@ -208,13 +210,13 @@ export default function AccessoryForm({
           </>
         </Field>
 
-        <Field label="accessory_type">
+        <Field label="アクセサリータイプ" theme={mergedTheme}>
           <>
             <input
               list="accessory-type-list"
               value={form.accessory_type}
               onChange={(e) => updateField("accessory_type", e.target.value)}
-              style={inputStyle}
+              style={inputStyle(mergedTheme)}
             />
             <datalist id="accessory-type-list">
               {accessoryTypes.map((type) => (
@@ -223,82 +225,49 @@ export default function AccessoryForm({
             </datalist>
           </>
         </Field>
-
-        <Field label="equip_level">
-          <input
-            type="number"
-            value={form.equip_level}
-            onChange={(e) => updateField("equip_level", e.target.value)}
-            style={inputStyle}
-          />
-        </Field>
-
-        <Field label="image_url">
-          <input
-            value={form.image_url}
-            onChange={(e) => updateField("image_url", e.target.value)}
-            style={inputStyle}
-          />
-        </Field>
-
-        <Field label="source_url">
-          <input
-            value={form.source_url}
-            onChange={(e) => updateField("source_url", e.target.value)}
-            style={inputStyle}
-          />
-        </Field>
-
-        <Field label="detail_url">
-          <input
-            value={form.detail_url}
-            onChange={(e) => updateField("detail_url", e.target.value)}
-            style={inputStyle}
-          />
-        </Field>
       </div>
 
-      <Field label="説明">
+      <Field label="説明" theme={mergedTheme}>
         <textarea
           rows={4}
           value={form.description}
           onChange={(e) => updateField("description", e.target.value)}
-          style={textareaStyle}
+          style={textareaStyle(mergedTheme)}
         />
       </Field>
 
-      <Field label="effects_json">
+      <Field label="効果" theme={mergedTheme}>
         <textarea
           rows={5}
           value={arrayToText(form.effects_json)}
           onChange={(e) => updateField("effects_json", textToArray(e.target.value))}
-          style={textareaStyle}
+          style={textareaStyle(mergedTheme)}
         />
       </Field>
 
-      <Field label="synthesis_effects_json">
+      <Field label="付く合成効果" theme={mergedTheme}>
         <textarea
           rows={5}
           value={arrayToText(form.synthesis_effects_json)}
           onChange={(e) =>
             updateField("synthesis_effects_json", textToArray(e.target.value))
           }
-          style={textareaStyle}
+          style={textareaStyle(mergedTheme)}
         />
       </Field>
 
-      <Field label="obtain_methods_json">
+      <Field label="補足" theme={mergedTheme}>
         <textarea
           rows={5}
           value={arrayToText(form.obtain_methods_json)}
           onChange={(e) =>
             updateField("obtain_methods_json", textToArray(e.target.value))
           }
-          style={textareaStyle}
+          style={textareaStyle(mergedTheme)}
         />
       </Field>
 
-      <Field label="落とすモンスター">
+      <Field label="落とすモンスター" theme={mergedTheme}>
         <MonsterPicker
           value={form.drop_monsters ?? []}
           onChange={(nextRows) => updateField("drop_monsters", nextRows)}
@@ -312,81 +281,121 @@ export default function AccessoryForm({
   );
 }
 
-function Field({ label, children }) {
+function Field({ label, children, theme }) {
   return (
     <label style={fieldStyle}>
-      <div style={labelStyle}>{label}</div>
+      <div style={labelStyle(theme)}>{label}</div>
       {children}
     </label>
   );
 }
 
-const formStyle = {
+function normalizeAccessoryTheme(theme) {
+  return {
+    text: theme?.text ?? theme?.pageText ?? "#111827",
+    heading: theme?.title ?? "#111827",
+    label: theme?.subText ?? theme?.text ?? "#334155",
+    inputBg: theme?.inputBg ?? "#ffffff",
+    inputBorder: theme?.inputBorder ?? "#cbd5e1",
+    inputText: theme?.inputText ?? "#111827",
+    saveBg: theme?.primaryBg ?? "#111111",
+    saveText: theme?.primaryText ?? "#ffffff",
+    saveBorder: theme?.primaryBorder ?? "#111111",
+    deleteBg: theme?.dangerBg ?? "#ffffff",
+    deleteText: theme?.dangerText ?? "#b91c1c",
+    deleteBorder: theme?.dangerBorder ?? "#ef4444",
+  };
+}
+
+const formStyle = (theme) => ({
   display: "grid",
   gap: 16,
-};
+  minWidth: 0,
+  color: theme.text,
+});
 
-const headerStyle = {
+const headerStyle = (isMobile) => ({
   display: "flex",
+  flexDirection: isMobile ? "column" : "row",
   justifyContent: "space-between",
-  alignItems: "center",
+  alignItems: isMobile ? "stretch" : "center",
   gap: 12,
-};
+});
 
-const actionStyle = {
+const headingStyle = (theme) => ({
+  margin: 0,
+  lineHeight: 1.3,
+  color: theme.heading,
+});
+
+const actionStyle = (isMobile) => ({
   display: "flex",
+  flexDirection: isMobile ? "column" : "row",
   gap: 8,
-};
+  width: isMobile ? "100%" : "auto",
+});
 
-const gridStyle = {
+const gridStyle = (isMobile) => ({
   display: "grid",
-  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  gridTemplateColumns: isMobile ? "minmax(0, 1fr)" : "repeat(2, minmax(0, 1fr))",
   gap: 12,
-};
+});
 
 const fieldStyle = {
   display: "grid",
   gap: 6,
+  minWidth: 0,
 };
 
-const labelStyle = {
+const labelStyle = (theme) => ({
   fontWeight: 700,
   fontSize: 14,
-};
+  color: theme.label,
+});
 
-const inputStyle = {
+const inputStyle = (theme) => ({
   width: "100%",
+  minWidth: 0,
   padding: "10px 12px",
-  border: "1px solid #ccc",
+  border: `1px solid ${theme.inputBorder}`,
   borderRadius: 8,
   fontSize: 14,
   boxSizing: "border-box",
-};
+  background: theme.inputBg,
+  color: theme.inputText,
+});
 
-const textareaStyle = {
+const textareaStyle = (theme) => ({
   width: "100%",
+  minWidth: 0,
   padding: "10px 12px",
-  border: "1px solid #ccc",
+  border: `1px solid ${theme.inputBorder}`,
   borderRadius: 8,
   fontSize: 14,
   boxSizing: "border-box",
   resize: "vertical",
-};
+  background: theme.inputBg,
+  color: theme.inputText,
+});
 
-const saveButtonStyle = {
+const saveButtonStyle = (isMobile, theme) => ({
   padding: "10px 14px",
   borderRadius: 8,
-  border: "1px solid #111",
-  background: "#111",
-  color: "#fff",
+  border: `1px solid ${theme.saveBorder}`,
+  background: theme.saveBg,
+  color: theme.saveText,
   cursor: "pointer",
-};
+  width: isMobile ? "100%" : "auto",
+  fontWeight: 700,
+});
 
-const deleteButtonStyle = {
+const deleteButtonStyle = (isMobile, theme) => ({
   padding: "10px 14px",
   borderRadius: 8,
-  border: "1px solid #c62828",
-  background: "#fff",
-  color: "#c62828",
+  border: `1px solid ${theme.deleteBorder}`,
+  background: theme.deleteBg,
+  color: theme.deleteText,
   cursor: "pointer",
-};
+  width: isMobile ? "100%" : "auto",
+  fontWeight: 700,
+});
