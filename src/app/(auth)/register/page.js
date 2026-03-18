@@ -1,34 +1,49 @@
 'use client'
 
+import { Suspense, useEffect, useState } from 'react'
+import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
+
 import Button from '@/components/Button'
 import Input from '@/components/Input'
 import InputError from '@/components/InputError'
 import Label from '@/components/Label'
-import Link from 'next/link'
 import { useAuth } from '@/hooks/auth'
-import { useState } from 'react'
+import AuthSessionStatus from '@/app/(auth)/AuthSessionStatus'
 
-const Page = () => {
-    const { register, authLoading } = useAuth({
+function LoginContent() {
+    const searchParams = useSearchParams()
+
+    const { login, authLoading } = useAuth({
         middleware: 'guest',
-        redirectIfAuthenticated: '/dashboard',
+        redirectIfAuthenticated: '/tool-editor',
     })
 
-    const [name, setName] = useState('')
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
-    const [passwordConfirmation, setPasswordConfirmation] = useState('')
+    const [shouldRemember, setShouldRemember] = useState(false)
     const [errors, setErrors] = useState([])
+    const [status, setStatus] = useState(null)
+
+    useEffect(() => {
+        const reset = searchParams.get('reset')
+
+        if (reset && errors.length === 0) {
+            setStatus(atob(reset))
+        } else {
+            setStatus(null)
+        }
+    }, [searchParams, errors])
 
     const submitForm = async event => {
         event.preventDefault()
 
-        await register({
-            name,
+        await login({
             email,
             password,
-            password_confirmation: passwordConfirmation,
+            remember: shouldRemember,
             setErrors,
+            setStatus,
         })
     }
 
@@ -74,7 +89,7 @@ const Page = () => {
                                 fontWeight: 600,
                                 color: '#334155',
                             }}>
-                            登録中...
+                            ログイン中...
                         </p>
                     </div>
                 </div>
@@ -91,27 +106,31 @@ const Page = () => {
                 }
             `}</style>
 
+            <div style={{ marginBottom: '20px' }}>
+                <h2
+                    style={{
+                        margin: 0,
+                        fontSize: '1.8rem',
+                        fontWeight: 800,
+                        color: '#0f172a',
+                    }}>
+                    Login
+                </h2>
+                <p
+                    style={{
+                        marginTop: '8px',
+                        color: '#475569',
+                        lineHeight: 1.7,
+                    }}>
+                    メールアドレスとパスワードを入力してログイン
+                </p>
+            </div>
+
+            <AuthSessionStatus className="mb-4" status={status} />
+
             <form onSubmit={submitForm}>
                 <div>
-                    <Label htmlFor="name">Name</Label>
-
-                    <Input
-                        id="name"
-                        type="text"
-                        value={name}
-                        className="block mt-1 w-full"
-                        onChange={event => setName(event.target.value)}
-                        required
-                        autoFocus
-                        disabled={authLoading}
-                    />
-
-                    <InputError messages={errors.name} className="mt-2" />
-                </div>
-
-                <div className="mt-4">
                     <Label htmlFor="email">Email</Label>
-
                     <Input
                         id="email"
                         type="email"
@@ -119,15 +138,14 @@ const Page = () => {
                         className="block mt-1 w-full"
                         onChange={event => setEmail(event.target.value)}
                         required
+                        autoFocus
                         disabled={authLoading}
                     />
-
                     <InputError messages={errors.email} className="mt-2" />
                 </div>
 
                 <div className="mt-4">
                     <Label htmlFor="password">Password</Label>
-
                     <Input
                         id="password"
                         type="password"
@@ -135,45 +153,44 @@ const Page = () => {
                         className="block mt-1 w-full"
                         onChange={event => setPassword(event.target.value)}
                         required
-                        autoComplete="new-password"
+                        autoComplete="current-password"
                         disabled={authLoading}
                     />
-
-                    <InputError messages={errors.password} className="mt-2" />
-                </div>
-
-                <div className="mt-4">
-                    <Label htmlFor="passwordConfirmation">
-                        Confirm Password
-                    </Label>
-
-                    <Input
-                        id="passwordConfirmation"
-                        type="password"
-                        value={passwordConfirmation}
-                        className="block mt-1 w-full"
-                        onChange={event =>
-                            setPasswordConfirmation(event.target.value)
-                        }
-                        required
-                        disabled={authLoading}
-                    />
-
                     <InputError
-                        messages={errors.password_confirmation}
+                        messages={errors.password}
                         className="mt-2"
                     />
                 </div>
 
+                <div className="block mt-4">
+                    <label
+                        htmlFor="remember_me"
+                        className="inline-flex items-center">
+                        <input
+                            id="remember_me"
+                            type="checkbox"
+                            name="remember"
+                            className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                            onChange={event =>
+                                setShouldRemember(event.target.checked)
+                            }
+                            disabled={authLoading}
+                        />
+                        <span className="ml-2 text-sm text-gray-600">
+                            Remember me
+                        </span>
+                    </label>
+                </div>
+
                 <div className="flex items-center justify-end mt-4">
                     <Link
-                        href="/login"
+                        href="/forgot-password"
                         className="underline text-sm text-gray-600 hover:text-gray-900">
-                        Already registered?
+                        Forgot your password?
                     </Link>
 
-                    <Button className="ml-4" disabled={authLoading}>
-                        {authLoading ? 'Loading...' : 'Register'}
+                    <Button className="ml-3" disabled={authLoading}>
+                        {authLoading ? 'Loading...' : 'Login'}
                     </Button>
                 </div>
             </form>
@@ -181,4 +198,10 @@ const Page = () => {
     )
 }
 
-export default Page
+export default function Login() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <LoginContent />
+        </Suspense>
+    )
+}
