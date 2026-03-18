@@ -15,19 +15,82 @@ import {
   getMonsterEditorTheme,
   usePrefersDarkMode,
 } from "../theme";
+import { DEFAULT_LAYER_NAME_OPTIONS } from "./mapOptions";
+
+function getLayerMetaByName(layerName) {
+  const normalized = String(layerName ?? "").trim();
+  const matched = DEFAULT_LAYER_NAME_OPTIONS.find(
+    (option) => option.value === normalized || option.label === normalized
+  );
+
+  if (!matched) {
+    return null;
+  }
+
+  const value = String(matched.value ?? "").trim();
+
+  let floorNo = 1;
+
+  if (
+    value === "地上" ||
+    value === "下層" ||
+    value === "中層" ||
+    value === "上層" ||
+    value === "洞窟"
+  ) {
+    floorNo = 1;
+  } else if (/^地下(\d+)階$/.test(value)) {
+    floorNo = -Number(value.match(/^地下(\d+)階$/)?.[1] ?? 1);
+  } else if (/^\d+$/.test(value)) {
+    floorNo = Number(value);
+  }
+
+  return {
+    layer_name: matched.value,
+    layer_file_name: String(matched.fileName ?? "").trim(),
+    floor_no: floorNo,
+  };
+}
 
 function createEmptyLayer(order = 1) {
   return {
     id: null,
     map_id: null,
-    layer_name: "",
-    layer_file_name: "",
-    floor_no: 0,
+    layer_name: "地上",
+    layer_file_name: "1",
+    floor_no: 1,
     image_path: "",
     image_url: "",
     image_file: null,
     source_url: "",
     display_order: order,
+  };
+}
+
+function normalizeLayer(layer, index = 0) {
+  const fallback = createEmptyLayer(index + 1);
+  const base = {
+    ...fallback,
+    ...layer,
+    image_file: null,
+  };
+
+  const derived = getLayerMetaByName(base.layer_name);
+
+  return {
+    ...base,
+    layer_name: derived?.layer_name ?? base.layer_name ?? "地上",
+    layer_file_name:
+      String(base.layer_file_name ?? "").trim() ||
+      derived?.layer_file_name ||
+      "ground",
+    floor_no:
+      base.floor_no !== null &&
+      base.floor_no !== undefined &&
+      String(base.floor_no) !== ""
+        ? Number(base.floor_no)
+        : Number(derived?.floor_no ?? 1),
+    display_order: Number(base.display_order ?? index + 1),
   };
 }
 
@@ -46,6 +109,10 @@ function createEmptyMap() {
 function getIsSp() {
   if (typeof window === "undefined") return false;
   return window.innerWidth <= 768;
+}
+
+function isNumericIdKeyword(value) {
+  return /^\d+$/.test(String(value ?? "").trim());
 }
 
 export default function MapsEditorClient() {
@@ -103,11 +170,7 @@ export default function MapsEditorClient() {
         continent_folder: row?.continent_folder ?? "",
         layers:
           Array.isArray(row?.layers) && row.layers.length > 0
-            ? row.layers.map((layer, index) => ({
-                ...createEmptyLayer(index + 1),
-                ...layer,
-                image_file: null,
-              }))
+            ? row.layers.map((layer, index) => normalizeLayer(layer, index))
             : [createEmptyLayer(1)],
       });
       setSelectedId(row.id);
@@ -193,13 +256,27 @@ export default function MapsEditorClient() {
       const nextLayers = [...(prev.layers ?? [])];
       const target = nextLayers[index] ?? createEmptyLayer(index + 1);
 
-      nextLayers[index] = {
+      let nextLayer = {
         ...target,
         [key]:
           key === "floor_no" || key === "display_order"
             ? Number(value || 0)
             : value,
       };
+
+      if (key === "layer_name") {
+        const derived = getLayerMetaByName(value);
+        if (derived) {
+          nextLayer = {
+            ...nextLayer,
+            layer_name: derived.layer_name,
+            layer_file_name: derived.layer_file_name,
+            floor_no: derived.floor_no,
+          };
+        }
+      }
+
+      nextLayers[index] = nextLayer;
 
       return {
         ...prev,
@@ -236,14 +313,27 @@ export default function MapsEditorClient() {
         name: currentMap.name?.trim() ?? "",
         map_type: currentMap.map_type?.trim() ?? "",
         source_url: currentMap.source_url?.trim() ?? "",
-        layers: (currentMap.layers ?? []).map((layer, index) => ({
-          id: layer.id ?? null,
-          layer_name: layer.layer_name?.trim() ?? "",
-          floor_no: Number(layer.floor_no ?? 0),
-          image_file: layer.image_file ?? null,
-          source_url: layer.source_url?.trim() ?? "",
-          display_order: Number(layer.display_order ?? index + 1),
-        })),
+        layers: (currentMap.layers ?? []).map((layer, index) => {
+          const derived = getLayerMetaByName(layer.layer_name);
+
+          return {
+            id: layer.id ?? null,
+            layer_name: layer.layer_name?.trim() ?? derived?.layer_name ?? "地上",
+            layer_file_name:
+              String(layer.layer_file_name ?? "").trim() ||
+              derived?.layer_file_name ||
+              String(layer.floor_no ?? derived?.floor_no ?? 1),
+            floor_no:
+              layer.floor_no !== null &&
+              layer.floor_no !== undefined &&
+              String(layer.floor_no) !== ""
+                ? Number(layer.floor_no)
+                : Number(derived?.floor_no ?? 1),
+            image_file: layer.image_file ?? null,
+            source_url: layer.source_url?.trim() ?? "",
+            display_order: Number(layer.display_order ?? index + 1),
+          };
+        }),
       };
 
       if (!payload.name) {
@@ -252,6 +342,10 @@ export default function MapsEditorClient() {
 
       if (!payload.continent) {
         throw new Error("continent は必須");
+      }
+
+      if (!payload.continent_folder) {
+        throw new Error("continent_folder は必須");
       }
 
       if (!payload.map_type) {
@@ -322,11 +416,74 @@ export default function MapsEditorClient() {
 
   async function handleSearchSubmit(e) {
     e.preventDefault();
-    const rows = await loadMaps(keyword);
+
+    const trimmedKeyword = keyword.trim();
+
+    if (!trimmedKeyword) {
+      const rows = await loadMaps("");
+
+      if (rows.length === 0) {
+        setSelectedId(null);
+        setCurrentMap(createEmptyMap());
+        return;
+      }
+
+      if (isSp) {
+        setIsMobileListOpen(true);
+      }
+
+      const stillExists = rows.some(
+        (row) => Number(row.id) === Number(selectedId)
+      );
+
+      if (stillExists && selectedId) {
+        await loadMapDetail(selectedId);
+      } else {
+        await loadMapDetail(rows[0].id);
+      }
+      return;
+    }
+
+    if (isNumericIdKeyword(trimmedKeyword)) {
+      setLoadingList(true);
+      setMessage("");
+
+      try {
+        const row = await fetchMap(Number(trimmedKeyword));
+
+        if (!row?.id) {
+          setMaps([]);
+          setSelectedId(null);
+          setCurrentMap(createEmptyMap());
+          setMessage("その map id は見つからなかった");
+          return;
+        }
+
+        setMaps([row]);
+        await loadMapDetail(row.id);
+
+        if (isSp) {
+          setIsMobileListOpen(true);
+        }
+      } catch (error) {
+        console.error(error);
+        setMaps([]);
+        setSelectedId(null);
+        setCurrentMap(createEmptyMap());
+        setMessage(error.message || "その map id は見つからなかった");
+      } finally {
+        setLoadingList(false);
+      }
+
+      return;
+    }
+
+    const rows = await loadMaps(trimmedKeyword);
 
     if (rows.length === 0) {
       setSelectedId(null);
       setCurrentMap(createEmptyMap());
+      setMessage("検索結果なし");
       return;
     }
 
@@ -362,7 +519,7 @@ export default function MapsEditorClient() {
               <input
                 value={keyword}
                 onChange={(e) => setKeyword(e.target.value)}
-                placeholder="マップ名で検索"
+                placeholder="マップ名 / map id で検索"
                 style={searchInputStyle(theme)}
               />
               <button type="submit" style={secondaryButtonStyle(theme)}>
@@ -380,7 +537,7 @@ export default function MapsEditorClient() {
               </button>
             ) : null}
 
-            {(!isSp || isMobileListOpen) ? (
+            {!isSp || isMobileListOpen ? (
               <div style={mobileListWrapStyle(isSp, theme)}>
                 <MapListPane
                   maps={maps}
@@ -431,6 +588,7 @@ export default function MapsEditorClient() {
               loading={loadingDetail}
               continentOptions={continentOptions}
               mapTypeOptions={mapTypeOptions}
+              layerNameOptions={DEFAULT_LAYER_NAME_OPTIONS}
               onChangeField={handleChangeField}
               onAddLayer={handleAddLayer}
               onChangeLayer={handleChangeLayer}

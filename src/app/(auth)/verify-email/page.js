@@ -15,10 +15,7 @@ const Page = () => {
     return (
         <>
             <div className="mb-4 text-sm text-gray-600">
-                Thanks for signing up! Before getting started, could you verify
-                your email address by clicking on the link we just
-                emailed to you? If you didn't receive the email, we will gladly
-                send you another.
+                登録ありがとうございます!メールアドレスの認証は管理者にお問い合わせください。
             </div>
 
             {status === 'verification-link-sent' && (

@@ -12,7 +12,7 @@ import EquipmentGridPanel from "./EquipmentGridPanel";
 import EquipmentMaterialsPanel from "./EquipmentMaterialsPanel";
 import EquipmentEffectsPanel from "./EquipmentEffectsPanel";
 import EquipmentJsonPreview from "./EquipmentJsonPreview";
-import {fetchItemsByIds } from "@/lib/items";
+import { fetchItemsByIds } from "@/lib/items";
 import { fetchEquipments } from "@/lib/equipments";
 import { fetchGameJobs } from "@/lib/gameJobs";
 import { fetchEquipmentTypes } from "@/lib/equipmentTypes";
@@ -34,6 +34,33 @@ import {
   findEquipmentTypeById,
 } from "./equipmentFormHelpers";
 
+const DEFAULT_GROUP_KIND = "armor_set";
+
+function createInitialNewItem() {
+  return {
+    itemName: "",
+    equipmentTypeId: "",
+    jobOverrideMode: "inherit",
+    slot: "",
+    slotGridType: "",
+    groupName: "",
+    equipLevel: "",
+  };
+}
+
+function createInitialNewGroup(groupKind = DEFAULT_GROUP_KIND) {
+  const safeGroupKind = groupKind || DEFAULT_GROUP_KIND;
+
+  return {
+    groupName: "",
+    groupKind: safeGroupKind,
+    equipmentTypeId: "",
+    jobOverrideMode: "inherit",
+    members: buildEmptyGroupMembers(safeGroupKind),
+    equipLevel: "",
+  };
+}
+
 export default function EquipmentAdminPage() {
   const [rows, setRows] = useState([]);
   const [query, setQuery] = useState("");
@@ -47,25 +74,8 @@ export default function EquipmentAdminPage() {
   const [activeTab, setActiveTab] = useState("edit");
 
   const [newMode, setNewMode] = useState("single");
-
-  const [newItem, setNewItem] = useState({
-    itemName: "",
-    equipmentTypeId: "",
-    jobOverrideMode: "inherit",
-    slot: "",
-    slotGridType: "",
-    groupName: "",
-    equipLevel: "",
-  });
-
-  const [newGroup, setNewGroup] = useState({
-    groupName: "",
-    groupKind: "armor_set",
-    equipmentTypeId: "",
-    jobOverrideMode: "inherit",
-    members: buildEmptyGroupMembers("armor_set"),
-    equipLevel: "",
-  });
+  const [newItem, setNewItem] = useState(createInitialNewItem());
+  const [newGroup, setNewGroup] = useState(() => createInitialNewGroup());
 
   const selectedRow = useMemo(() => {
     return rows.find((r) => r.__key === selectedKey) ?? null;
@@ -103,7 +113,6 @@ export default function EquipmentAdminPage() {
 
   useEffect(() => {
     fetchInitial();
-    
   }, []);
 
   useEffect(() => {
@@ -117,57 +126,59 @@ export default function EquipmentAdminPage() {
     }
   }, [rows, selectedKey]);
 
-async function fetchInitial() {
-  try {
-    setLoading(true);
+  async function fetchInitial() {
+    try {
+      setLoading(true);
 
-    const equipments = await fetchEquipments();
-    const equipmentTypes = await fetchEquipmentTypes();
-    const jobs = await fetchGameJobs();
+      const equipments = await fetchEquipments();
+      const fetchedEquipmentTypes = await fetchEquipmentTypes();
+      const jobs = await fetchGameJobs();
 
-    const materialItemIds = Array.from(
-      new Set(
-        equipments.flatMap((row) => {
-          const mats = Array.isArray(row.materialsJson) ? row.materialsJson : [];
-          return mats
-            .map((mat) => Number(mat?.item_id ?? mat?.itemId))
-            .filter((id) => Number.isInteger(id) && id > 0);
-        })
-      )
-    );
+      const materialItemIds = Array.from(
+        new Set(
+          equipments.flatMap((row) => {
+            const mats = Array.isArray(row.materialsJson)
+              ? row.materialsJson
+              : [];
+            return mats
+              .map((mat) => Number(mat?.item_id ?? mat?.itemId))
+              .filter((id) => Number.isInteger(id) && id > 0);
+          })
+        )
+      );
 
-    let materialItems = [];
+      let materialItems = [];
 
-    if (materialItemIds.length > 0) {
-      try {
-        materialItems = await fetchItemsByIds(materialItemIds);
-      } catch (error) {
-        console.error("fetchItemsByIds failed", error);
-        materialItems = [];
+      if (materialItemIds.length > 0) {
+        try {
+          materialItems = await fetchItemsByIds(materialItemIds);
+        } catch (error) {
+          console.error("fetchItemsByIds failed", error);
+          materialItems = [];
+        }
       }
+
+      const hydratedEquipments = equipments.map((row) =>
+        hydrateRowMaterialsWithItems(row, materialItems)
+      );
+
+      setRows(hydratedEquipments);
+      setEquipmentTypes(fetchedEquipmentTypes);
+      setAllJobs(jobs);
+      setAllItems(materialItems);
+
+      if (hydratedEquipments[0]?.__key) {
+        setSelectedKey(hydratedEquipments[0].__key);
+      } else {
+        setSelectedKey("");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("初期データ読み込みに失敗した");
+    } finally {
+      setLoading(false);
     }
-
-    const hydratedEquipments = equipments.map((row) =>
-      hydrateRowMaterialsWithItems(row, materialItems)
-    );
-
-    setRows(hydratedEquipments);
-    setEquipmentTypes(equipmentTypes);
-    setAllJobs(jobs);
-    setAllItems(materialItems);
-
-    if (hydratedEquipments[0]?.__key) {
-      setSelectedKey(hydratedEquipments[0].__key);
-    } else {
-      setSelectedKey("");
-    }
-  } catch (error) {
-    console.error(error);
-    alert("初期データ読み込みに失敗した");
-  } finally {
-    setLoading(false);
   }
-}
 
   function setSelectedRowPatch(patch) {
     if (!selectedKey) return;
@@ -207,7 +218,8 @@ async function fetchInitial() {
   }
 
   async function handleCreateItem() {
-    const name = str(newItem.itemName).trim();
+    const safeNewItem = newItem ?? createInitialNewItem();
+    const name = str(safeNewItem.itemName).trim();
 
     if (!name) {
       alert("itemName は必須");
@@ -216,24 +228,27 @@ async function fetchInitial() {
 
     const selectedType = findEquipmentTypeById(
       equipmentTypes,
-      newItem.equipmentTypeId
+      safeNewItem.equipmentTypeId
     );
 
-    const autoSlotGridType = getAutoSlotGridType(newItem.slot, selectedType);
+    const autoSlotGridType = getAutoSlotGridType(
+      safeNewItem.slot,
+      selectedType
+    );
     const preset = getGridPreset(autoSlotGridType);
 
     const row = {
       ...createEmptyRow(),
       itemName: name,
-      equipmentTypeId: str(newItem.equipmentTypeId),
+      equipmentTypeId: str(safeNewItem.equipmentTypeId),
       equipmentType: selectedType,
       jobOverrideMode: "inherit",
-      slot: str(newItem.slot),
+      slot: str(safeNewItem.slot),
       slotGridType: autoSlotGridType,
       slotGridCols: preset?.cols ? String(preset.cols) : "",
-      groupName: str(newItem.groupName),
+      groupName: str(safeNewItem.groupName),
       groupKind: "",
-      equipLevel: str(newItem.equipLevel),
+      equipLevel: str(safeNewItem.equipLevel),
     };
 
     row.itemId = makeItemId(row, equipmentTypes);
@@ -250,16 +265,7 @@ async function fetchInitial() {
       setRows((prev) => [saved, ...prev]);
       setSelectedKey(saved.__key);
       setActiveTab("edit");
-
-      setNewItem({
-        itemName: "",
-        equipmentTypeId: "",
-        jobOverrideMode: "inherit",
-        slot: "",
-        slotGridType: "",
-        groupName: "",
-        equipLevel: "",
-      });
+      setNewItem(createInitialNewItem());
     } catch (error) {
       console.error(error);
       alert("追加に失敗した");
@@ -269,14 +275,17 @@ async function fetchInitial() {
   }
 
   async function handleCreateGroup() {
-    const groupName = str(newGroup.groupName).trim();
+    const safeNewGroup = newGroup ?? createInitialNewGroup();
+    const groupName = str(safeNewGroup.groupName).trim();
 
     if (!groupName) {
       alert("groupName は必須");
       return;
     }
 
-    const enabledMembers = newGroup.members.filter((m) => m.enabled);
+    const enabledMembers = Array.isArray(safeNewGroup.members)
+      ? safeNewGroup.members.filter((m) => m.enabled)
+      : [];
 
     if (!enabledMembers.length) {
       alert("少なくとも1つの部位をONにしてくれ");
@@ -286,8 +295,9 @@ async function fetchInitial() {
     const groupId = makeGroupId(groupName);
     const selectedType = findEquipmentTypeById(
       equipmentTypes,
-      newGroup.equipmentTypeId
+      safeNewGroup.equipmentTypeId
     );
+    const isCraftToolSet = str(safeNewGroup.groupKind) === "craft_tool_set";
 
     try {
       setSaving(true);
@@ -297,24 +307,34 @@ async function fetchInitial() {
       for (const member of enabledMembers) {
         const name =
           str(member.itemName).trim() ||
-          getDefaultGroupItemName(groupName, member.slotLabel);
+          (isCraftToolSet
+            ? str(member.slotLabel).trim()
+            : getDefaultGroupItemName(groupName, member.slotLabel));
 
-        const autoSlotGridType = getAutoSlotGridType(member.slot, selectedType);
+        const autoSlotGridType = getAutoSlotGridType(
+          member.slot,
+          selectedType,
+          safeNewGroup.groupKind,
+          member
+        );
+
         const preset = getGridPreset(autoSlotGridType);
 
         const row = {
           ...createEmptyRow(),
           itemName: name,
-          equipmentTypeId: str(newGroup.equipmentTypeId),
-          equipmentType: selectedType,
+          equipmentTypeId: isCraftToolSet
+            ? ""
+            : str(safeNewGroup.equipmentTypeId),
+          equipmentType: isCraftToolSet ? null : selectedType,
           jobOverrideMode: "inherit",
           slot: member.slot,
           slotGridType: autoSlotGridType,
           slotGridCols: preset?.cols ? String(preset.cols) : "",
-          groupKind: str(newGroup.groupKind),
+          groupKind: str(safeNewGroup.groupKind),
           groupId,
           groupName,
-          equipLevel: str(newGroup.equipLevel),
+          equipLevel: isCraftToolSet ? "" : str(safeNewGroup.equipLevel),
         };
 
         row.itemId = makeItemId(row, equipmentTypes);
@@ -335,15 +355,7 @@ async function fetchInitial() {
       }
 
       setActiveTab("edit");
-
-      setNewGroup({
-        groupName: "",
-        groupKind: "armor_set",
-        equipmentTypeId: "",
-        jobOverrideMode: "inherit",
-        members: buildEmptyGroupMembers("armor_set"),
-        equipLevel: "",
-      });
+      setNewGroup(createInitialNewGroup());
     } catch (error) {
       console.error(error);
       alert("セット追加に失敗した");
@@ -359,13 +371,18 @@ async function fetchInitial() {
       setSaving(true);
 
       const gid = str(selectedRow.groupId).trim();
+      const saveSingleOnly = !!selectedRow.__saveSingleOnly;
+
       const targetRows =
-        syncGroup && gid
+        !saveSingleOnly && syncGroup && gid
           ? rows.filter((r) => str(r.groupId).trim() === gid)
           : [selectedRow];
 
       for (const row of targetRows) {
-        const payload = buildApiPayload(row);
+        const payload = buildApiPayload({
+          ...row,
+          __saveSingleOnly: undefined,
+        });
 
         if (row.id) {
           await axios.put(`/api/equipments/${row.id}`, payload);
@@ -381,6 +398,14 @@ async function fetchInitial() {
           );
         }
       }
+
+      setRows((prev) =>
+        prev.map((r) =>
+          r.__key === selectedRow.__key
+            ? { ...r, __saveSingleOnly: undefined }
+            : r
+        )
+      );
 
       await fetchInitial();
       alert("保存した");
@@ -448,11 +473,12 @@ async function fetchInitial() {
       setSaving(false);
     }
   }
-function addMaterial(newMaterial = null) {
-  const material = newMaterial ?? { item_id: null, count: 1 };
-  const next = [...materials, material];
-  setSelectedRowPatch({ materialsJson: toJsonString(next, "[]") });
-}
+
+  function addMaterial(newMaterial = null) {
+    const material = newMaterial ?? { item_id: null, count: 1 };
+    const next = [...materials, material];
+    setSelectedRowPatch({ materialsJson: toJsonString(next, "[]") });
+  }
 
   function updateMaterial(index, key, value) {
     const next = materials.map((m, i) =>
@@ -548,7 +574,7 @@ function addMaterial(newMaterial = null) {
               onCreateGroup={handleCreateGroup}
             />
           ) : !selectedRow ? (
-            <section className={styles.card}>左から装備を選んでくれ</section>
+            <section className={styles.card}>左から装備を選択してくれ</section>
           ) : (
             <>
               <EquipmentEditorPanel

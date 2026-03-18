@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import MonsterMapOverlay from "./MonsterMapOverlay";
 
-const AREA_PREVIEW_COUNT = 4;
+const AREA_PREVIEW_COUNT = 3;
 
 function usePrefersDark() {
   const [isDark, setIsDark] = useState(false);
@@ -62,7 +62,9 @@ function normalizeSpawnTime(value) {
 
   if (v.includes("night") || v.includes("夜")) return "夜";
   if (v.includes("day") || v.includes("昼") || v.includes("日中")) return "日中";
-  if (v.includes("normal") || v.includes("always") || v.includes("いつでも")) return "いつでも";
+  if (v.includes("normal") || v.includes("always") || v.includes("いつでも")) {
+    return "いつでも";
+  }
 
   return String(value ?? "").trim();
 }
@@ -224,6 +226,17 @@ function useIsMobile(breakpoint = 920) {
   return isMobile;
 }
 
+function getContinentName(mapItem = {}) {
+  return (
+    String(
+      mapItem?.continent_name ??
+        mapItem?.continent ??
+        mapItem?.continentLabel ??
+        ""
+    ).trim()
+  );
+}
+
 export default function MonsterMapCard({ mapItem }) {
   const isMobile = useIsMobile();
   const isDark = usePrefersDark();
@@ -274,10 +287,14 @@ export default function MonsterMapCard({ mapItem }) {
 
   const areaTags = useMemo(() => buildAreaTags(displaySpawns), [displaySpawns]);
   const displayTimes = summary.times;
+  const continentName = getContinentName(mapItem);
 
   const previewAreaTags = areaTags.slice(0, AREA_PREVIEW_COUNT);
   const hiddenAreaTags = areaTags.slice(AREA_PREVIEW_COUNT);
   const hasHiddenCoords = hiddenAreaTags.length > 0;
+
+  const hasSpawnMeta =
+    previewAreaTags.length > 0 || displayTimes.length > 0 || summary.layerNames.length > 0;
 
   return (
     <article style={styles.card}>
@@ -288,24 +305,13 @@ export default function MonsterMapCard({ mapItem }) {
         }}
       >
         <div style={styles.titleWrap}>
-          <h3 style={styles.mapTitle}>{mapItem?.name || "マップ"}</h3>
+          <div style={styles.titleLine}>
+            <h3 style={styles.mapTitle}>{mapItem?.name || "マップ"}</h3>
 
-          {displayTimes.length > 0 ? (
-            <div style={styles.timeTagWrap}>
-              {displayTimes.map((time) => (
-                <span
-                  key={time}
-                  style={{
-                    ...styles.tag,
-                    ...(time === "夜" ? styles.tagNight : {}),
-                    ...((time === "日中" || time === "昼") ? styles.tagDay : {}),
-                  }}
-                >
-                  {time}
-                </span>
-              ))}
-            </div>
-          ) : null}
+            {continentName ? (
+              <span style={styles.continentText}>{continentName}</span>
+            ) : null}
+          </div>
         </div>
 
         {hasLayerSwitch ? (
@@ -336,34 +342,61 @@ export default function MonsterMapCard({ mapItem }) {
         ) : null}
       </div>
 
-      {areaTags.length > 0 ? (
-        <div style={styles.coordsSection}>
-          <div style={styles.areaRow}>
-            {previewAreaTags.map((area) => (
-              <span key={area} style={{ ...styles.tag, ...styles.tagArea }}>
-                {area}
-              </span>
-            ))}
+      {hasSpawnMeta ? (
+        <div style={styles.spawnInfoSection}>
+          <div style={styles.spawnInfoRow}>
+            <span style={styles.spawnInfoLabel}>生息</span>
 
-            {!coordsExpanded && hasHiddenCoords ? (
-              <button
-                type="button"
-                onClick={() => setCoordsExpanded(true)}
-                style={styles.coordsToggleButton}
-              >
-                +{hiddenAreaTags.length}
-              </button>
-            ) : null}
+            <div style={styles.spawnMetaWrap}>
+              <div style={styles.spawnMetaWrapTag}>
+                {previewAreaTags.map((area) => (
+                  <div key={area} style={{ ...styles.tag, ...styles.tagArea }}>
+                    {area}
+                  </div>
+                ))}
+                {!coordsExpanded && hasHiddenCoords ? (
+                  <button
+                    type="button"
+                    onClick={() => setCoordsExpanded(true)}
+                    style={styles.coordsToggleButton}
+                  >
+                    +{hiddenAreaTags.length}
+                  </button>
+                ) : null}
+              </div>
+              <div>
+                {displayTimes.map((time) => (
+                  <div
+                    key={time}
+                    style={{
+                      ...styles.tag,
+                      ...(time === "夜" ? styles.tagNight : {}),
+                      ...((time === "日中" || time === "昼") ? styles.tagDay : {}),
+                      ...(time === "いつでも" ? styles.tagAnytime : {}),
+                    }}
+                  >
+                    {time}
+                  </div>
+                ))}
+              </div>
+
+           
+             
+            </div>
           </div>
 
           {coordsExpanded && hasHiddenCoords ? (
             <div style={styles.coordsAccordion}>
-              <div style={styles.areaRow}>
-                {hiddenAreaTags.map((area) => (
-                  <span key={area} style={{ ...styles.tag, ...styles.tagArea }}>
-                    {area}
-                  </span>
-                ))}
+              <div style={styles.spawnInfoRow}>
+                <span style={styles.spawnInfoLabelSub}>追加</span>
+
+                <div style={styles.spawnMetaWrap}>
+                  {hiddenAreaTags.map((area) => (
+                    <span key={area} style={{ ...styles.tag, ...styles.tagArea }}>
+                      {area}
+                    </span>
+                  ))}
+                </div>
               </div>
 
               <button
@@ -429,6 +462,13 @@ function getStyles(isDark) {
       gap: "8px",
       flexWrap: "wrap",
     },
+    titleLine: {
+      display: "flex",
+      alignItems: "baseline",
+      gap: "8px",
+      flexWrap: "wrap",
+      minWidth: 0,
+    },
     mapTitle: {
       margin: 0,
       fontSize: "18px",
@@ -438,12 +478,13 @@ function getStyles(isDark) {
       overflowWrap: "anywhere",
       wordBreak: "break-word",
     },
-    timeTagWrap: {
-      display: "flex",
-      gap: "6px",
-      flexWrap: "wrap",
-      alignItems: "center",
-      minWidth: 0,
+    continentText: {
+      fontSize: "12px",
+      fontWeight: 600,
+      lineHeight: 1.4,
+      color: isDark ? "#94a3b8" : "#64748b",
+      whiteSpace: "normal",
+      wordBreak: "break-word",
     },
     layerSwitchRow: {
       display: "flex",
@@ -481,18 +522,53 @@ function getStyles(isDark) {
         ? "0 8px 20px rgba(79,70,229,0.28)"
         : "0 8px 20px rgba(37,99,235,0.18)",
     },
-    coordsSection: {
+    spawnInfoSection: {
       display: "flex",
       flexDirection: "column",
       gap: "8px",
       minWidth: 0,
+      padding: "10px 12px",
+      borderRadius: "14px",
+      background: isDark ? "rgba(2,6,23,0.42)" : "#f8fafc",
+      border: isDark ? "1px solid #1e293b" : "1px solid #e2e8f0",
     },
-    areaRow: {
+    spawnInfoRow: {
       display: "flex",
-      gap: "6px",
-      flexWrap: "wrap",
-      minWidth: 0,
       alignItems: "center",
+      gap: "10px",
+      minWidth: 0,
+    },
+    spawnInfoLabel: {
+      flex: "0 0 auto",
+      minWidth: "32px",
+      fontSize: "11px",
+      fontWeight: 800,
+ 
+      color: isDark ? "#93c5fd" : "#2563eb",
+    },
+    spawnInfoLabelSub: {
+      flex: "0 0 auto",
+      minWidth: "32px",
+      fontSize: "11px",
+      fontWeight: 800,
+      lineHeight: 1.9,
+      color: isDark ? "#64748b" : "#94a3b8",
+    },
+    spawnMetaWrap: {
+      display: "flex",
+
+      width:"100%",
+      flexWrap: "wrap",
+      alignItems: "center",
+      justifyContent:"space-between",
+      minWidth: 0,
+    },
+    spawnMetaWrapTag: {
+      display: "flex",
+      flexWrap: "wrap",
+      alignItems: "center",
+      justifyContent:"space-between",
+      minWidth: 0,
     },
     coordsAccordion: {
       display: "flex",
@@ -513,9 +589,14 @@ function getStyles(isDark) {
       lineHeight: 1.35,
     },
     tagArea: {
-      background: isDark ? "#111827" : "#f1f5f9",
+      background: isDark ? "#111827" : "#ffffff",
       color: isDark ? "#cbd5e1" : "#334155",
       border: isDark ? "1px solid #334155" : "1px solid #cbd5e1",
+    },
+    tagLayer: {
+      background: isDark ? "rgba(148,163,184,0.12)" : "#f1f5f9",
+      color: isDark ? "#cbd5e1" : "#475569",
+      border: isDark ? "1px solid #475569" : "1px solid #cbd5e1",
     },
     tagDay: {
       background: isDark ? "rgba(251,146,60,0.16)" : "#ffedd5",
@@ -527,6 +608,11 @@ function getStyles(isDark) {
       color: "#ffffff",
       border: isDark ? "1px solid #334155" : "1px solid #374151",
     },
+    tagAnytime: {
+      background: isDark ? "rgba(34,197,94,0.16)" : "#dcfce7",
+      color: isDark ? "#86efac" : "#166534",
+      border: isDark ? "1px solid rgba(34,197,94,0.30)" : "1px solid #86efac",
+    },
     coordsToggleButton: {
       appearance: "none",
       border: isDark ? "1px solid #334155" : "1px solid #cbd5e1",
@@ -537,7 +623,7 @@ function getStyles(isDark) {
       fontSize: "11px",
       fontWeight: 700,
       cursor: "pointer",
-      lineHeight: 1.35,
+
     },
     coordsCloseButton: {
       alignSelf: "flex-start",

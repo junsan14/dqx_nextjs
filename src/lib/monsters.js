@@ -53,7 +53,6 @@ export async function searchMonsters(keyword = "", searchType = "monster") {
 export async function fetchMonsterDetail(id) {
   try {
     const res = await api.get(`/api/monster-search/${id}`);
-
     return res.data?.data ?? res.data ?? null;
   } catch (error) {
     console.error(error);
@@ -65,7 +64,6 @@ export async function fetchMonsterDetail(id) {
     throw new Error("モンスター詳細取得失敗");
   }
 }
-
 
 export async function createMonster(payload) {
   try {
@@ -123,6 +121,7 @@ export async function deleteMonster(id) {
     throw new Error("モンスター削除失敗");
   }
 }
+
 export async function fetchMonstersAroundDisplayOrder(
   displayOrder,
   { range = 5, excludeId = null } = {}
@@ -137,7 +136,6 @@ export async function fetchMonstersAroundDisplayOrder(
     });
 
     const rows = res.data?.data ?? [];
-
     return Array.isArray(rows) ? rows : [];
   } catch (error) {
     console.error(error);

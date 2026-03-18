@@ -5,6 +5,7 @@ export const GROUP_KIND_OPTIONS = [
   "tailoring_set",
   "shield_set",
   "weapon_set",
+  "craft_tool_set",
   "single",
 ];
 
@@ -49,27 +50,76 @@ export const GRID_TYPE_PRESETS = {
   扇: { rows: 2, cols: 2, disabledCells: [] },
   弓: { rows: 3, cols: 2, disabledCells: [[1, 1]] },
   鎌: { rows: 4, cols: 2, disabledCells: [[1, 1], [2, 1], [3, 1]] },
+
+  道具ハンマー: { rows: 3, cols: 2, disabledCells: [[2, 1]] },
+  道具木工刀: { rows: 3, cols: 1, disabledCells: [] },
+  道具錬金ツボ: { rows: 3, cols: 2, disabledCells: [] },
+  道具錬金ランプ: { rows: 2, cols: 2, disabledCells: [] },
+  道具さいほう針: { rows: 2, cols: 1, disabledCells: [] },
+  道具フライパン: { rows: 4, cols: 2, disabledCells: [[3, 1]] },
 };
 
 export const GRID_TYPE_OPTIONS = Object.keys(GRID_TYPE_PRESETS);
 
 export const GROUP_MEMBER_PRESETS = {
   armor_set: [
-    { key: "head", label: "頭", slot: "頭", slotGridType: "鎧頭" },
-    { key: "bodyTop", label: "体上", slot: "体上", slotGridType: "鎧上" },
-    { key: "bodyBottom", label: "体下", slot: "体下", slotGridType: "鎧下" },
-    { key: "arm", label: "腕", slot: "腕", slotGridType: "鎧腕" },
-    { key: "foot", label: "足", slot: "足", slotGridType: "鎧足" },
+    { key: "head", label: "鎧頭", slot: "頭", slotGridType: "鎧頭" },
+    { key: "bodyTop", label: "鎧上", slot: "体上", slotGridType: "鎧上" },
+    { key: "bodyBottom", label: "鎧下", slot: "体下", slotGridType: "鎧下" },
+    { key: "arm", label: "鎧腕", slot: "腕", slotGridType: "鎧腕" },
+    { key: "foot", label: "鎧足", slot: "足", slotGridType: "鎧足" },
   ],
   tailoring_set: [
-    { key: "head", label: "頭", slot: "頭", slotGridType: "裁縫頭" },
-    { key: "bodyTop", label: "体上", slot: "体上", slotGridType: "裁縫上" },
-    { key: "bodyBottom", label: "体下", slot: "体下", slotGridType: "裁縫下" },
-    { key: "arm", label: "腕", slot: "腕", slotGridType: "裁縫腕" },
-    { key: "foot", label: "足", slot: "足", slotGridType: "裁縫足" },
+    { key: "head", label: "裁縫頭", slot: "頭", slotGridType: "裁縫頭" },
+    { key: "bodyTop", label: "裁縫上", slot: "体上", slotGridType: "裁縫上" },
+    { key: "bodyBottom", label: "裁縫下", slot: "体下", slotGridType: "裁縫下" },
+    { key: "arm", label: "裁縫腕", slot: "腕", slotGridType: "裁縫腕" },
+    { key: "foot", label: "裁縫足", slot: "足", slotGridType: "裁縫足" },
   ],
-  shield_set: [{ key: "shield", label: "盾", slot: "盾", slotGridType: "盾" }],
-  weapon_set: [{ key: "weapon", label: "武器", slot: "武器", slotGridType: "" }],
+  shield_set: [
+    { key: "shield", label: "盾", slot: "盾", slotGridType: "盾" },
+  ],
+  weapon_set: [
+    { key: "weapon", label: "武器", slot: "武器", slotGridType: "" },
+  ],
+  craft_tool_set: [
+    {
+      key: "needle",
+      label: "さいほう針",
+      slot: "その他",
+      slotGridType: "道具さいほう針",
+    },
+    {
+      key: "wood",
+      label: "木工刀",
+      slot: "その他",
+      slotGridType: "道具木工刀",
+    },
+    {
+      key: "lamp",
+      label: "錬金ランプ",
+      slot: "その他",
+      slotGridType: "道具錬金ランプ",
+    },
+    {
+      key: "pot",
+      label: "錬金ツボ",
+      slot: "その他",
+      slotGridType: "道具錬金ツボ",
+    },
+    {
+      key: "pan",
+      label: "フライパン",
+      slot: "その他",
+      slotGridType: "道具フライパン",
+    },
+    {
+      key: "hammer",
+      label: "鍛冶ハンマー",
+      slot: "その他",
+      slotGridType: "道具ハンマー",
+    },
+  ],
 };
 
 export function cx(...classes) {
@@ -329,19 +379,24 @@ export function buildApiPayload(row) {
     group_kind: str(row.groupKind).trim() || null,
     group_id: str(row.groupId).trim() || null,
     group_name: str(row.groupName).trim() || null,
-    materials_json: safeJsonParse(row.materialsJson, []),
+    materials_json: Array.isArray(row.materialsJson)
+      ? row.materialsJson
+      : safeJsonParse(row.materialsJson, []),
     slot_grid_json:
       str(row.slotGridJson).trim() === ""
         ? null
-        : safeJsonParse(row.slotGridJson, null),
+        : safeJsonParse(row.slotGridJson, []),
     source_url: str(row.sourceUrl).trim() || null,
     detail_url: str(row.detailUrl).trim() || null,
-    effects_json: safeJsonParse(row.effectsJson, []),
+    effects_json: Array.isArray(row.effectsJson)
+      ? row.effectsJson
+      : safeJsonParse(row.effectsJson, []),
   };
 }
 
 export function getGridPreset(gridType) {
-  return GRID_TYPE_PRESETS[str(gridType).trim()] ?? null;
+  const type = str(gridType).trim();
+  return GRID_TYPE_PRESETS[type] ?? null;
 }
 
 export function isDisabledCell(gridType, r, c) {
@@ -479,7 +534,7 @@ export function buildEmptyGroupMembers(groupKind) {
     slotLabel: x.label,
     slot: x.slot,
     slotGridType: x.slotGridType,
-    itemName: "",
+    itemName: x.label,
   }));
 }
 
@@ -531,37 +586,154 @@ export function findEquipmentTypeById(equipmentTypes = [], equipmentTypeId) {
   );
 }
 
-export function getAutoSlotGridType(slot, equipmentType) {
-  const normalizedSlot = str(slot).trim();
-  const kind = str(equipmentType?.kind).trim().toLowerCase();
-  const craftTypeId = String(equipmentType?.craft_type_id ?? "");
-  const typeName = str(equipmentType?.name).trim();
+export function getCraftGridTypeByBaseSlot(baseSlot, groupKind) {
+  const slot = str(baseSlot).trim();
 
-  if (!normalizedSlot || !equipmentType) return "";
-
-  if (kind === "shield" || normalizedSlot === "盾") {
-    return "盾";
-  }
-
-  if (kind === "weapon" || normalizedSlot === "武器") {
-    return typeName || "";
-  }
-
-  if (kind === "armor") {
-    const prefix = craftTypeId === "4" ? "裁縫" : "鎧";
-
+  if (groupKind === "armor_set") {
     const map = {
-      頭: `${prefix}頭`,
-      からだ上: `${prefix}上`,
-      体上: `${prefix}上`,
-      からだ下: `${prefix}下`,
-      体下: `${prefix}下`,
-      腕: `${prefix}腕`,
-      足: `${prefix}足`,
+      頭: "鎧頭",
+      体上: "鎧上",
+      からだ上: "鎧上",
+      体下: "鎧下",
+      からだ下: "鎧下",
+      腕: "鎧腕",
+      足: "鎧足",
     };
+    return map[slot] ?? "";
+  }
 
-    return map[normalizedSlot] ?? "";
+  if (groupKind === "tailoring_set") {
+    const map = {
+      頭: "裁縫頭",
+      体上: "裁縫上",
+      からだ上: "裁縫上",
+      体下: "裁縫下",
+      からだ下: "裁縫下",
+      腕: "裁縫腕",
+      足: "裁縫足",
+    };
+    return map[slot] ?? "";
   }
 
   return "";
+}
+
+export function getAutoSlotGridType(
+  slot,
+  equipmentType,
+  groupKind = null,
+  member = null
+) {
+  const rawSlot = str(slot).trim();
+
+  if (groupKind === "craft_tool_set") {
+    return str(member?.slotGridType).trim();
+  }
+
+  if (!rawSlot) return "";
+
+  if (groupKind === "armor_set" || groupKind === "tailoring_set") {
+    return getCraftGridTypeByBaseSlot(rawSlot, groupKind);
+  }
+
+  const typeName = str(equipmentType?.name ?? equipmentType?.label).trim();
+
+  if (rawSlot === "盾") return "盾";
+  if (rawSlot === "武器") return typeName || "武器";
+
+  return "";
+}
+
+export function inferSingleSlotFromEquipmentType(equipmentType) {
+  const typeName = str(equipmentType?.name ?? equipmentType?.label).trim();
+  const craftTypeId = String(equipmentType?.craft_type_id ?? "");
+  const normalized = typeName.toLowerCase();
+
+  const matchers = [
+    {
+      keywords: ["頭", "ぼうし", "helmet", "hat", "cap", "hood", "circlet"],
+      slot: "頭",
+    },
+    {
+      keywords: ["からだ上", "体上", "upper", "top"],
+      slot: "体上",
+    },
+    {
+      keywords: ["からだ下", "体下", "lower", "bottom", "pants"],
+      slot: "体下",
+    },
+    {
+      keywords: ["腕", "うで", "glove", "gloves", "gauntlet"],
+      slot: "腕",
+    },
+    {
+      keywords: ["足", "あし", "shoe", "shoes", "boots", "boot"],
+      slot: "足",
+    },
+    { keywords: ["盾", "shield"], slot: "盾" },
+    {
+      keywords: [
+        "武器",
+        "剣",
+        "片手剣",
+        "両手剣",
+        "短剣",
+        "ヤリ",
+        "オノ",
+        "ハンマー",
+        "ツメ",
+        "ムチ",
+        "ブーメラン",
+        "スティック",
+        "両手杖",
+        "棍",
+        "扇",
+        "弓",
+        "鎌",
+        "sword",
+        "axe",
+        "wand",
+        "staff",
+        "hammer",
+        "spear",
+        "bow",
+        "dagger",
+        "claw",
+      ],
+      slot: "武器",
+    },
+  ];
+
+  const matched = matchers.find((item) =>
+    item.keywords.some((keyword) =>
+      normalized.includes(String(keyword).toLowerCase())
+    )
+  );
+
+  const slot = matched?.slot ?? "";
+
+  let inferredGroupKind = null;
+  if (craftTypeId === "3") inferredGroupKind = "armor_set";
+  if (craftTypeId === "4") inferredGroupKind = "tailoring_set";
+
+  if (!inferredGroupKind) {
+    if (
+      typeName.includes("ローブ") ||
+      typeName.includes("服") ||
+      typeName.includes("裁縫")
+    ) {
+      inferredGroupKind = "tailoring_set";
+    } else if (
+      typeName.includes("鎧") ||
+      typeName.includes("よろい") ||
+      typeName.includes("アーマー")
+    ) {
+      inferredGroupKind = "armor_set";
+    }
+  }
+
+  return {
+    slot,
+    slotGridType: getAutoSlotGridType(slot, equipmentType, inferredGroupKind),
+  };
 }

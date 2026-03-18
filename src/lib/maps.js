@@ -41,6 +41,7 @@ function normalizeLayer(row = {}) {
     source_url: row?.source_url ?? "",
     display_order: Number(row?.display_order ?? 1),
     image_file: null,
+    layer_file_name: String(row?.layer_file_name ?? "").trim(),
   };
 }
 
@@ -99,9 +100,26 @@ function buildMapFormData(payload = {}) {
       formData.append(`layers[${index}][id]`, String(layer.id));
     }
 
-    formData.append(`layers[${index}][layer_name]`, String(layer?.layer_name ?? ""));
-    formData.append(`layers[${index}][floor_no]`, String(layer?.floor_no ?? 0));
-    formData.append(`layers[${index}][source_url]`, String(layer?.source_url ?? ""));
+    formData.append(
+      `layers[${index}][layer_name]`,
+      String(layer?.layer_name ?? "")
+    );
+
+    formData.append(
+      `layers[${index}][layer_file_name]`,
+      String(layer?.layer_file_name ?? "")
+    );
+
+    formData.append(
+      `layers[${index}][floor_no]`,
+      String(layer?.floor_no ?? 0)
+    );
+
+    formData.append(
+      `layers[${index}][source_url]`,
+      String(layer?.source_url ?? "")
+    );
+
     formData.append(
       `layers[${index}][display_order]`,
       String(layer?.display_order ?? index + 1)
@@ -151,7 +169,9 @@ export async function createMap(payload) {
     return normalizeMap(extractOne(res.data));
   } catch (error) {
     console.error(error?.response?.data || error);
-    throw new Error("マップ作成失敗");
+    throw new Error(
+      error?.response?.data?.message || "マップ作成失敗"
+    );
   }
 }
 
@@ -169,7 +189,9 @@ export async function updateMap(id, payload) {
     return normalizeMap(extractOne(res.data));
   } catch (error) {
     console.error(error?.response?.data || error);
-    throw new Error("マップ更新失敗");
+    throw new Error(
+      error?.response?.data?.message || "マップ更新失敗"
+    );
   }
 }
 

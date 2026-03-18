@@ -35,6 +35,7 @@ export default function MapListPane({
               ...(active ? styles.itemActive : null),
             }}
           >
+            <div style={styles.idText}>ID: {row.id}</div>
             <div style={styles.itemTitle}>{row.name || "名称未設定"}</div>
             <div style={styles.meta}>
               {row.continent || "-"} / {row.map_type || "-"}
@@ -70,6 +71,11 @@ const baseStyles = {
   itemActive: {
     borderColor: "#2563eb",
     background: "#eff6ff",
+  },
+  idText: {
+    fontSize: "12px",
+    color: "#64748b",
+    marginBottom: "4px",
   },
   itemTitle: {
     fontWeight: 700,

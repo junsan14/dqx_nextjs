@@ -47,7 +47,23 @@ function SlotGridView({ grid }) {
   );
 }
 
-function MobileSlotTabs({ slots, activeSlot, onChange }) {
+function getAxisLabel(slot, slotGridMeta, slotItemMap) {
+  return (
+    slotGridMeta?.[slot]?.label ||
+    slotGridMeta?.[slot]?.itemName ||
+    slotItemMap?.[slot] ||
+    slot
+  );
+}
+
+function getAxisItemName(slot, slotGridMeta, selectedSet) {
+  return (
+    slotGridMeta?.[slot]?.itemName ||
+    getSlotItemName(selectedSet, slot)
+  );
+}
+
+function MobileSlotTabs({ slots, activeSlot, onChange, slotGridMeta, slotItemMap }) {
   return (
     <div className="-mx-4 px-4 sm:mx-0 sm:px-0 overflow-x-auto">
       <div className="flex gap-2 py-1">
@@ -65,7 +81,7 @@ function MobileSlotTabs({ slots, activeSlot, onChange }) {
                   : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200")
               }
             >
-              {s}
+              {getAxisLabel(s, slotGridMeta, slotItemMap)}
             </button>
           );
         })}
@@ -159,7 +175,7 @@ function MobileMaterialsList({ slot, rows, unitCostMap, onChangeUnitCost, toolRo
         ))
       ) : (
         <div className="px-3 py-4 text-xs text-slate-500 dark:text-slate-400">
-          この部位で使う素材はない。
+          この項目で使う素材はない。
         </div>
       )}
 
@@ -176,6 +192,7 @@ function MobileSlotCarousel({
   onChange,
   slotGrids,
   slotItemMap,
+  slotGridMeta,
   children,
 }) {
   const scrollerRef = useRef(null);
@@ -267,7 +284,7 @@ function MobileSlotCarousel({
                 {grid ? (
                   <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 p-3 space-y-2">
                     <div className="text-xs font-semibold text-center text-slate-700 dark:text-slate-200 truncate px-2">
-                      {slotItemMap?.[slot] || slot}
+                      {getAxisLabel(slot, slotGridMeta, slotItemMap)}
                     </div>
 
                     <div className="min-h-[184px] flex items-center">
@@ -288,7 +305,7 @@ function MobileSlotCarousel({
       </div>
 
       <div className="text-center text-[11px] text-slate-500 dark:text-slate-400">
-        ← 横スワイプで部位切替 →
+        ← 横スワイプで切替 →
       </div>
     </div>
   );
@@ -298,6 +315,7 @@ export default function CraftProfitMaterialsCard({
   slots,
   rows,
   slotGrids,
+  slotGridMeta,
   selectedSet,
   activeSlot,
   setActiveSlot,
@@ -316,7 +334,10 @@ export default function CraftProfitMaterialsCard({
   const slotItemMap = useMemo(() => {
     const map = {};
     for (const it of selectedSet?.items || []) {
-      map[it.slot] = it.name;
+      map[String(it.id || it.slot || it.name)] = it.name;
+      if (it.slot) {
+        map[it.slot] = it.name;
+      }
     }
     return map;
   }, [selectedSet]);
@@ -332,6 +353,8 @@ export default function CraftProfitMaterialsCard({
           slots={slots}
           activeSlot={activeSlot}
           onChange={setActiveSlot}
+          slotGridMeta={slotGridMeta}
+          slotItemMap={slotItemMap}
         />
 
         <MobileSlotCarousel
@@ -340,6 +363,7 @@ export default function CraftProfitMaterialsCard({
           onChange={setActiveSlot}
           slotGrids={slotGrids}
           slotItemMap={slotItemMap}
+          slotGridMeta={slotGridMeta}
         >
           {(slot) => (
             <MobileMaterialsList
@@ -360,7 +384,8 @@ export default function CraftProfitMaterialsCard({
           <div className="flex gap-3 min-w-max pb-2">
             {slots.map((slot) => {
               const grid = slotGrids?.[slot] ?? null;
-              const itemName = getSlotItemName(selectedSet, slot);
+              const label = getAxisLabel(slot, slotGridMeta, slotItemMap);
+              const itemName = getAxisItemName(slot, slotGridMeta, selectedSet);
 
               if (!grid) return null;
 
@@ -370,9 +395,13 @@ export default function CraftProfitMaterialsCard({
                   className="w-[220px] shrink-0 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 p-4 space-y-2"
                 >
                   <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                    {slot}
-                    <br />
-                    {itemName ? itemName : ""}
+                    {label}
+                    {itemName && itemName !== label ? (
+                      <>
+                        <br />
+                        {itemName}
+                      </>
+                    ) : null}
                   </div>
 
                   <SlotGridView grid={grid} />
@@ -395,7 +424,7 @@ export default function CraftProfitMaterialsCard({
                       key={slot}
                       className="px-3 py-2 text-right font-semibold text-slate-700 dark:text-slate-200"
                     >
-                      {slot}
+                      {getAxisLabel(slot, slotGridMeta, slotItemMap)}
                     </th>
                   ))}
                   <th className="px-3 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">
@@ -520,7 +549,7 @@ export default function CraftProfitMaterialsCard({
 
                 <tr>
                   <td className="px-3 py-2 font-semibold border-t border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100">
-                    参考（1部位あたり）
+                    参考（1件あたり）
                   </td>
                   <td
                     className="px-3 py-2 text-right font-semibold tabular-nums border-t border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100"

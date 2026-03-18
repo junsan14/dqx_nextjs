@@ -287,7 +287,13 @@ export function buildSetsFromEquipments(rows, itemMap = new Map()) {
   }
 
   const grouped = Array.from(groups.values()).map((group) => {
+    const isCraftToolSet = String(group.groupKind || "") === "craft_tool_set";
+
     group.items.sort((a, b) => {
+      if (isCraftToolSet) {
+        return collator.compare(a.name || "", b.name || "");
+      }
+
       const sa = SLOT_ORDER_MAP[a.slot] ?? 99;
       const sb = SLOT_ORDER_MAP[b.slot] ?? 99;
       if (sa !== sb) return sa - sb;
@@ -328,9 +334,21 @@ export function normalizeSlots(items) {
   return slots;
 }
 
+function isCraftToolSet(selectedSet) {
+  return String(selectedSet?.groupKind || "") === "craft_tool_set";
+}
+
+function getAxisKey(item, index, selectedSet) {
+  if (isCraftToolSet(selectedSet)) {
+    return String(item.id || item.name || `tool_${index}`);
+  }
+
+  return item.slot || "その他";
+}
+
 export function buildMatrix(selectedSet) {
   if (!selectedSet) {
-    return { slots: [], rows: [], slotGrids: {} };
+    return { slots: [], rows: [], slotGrids: {}, slotGridMeta: {} };
   }
 
   const normalizedItems =
@@ -350,11 +368,27 @@ export function buildMatrix(selectedSet) {
         ]
       : [];
 
-  const slots = normalizeSlots(normalizedItems);
-  const materialMap = new Map();
+  const slots = isCraftToolSet(selectedSet)
+    ? normalizedItems.map((item, index) => getAxisKey(item, index, selectedSet))
+    : normalizeSlots(normalizedItems);
 
-  for (const item of normalizedItems) {
-    const slot = item.slot || "その他";
+  const slotGridMeta = {};
+  const materialMap = new Map();
+  const slotGrids = {};
+
+  normalizedItems.forEach((item, index) => {
+    const axisKey = getAxisKey(item, index, selectedSet);
+
+    slotGridMeta[axisKey] = {
+      key: axisKey,
+      label: isCraftToolSet(selectedSet) ? item.name : (item.slot || "その他"),
+      itemName: item.name || "",
+      slot: item.slot || "その他",
+    };
+
+    if (item.slotGrid) {
+      slotGrids[axisKey] = item.slotGrid;
+    }
 
     for (const material of item.materials || []) {
       const key = `${material.item_id ?? "noid"}::${material.name}`;
@@ -368,7 +402,7 @@ export function buildMatrix(selectedSet) {
       };
 
       const qty = Number(material.qty || 0);
-      current.perSlotQty[slot] = (current.perSlotQty[slot] || 0) + qty;
+      current.perSlotQty[axisKey] = (current.perSlotQty[axisKey] || 0) + qty;
       current.totalQty += qty;
 
       if (!current.defaultUnitCost && material.defaultUnitCost != null) {
@@ -377,28 +411,26 @@ export function buildMatrix(selectedSet) {
 
       materialMap.set(key, current);
     }
-  }
+  });
 
   const rows = Array.from(materialMap.values()).sort((a, b) =>
     collator.compare(a.materialName, b.materialName)
   );
 
-  const slotGrids = {};
-
-  for (const item of normalizedItems) {
-    const slot = item.slot || "その他";
-    if (item.slotGrid) {
-      slotGrids[slot] = item.slotGrid;
-    }
-  }
-
-  return { slots, rows, slotGrids };
+  return { slots, rows, slotGrids, slotGridMeta };
 }
 
 export function getSlotItemName(selectedSet, slot) {
   if (!selectedSet) return null;
 
   if (Array.isArray(selectedSet.items)) {
+    if (isCraftToolSet(selectedSet)) {
+      const item = selectedSet.items.find(
+        (it) => String(it.id || it.name) === String(slot)
+      );
+      return item?.name ?? null;
+    }
+
     const item = selectedSet.items.find((it) => it.slot === slot);
     return item?.name ?? null;
   }

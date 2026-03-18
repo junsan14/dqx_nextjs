@@ -54,6 +54,17 @@ function usePrefersDark() {
   return isDark;
 }
 
+function getReincarnationParentName(monster) {
+  if (!monster) return "";
+
+  return (
+    monster.reincarnation_parent_name ||
+    monster.parent_name ||
+    monster.reincarnation_parent?.name ||
+    ""
+  );
+}
+
 export default function MonsterDetailHero({ monster }) {
   const isDark = usePrefersDark();
   const styles = getStyles(isDark);
@@ -63,9 +74,31 @@ export default function MonsterDetailHero({ monster }) {
     joinDisplayValue(monster?.note) ||
     "";
 
+  const parentName = getReincarnationParentName(monster);
+  const isReincarnated =
+    Number(monster?.is_reincarnated) === 1 || monster?.is_reincarnated === true;
+
   return (
     <section style={styles.card}>
       <div style={styles.contentCol}>
+        <div style={styles.titleBlock}>
+          <div style={styles.titleRow}>
+
+            {isReincarnated ? (
+              <div style={styles.reincarnationRow}>
+                <span style={styles.reincarnationBadge}>転生</span>
+                {parentName ? (
+                  <span style={styles.parentText}>（{parentName}）</span>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+
+          {monster?.system_type ? (
+            <div style={styles.systemType}>{monster.system_type}</div>
+          ) : null}
+        </div>
+
         {description ? <p style={styles.description}>{description}</p> : null}
 
         {monster?.exp != null || monster?.gold != null ? (
@@ -94,12 +127,75 @@ function getStyles(isDark) {
   return {
     card: {
       marginBottom: "16px",
+      width: "100%",
     },
     contentCol: {
       minWidth: 0,
       display: "grid",
       gap: "12px",
       alignContent: "start",
+      width: "100%",
+    },
+    titleBlock: {
+      display: "grid",
+      gap: "6px",
+      width: "100%",
+    },
+    titleRow: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "flex-end",
+      gap: "12px",
+      flexWrap: "wrap",
+      width: "100%",
+    },
+    title: {
+      margin: 0,
+      fontSize: "clamp(26px, 5vw, 40px)",
+      lineHeight: 1.15,
+      fontWeight: 900,
+      color: isDark ? "#f8fafc" : "#0f172a",
+      letterSpacing: "-0.02em",
+      minWidth: 0,
+      wordBreak: "break-word",
+    },
+    reincarnationRow: {
+      display: "flex",
+      alignItems: "center",
+      gap: "8px",
+      flexWrap: "wrap",
+      justifyContent: "flex-start",
+    },
+    reincarnationBadge: {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "6px 10px",
+      borderRadius: "999px",
+      fontSize: "12px",
+      fontWeight: 800,
+      lineHeight: 1,
+      background: isDark
+        ? "rgba(250, 204, 21, 0.18)"
+        : "rgba(245, 158, 11, 0.14)",
+      color: isDark ? "#fde68a" : "#b45309",
+      border: isDark
+        ? "1px solid rgba(250, 204, 21, 0.35)"
+        : "1px solid rgba(245, 158, 11, 0.26)",
+      whiteSpace: "nowrap",
+    },
+    parentText: {
+      fontSize: "14px",
+      fontWeight: 700,
+      color: isDark ? "#cbd5e1" : "#475569",
+      whiteSpace: "normal",
+      wordBreak: "break-word",
+    },
+    systemType: {
+      fontSize: "14px",
+      fontWeight: 700,
+      color: isDark ? "#94a3b8" : "#64748b",
+      wordBreak: "break-word",
     },
     description: {
       margin: 0,

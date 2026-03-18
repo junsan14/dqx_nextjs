@@ -491,6 +491,21 @@
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
+.actionsInline {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.buttonPrimary {
+  appearance: none;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid;
+}
 
 .gridEditorPlainCompact {
   --cell-size: 78px;

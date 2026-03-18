@@ -52,6 +52,8 @@ export default function MonsterEditorPage() {
   const [accessories, setAccessories] = useState([]);
   const [maps, setMaps] = useState([]);
 
+  const [parentCandidates, setParentCandidates] = useState([]);
+
   const isDark = usePrefersDarkMode();
   const theme = useMemo(() => getMonsterEditorTheme(isDark), [isDark]);
 
@@ -147,6 +149,32 @@ export default function MonsterEditorPage() {
     }
   }
 
+  async function searchReincarnationParents(nextKeyword = "") {
+    const keyword = String(nextKeyword ?? "").trim();
+
+    if (!keyword) {
+      setParentCandidates([]);
+      return;
+    }
+
+    try {
+      const rows = await searchMonsters(keyword, "monster");
+      const normalized = Array.isArray(rows) ? rows : [];
+
+      const currentId = Number(selectedMonster?.id ?? 0);
+
+      setParentCandidates(
+        normalized
+          .filter((row) => Number(row?.id ?? 0) > 0)
+          .filter((row) => Number(row.id) !== currentId)
+          .slice(0, 20)
+      );
+    } catch (error) {
+      console.error(error);
+      setParentCandidates([]);
+    }
+  }
+
   useEffect(() => {
     loadMonsters("");
     loadMasters();
@@ -218,6 +246,7 @@ export default function MonsterEditorPage() {
 
       setSelectedMonster(normalized);
       setInitialSpawns(Array.isArray(spawnRows) ? spawnRows : []);
+      setParentCandidates([]);
 
       if (typeof window !== "undefined" && window.innerWidth <= 960) {
         setSidebarOpen(false);
@@ -234,6 +263,7 @@ export default function MonsterEditorPage() {
     setSelectedMonster(emptyMonster());
     setInitialSpawns([]);
     setAroundMonsters([]);
+    setParentCandidates([]);
 
     if (typeof window !== "undefined" && window.innerWidth <= 960) {
       setSidebarOpen(false);
@@ -283,6 +313,7 @@ export default function MonsterEditorPage() {
         })
       );
       setInitialSpawns(Array.isArray(freshSpawns) ? freshSpawns : []);
+      setParentCandidates([]);
 
       await loadMonsters(keyword);
       alert("保存した");
@@ -299,6 +330,7 @@ export default function MonsterEditorPage() {
       setSelectedMonster(emptyMonster());
       setInitialSpawns([]);
       setAroundMonsters([]);
+      setParentCandidates([]);
       return;
     }
 
@@ -310,6 +342,7 @@ export default function MonsterEditorPage() {
       setSelectedMonster(emptyMonster());
       setInitialSpawns([]);
       setAroundMonsters([]);
+      setParentCandidates([]);
       await loadMonsters(keyword);
       alert("削除した");
     } catch (error) {
@@ -360,39 +393,53 @@ export default function MonsterEditorPage() {
             flex: 1 1 0;
             justify-content: center;
           }
-
-          .monster-editor-content {
-            gap: 12px !important;
-          }
         }
       `}</style>
 
-      <div className="monster-editor-page" style={pageStyle(theme)}>
+      <div
+        className="monster-editor-page"
+        style={pageStyle(theme)}
+      >
         <MonsterSearchSidebar
           theme={theme}
-          monsters={monsters}
-          selectedId={selectedMonster?.id}
+          open={sidebarOpen}
+          onToggle={() => setSidebarOpen((prev) => !prev)}
           keyword={keyword}
-          loading={loadingList}
           onKeywordChange={setKeyword}
+          monsters={monsters}
+          selectedId={selectedMonster?.id ?? null}
+          loading={loadingList}
           onSelect={handleSelect}
           onCreateNew={handleCreateNew}
-          isOpen={sidebarOpen}
-          onToggle={() => setSidebarOpen((prev) => !prev)}
         />
 
-        <main className="monster-editor-main" style={mainStyle}>
-          <div className="monster-editor-header" style={headerStyle}>
+        <main
+          className="monster-editor-main"
+          style={mainStyle}
+        >
+          <header
+            className="monster-editor-header"
+            style={headerStyle}
+          >
             <div style={headerTextStyle}>
-              <h1 className="monster-editor-title" style={titleStyle(theme)}>
-                モンスター編集
+              <h1
+                className="monster-editor-title"
+                style={titleStyle(theme)}
+              >
+                モンスター管理
               </h1>
-              <p className="monster-editor-desc" style={descStyle(theme)}>
-                基本情報・ドロップ・生息地をまとめて編集する
+              <p
+                className="monster-editor-desc"
+                style={descStyle(theme)}
+              >
+                モンスター基本情報、ドロップ、出現マップを管理する
               </p>
             </div>
 
-            <div className="monster-editor-actions" style={actionsStyle}>
+            <div
+              className="monster-editor-actions"
+              style={actionsStyle}
+            >
               <button
                 type="button"
                 onClick={handleSave}
@@ -405,124 +452,31 @@ export default function MonsterEditorPage() {
               <button
                 type="button"
                 onClick={handleDelete}
+                disabled={saving}
                 style={deleteButtonStyle(theme)}
               >
                 削除
               </button>
             </div>
-          </div>
+          </header>
 
           {loadingDetail ? (
-            <div style={loadingStyle(theme)}>詳細読み込み中...</div>
+            <div style={loadingStyle(theme)}>読み込み中...</div>
           ) : (
-            <div className="monster-editor-content" style={contentStyle}>
+            <div style={contentStyle}>
               <MonsterForm
                 monster={selectedMonster}
                 onChange={setSelectedMonster}
                 theme={theme}
+                parentCandidates={parentCandidates}
+                onSearchParents={searchReincarnationParents}
               />
 
-              <section style={orderPreviewCardStyle(theme)}>
-                <div style={orderPreviewHeaderStyle}>
-                  <h2 style={orderPreviewTitleStyle(theme)}>表示順の前後プレビュー</h2>
-                  <p style={orderPreviewDescStyle(theme)}>
-                    上に2件、下に2件を縦並びで表示する
-                  </p>
-                </div>
-
-                {Number(selectedMonster?.display_order ?? 0) > 0 ? (
-                  loadingAround ? (
-                    <div style={orderPreviewEmptyStyle(theme)}>
-                      前後モンスターを読み込み中...
-                    </div>
-                  ) : (
-                    <div style={orderPreviewColumnStyle}>
-                      {orderPreviewRows.above.length > 0 ? (
-                        orderPreviewRows.above.map((row) => (
-                          <div
-                            key={`above-${row.id ?? row.display_order}`}
-                            style={orderPreviewRowStyle(theme)}
-                          >
-                            <div style={orderPreviewOrderStyle(theme)}>
-                              {row.display_order}
-                            </div>
-                            <div style={orderPreviewBodyStyle}>
-                              <div style={orderPreviewNameStyle(theme)}>
-                                {row.name || "名称未設定"}
-                              </div>
-                              <div style={orderPreviewMetaStyle(theme)}>
-                                上のモンスター
-                              </div>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <div style={orderPreviewGhostStyle(theme)}>
-                          上側にモンスターなし
-                        </div>
-                      )}
-
-                      {orderPreviewRows.current ? (
-                        <div style={orderPreviewCurrentStyle(theme)}>
-                          <div style={orderPreviewOrderCurrentStyle(theme)}>
-                            {orderPreviewRows.current.display_order}
-                          </div>
-                          <div style={orderPreviewBodyStyle}>
-                            <div style={orderPreviewNameCurrentStyle(theme)}>
-                              {orderPreviewRows.current.name}
-                            </div>
-                            <div style={orderPreviewMetaCurrentStyle(theme)}>
-                              編集中のモンスター
-                            </div>
-                            {Array.isArray(orderPreviewRows.current.conflicts) &&
-                            orderPreviewRows.current.conflicts.length > 0 ? (
-                              <div style={orderPreviewConflictListStyle}>
-                                {orderPreviewRows.current.conflicts.map((row) => (
-                                  <div
-                                    key={`conflict-${row.id ?? row.name}`}
-                                    style={orderPreviewConflictItemStyle(theme)}
-                                  >
-                                    同順番: {row.name || "名称未設定"}
-                                  </div>
-                                ))}
-                              </div>
-                            ) : null}
-                          </div>
-                        </div>
-                      ) : null}
-
-                      {orderPreviewRows.below.length > 0 ? (
-                        orderPreviewRows.below.map((row) => (
-                          <div
-                            key={`below-${row.id ?? row.display_order}`}
-                            style={orderPreviewRowStyle(theme)}
-                          >
-                            <div style={orderPreviewOrderStyle(theme)}>
-                              {row.display_order}
-                            </div>
-                            <div style={orderPreviewBodyStyle}>
-                              <div style={orderPreviewNameStyle(theme)}>
-                                {row.name || "名称未設定"}
-                              </div>
-                              <div style={orderPreviewMetaStyle(theme)}>
-                                下のモンスター
-                              </div>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <div style={orderPreviewGhostStyle(theme)}>
-                          下側にモンスターなし
-                        </div>
-                      )}
-                    </div>
-                  )
-                ) : (
-                  <div style={orderPreviewEmptyStyle(theme)}>
-                    表示順を入力すると前後のモンスターが見える
-                  </div>
-                )}
-              </section>
+              <OrderPreviewCard
+                theme={theme}
+                loading={loadingAround}
+                rows={orderPreviewRows}
+              />
 
               <MonsterDropsEditor
                 theme={theme}
@@ -555,6 +509,76 @@ export default function MonsterEditorPage() {
         </main>
       </div>
     </>
+  );
+}
+
+function OrderPreviewCard({ theme, loading, rows }) {
+  return (
+    <section style={cardStyle(theme)}>
+      <div style={orderPreviewHeaderStyle}>
+        <h2 style={sectionTitleStyle(theme)}>表示順プレビュー</h2>
+        <p style={sectionDescStyle(theme)}>
+          前後の表示順を確認できる
+        </p>
+      </div>
+
+      {loading ? (
+        <div style={mutedPanelStyle(theme)}>読み込み中...</div>
+      ) : (
+        <div style={orderPreviewGridStyle}>
+          <div style={orderPreviewColumnStyle}>
+            <div style={columnTitleStyle(theme)}>前</div>
+            {(rows?.above ?? []).length > 0 ? (
+              rows.above.map((row) => (
+                <div key={`above-${row.id ?? row.display_order}`} style={rowCardStyle(theme)}>
+                  <div style={rowNameStyle(theme)}>{row.name}</div>
+                  <div style={rowMetaStyle(theme)}>No.{row.display_order}</div>
+                </div>
+              ))
+            ) : (
+              <div style={mutedPanelStyle(theme)}>なし</div>
+            )}
+          </div>
+
+          <div style={orderPreviewBodyStyle}>
+            <div style={columnTitleStyle(theme)}>現在</div>
+            <div style={currentRowCardStyle(theme)}>
+              <div style={rowNameStyle(theme)}>
+                {rows?.current?.name ?? "未設定"}
+              </div>
+              <div style={rowMetaStyle(theme)}>
+                No.{rows?.current?.display_order ?? "-"}
+              </div>
+
+              {(rows?.current?.conflicts ?? []).length > 0 && (
+                <div style={orderPreviewConflictListStyle}>
+                  <div style={conflictTitleStyle(theme)}>同じ表示順</div>
+                  {rows.current.conflicts.map((row) => (
+                    <div key={`conflict-${row.id ?? row.name}`} style={conflictItemStyle(theme)}>
+                      {row.name}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div style={orderPreviewColumnStyle}>
+            <div style={columnTitleStyle(theme)}>後</div>
+            {(rows?.below ?? []).length > 0 ? (
+              rows.below.map((row) => (
+                <div key={`below-${row.id ?? row.display_order}`} style={rowCardStyle(theme)}>
+                  <div style={rowNameStyle(theme)}>{row.name}</div>
+                  <div style={rowMetaStyle(theme)}>No.{row.display_order}</div>
+                </div>
+              ))
+            ) : (
+              <div style={mutedPanelStyle(theme)}>なし</div>
+            )}
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -607,14 +631,20 @@ const orderPreviewBodyStyle = {
   display: "flex",
   flexDirection: "column",
   justifyContent: "center",
-  gap: 4,
+  gap: 8,
 };
 
 const orderPreviewConflictListStyle = {
   display: "flex",
   flexDirection: "column",
   gap: 4,
-  marginTop: 4,
+  marginTop: 8,
+};
+
+const orderPreviewGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+  gap: 12,
 };
 
 const pageStyle = (theme) => ({
@@ -668,126 +698,79 @@ const loadingStyle = (theme) => ({
   color: theme.pageText,
 });
 
-const orderPreviewCardStyle = (theme) => ({
+const cardStyle = (theme) => ({
   background: theme.cardBg,
   border: `1px solid ${theme.cardBorder}`,
   borderRadius: 14,
   padding: 16,
   display: "flex",
   flexDirection: "column",
-  gap: 14,
+  gap: 16,
 });
 
-const orderPreviewTitleStyle = (theme) => ({
+const sectionTitleStyle = (theme) => ({
   margin: 0,
   fontSize: 18,
   color: theme.title,
 });
 
-const orderPreviewDescStyle = (theme) => ({
+const sectionDescStyle = (theme) => ({
   margin: 0,
-  fontSize: 14,
   color: theme.mutedText,
+  fontSize: 13,
 });
 
-const orderPreviewRowStyle = (theme) => ({
-  display: "flex",
-  alignItems: "stretch",
-  gap: 12,
+const mutedPanelStyle = (theme) => ({
   border: `1px solid ${theme.softBorder}`,
-  borderRadius: 12,
   background: theme.softBg,
-  padding: 12,
-  minWidth: 0,
+  color: theme.mutedText,
+  borderRadius: 10,
+  padding: "12px 14px",
 });
 
-const orderPreviewCurrentStyle = (theme) => ({
+const columnTitleStyle = (theme) => ({
+  fontSize: 13,
+  fontWeight: 700,
+  color: theme.mutedText,
+});
+
+const rowCardStyle = (theme) => ({
+  border: `1px solid ${theme.softBorder}`,
+  background: theme.softBg,
+  borderRadius: 10,
+  padding: "10px 12px",
   display: "flex",
-  alignItems: "stretch",
-  gap: 12,
-  border: `2px solid ${theme.selectedBorder}`,
-  borderRadius: 12,
+  flexDirection: "column",
+  gap: 4,
+});
+
+const currentRowCardStyle = (theme) => ({
+  border: `1px solid ${theme.selectedBorder}`,
   background: theme.selectedBg,
-  padding: 12,
-  minWidth: 0,
-});
-
-const orderPreviewOrderStyle = (theme) => ({
-  width: 44,
-  minWidth: 44,
-  height: 44,
-  borderRadius: 999,
-  background: theme.primaryBg,
-  color: theme.primaryText,
+  borderRadius: 10,
+  padding: "12px 14px",
   display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  fontWeight: 800,
-  fontSize: 15,
+  flexDirection: "column",
+  gap: 4,
 });
 
-const orderPreviewOrderCurrentStyle = (theme) => ({
-  width: 48,
-  minWidth: 48,
-  height: 48,
-  borderRadius: 999,
-  background: theme.selectedBorder,
-  color: "#fff",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  fontWeight: 800,
-  fontSize: 16,
-});
-
-const orderPreviewNameStyle = (theme) => ({
-  fontSize: 15,
-  fontWeight: 700,
+const rowNameStyle = (theme) => ({
   color: theme.text,
-  wordBreak: "break-word",
-});
-
-const orderPreviewNameCurrentStyle = (theme) => ({
-  fontSize: 16,
-  fontWeight: 800,
-  color: theme.text,
-  wordBreak: "break-word",
-});
-
-const orderPreviewMetaStyle = (theme) => ({
-  fontSize: 12,
-  color: theme.mutedText,
-});
-
-const orderPreviewMetaCurrentStyle = (theme) => ({
-  fontSize: 12,
-  color: theme.secondaryText,
   fontWeight: 700,
 });
 
-const orderPreviewConflictItemStyle = (theme) => ({
+const rowMetaStyle = (theme) => ({
+  color: theme.mutedText,
   fontSize: 12,
-  color: theme.warningText,
-  background: theme.warningBg,
-  border: `1px solid ${theme.warningBorder}`,
-  borderRadius: 8,
-  padding: "4px 8px",
 });
 
-const orderPreviewGhostStyle = (theme) => ({
-  border: `1px dashed ${theme.ghostBorder}`,
-  borderRadius: 12,
-  background: theme.ghostBg,
+const conflictTitleStyle = (theme) => ({
   color: theme.mutedText,
-  padding: 12,
-  fontSize: 14,
+  fontSize: 12,
+  fontWeight: 700,
 });
 
-const orderPreviewEmptyStyle = (theme) => ({
-  border: `1px dashed ${theme.ghostBorder}`,
-  borderRadius: 12,
-  background: theme.ghostBg,
-  color: theme.mutedText,
-  padding: 16,
-  fontSize: 14,
+const conflictItemStyle = (theme) => ({
+  color: theme.text,
+  fontSize: 13,
 });

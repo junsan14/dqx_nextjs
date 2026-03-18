@@ -23,7 +23,7 @@ export function parseAreaToCoords(area) {
           .filter(Boolean);
       }
     } catch (_error) {
-      // JSONじゃない文字列は下のCSV風パースで拾う
+      // noop
     }
 
     return trimmed
@@ -52,6 +52,9 @@ export function emptyMonster() {
     name: "",
     system_type: "",
     source_url: "",
+    is_reincarnated: false,
+    reincarnation_parent_id: null,
+    reincarnation_parent_name: null,
     drops: [],
     spawns: [],
   };
@@ -67,6 +70,11 @@ export function normalizeMonster(row = {}) {
     name: row?.name ?? "",
     system_type: row?.system_type ?? "",
     source_url: row?.source_url ?? "",
+    is_reincarnated: Boolean(
+      row?.is_reincarnated || row?.reincarnation_parent_id
+    ),
+    reincarnation_parent_id: row?.reincarnation_parent_id ?? null,
+    reincarnation_parent_name: row?.reincarnation_parent_name ?? null,
     drops: rawDrops.map((drop, index) => ({
       id: drop?.id ?? null,
       __key: drop?.id
@@ -112,6 +120,8 @@ export function normalizeMonster(row = {}) {
             : stringifyCoords(coords),
         coords,
         spawn_time: spawn?.spawn_time ?? "normal",
+        spawn_count: spawn?.spawn_count ?? "",
+        symbol_count: spawn?.symbol_count ?? "",
         note: spawn?.note ?? "",
         grid_mode: spawn?.grid_mode ?? "block",
       };
@@ -125,6 +135,8 @@ export function buildMonsterPayload(monster = {}) {
     name: String(monster?.name ?? "").trim(),
     system_type: String(monster?.system_type ?? "").trim(),
     source_url: String(monster?.source_url ?? "").trim(),
+    reincarnation_parent_id:
+      Number(monster?.reincarnation_parent_id ?? 0) || null,
     drops: Array.isArray(monster?.drops)
       ? monster.drops.map((drop, index) => ({
           id: drop?.id ?? null,
@@ -144,6 +156,8 @@ export function buildMonsterPayload(monster = {}) {
           ),
           spawn_time:
             String(spawn?.spawn_time ?? "normal").trim() || "normal",
+          spawn_count: String(spawn?.spawn_count ?? "").trim(),
+          symbol_count: String(spawn?.symbol_count ?? "").trim(),
           note: String(spawn?.note ?? "").trim(),
         }))
       : [],

@@ -12,7 +12,6 @@ export default function Footer() {
 
         <div className="grid gap-8 md:grid-cols-3">
 
-
           <div>
             <h3 className="text-sm font-bold text-slate-200">
               Tools
@@ -25,7 +24,8 @@ export default function Footer() {
                 </Link>
               </li>
 
-              <li>                <Link href="/tools/monster-search" className="hover:text-white">
+              <li>
+                <Link href="/tools/monster-search" className="hover:text-white">
                   モンスター検索
                 </Link>
               </li>
@@ -61,8 +61,19 @@ export default function Footer() {
 
         </div>
 
-        <div className="mt-10 border-t border-slate-800 pt-6 text-center text-xs">
-          © {new Date().getFullYear()} DQX Tools
+        {/* copyright */}
+        <div className="mt-10 border-t border-slate-800 pt-6 text-center text-[11px] text-slate-500 space-y-1">
+          <div>
+            © {new Date().getFullYear()} DQX Tools
+          </div>
+
+          <div>
+            本サイトはドラゴンクエストXの非公式ファンサイトです。株式会社スクウェア・エニックスとは関係ありません。
+          </div>
+
+          <div>
+            © ARMOR PROJECT/BIRD STUDIO/SQUARE ENIX All Rights Reserved.
+          </div>
         </div>
 
       </div>

@@ -16,6 +16,7 @@ function normalizeOption(option) {
       label: option,
       value: option,
       folder: "",
+      fileName: "",
     };
   }
 
@@ -23,34 +24,64 @@ function normalizeOption(option) {
     label: option?.label ?? option?.value ?? "",
     value: option?.value ?? option?.label ?? "",
     folder: option?.folder ?? "",
+    fileName: option?.fileName ?? "",
   };
 }
 
-function mergeUniqueOptions(options = []) {
-  const map = new Map();
+/**
+ * default の順番を維持しつつ、
+ * 同じ value のものは default の label を優先して補完する
+ */
+function mergeOptionsByDefaultOrder(defaultOptions = [], apiOptions = []) {
+  const defaultItems = Array.isArray(defaultOptions)
+    ? defaultOptions.map(normalizeOption)
+    : [];
 
-  for (const raw of options) {
-    const item = normalizeOption(raw);
+  const apiItems = Array.isArray(apiOptions)
+    ? apiOptions.map(normalizeOption)
+    : [];
+
+  const apiMap = new Map();
+  for (const item of apiItems) {
     const key = String(item?.value ?? "");
+    if (!key) continue;
+    if (!apiMap.has(key)) {
+      apiMap.set(key, item);
+    }
+  }
 
+  const used = new Set();
+  const merged = [];
+
+  for (const def of defaultItems) {
+    const key = String(def?.value ?? "");
     if (!key) continue;
 
-    if (!map.has(key)) {
-      map.set(key, item);
-      continue;
-    }
+    const api = apiMap.get(key);
 
-    const prev = map.get(key);
-
-    map.set(key, {
-      ...prev,
-      label: prev?.label || item?.label || key,
+    merged.push({
       value: key,
-      folder: prev?.folder || item?.folder || "",
+      label: def?.label || api?.label || key,
+      folder: def?.folder || api?.folder || "",
+      fileName: def?.fileName || api?.fileName || "",
+    });
+
+    used.add(key);
+  }
+
+  for (const api of apiItems) {
+    const key = String(api?.value ?? "");
+    if (!key || used.has(key)) continue;
+
+    merged.push({
+      value: key,
+      label: api?.label || key,
+      folder: api?.folder || "",
+      fileName: api?.fileName || "",
     });
   }
 
-  return Array.from(map.values());
+  return merged;
 }
 
 export default function MapEditorForm({
@@ -58,6 +89,7 @@ export default function MapEditorForm({
   loading = false,
   continentOptions = [],
   mapTypeOptions = [],
+  layerNameOptions = [],
   onChangeField,
   onAddLayer,
   onChangeLayer,
@@ -68,28 +100,27 @@ export default function MapEditorForm({
   const styles = useMemo(() => getComponentStyles(theme), [theme]);
 
   const mergedContinentOptions = useMemo(() => {
-    const apiOptions = Array.isArray(continentOptions) ? continentOptions : [];
-    const defaultOptions = Array.isArray(DEFAULT_CONTINENT_OPTIONS)
-      ? DEFAULT_CONTINENT_OPTIONS
-      : [];
-
-    return mergeUniqueOptions([...apiOptions, ...defaultOptions]);
+    return mergeOptionsByDefaultOrder(
+      DEFAULT_CONTINENT_OPTIONS,
+      Array.isArray(continentOptions) ? continentOptions : []
+    );
   }, [continentOptions]);
 
   const mergedMapTypeOptions = useMemo(() => {
-    const apiOptions = Array.isArray(mapTypeOptions) ? mapTypeOptions : [];
-    const defaultOptions = Array.isArray(DEFAULT_MAP_TYPE_OPTIONS)
-      ? DEFAULT_MAP_TYPE_OPTIONS
-      : [];
-
-    return mergeUniqueOptions([...apiOptions, ...defaultOptions]);
+    return mergeOptionsByDefaultOrder(
+      DEFAULT_MAP_TYPE_OPTIONS,
+      Array.isArray(mapTypeOptions) ? mapTypeOptions : []
+    );
   }, [mapTypeOptions]);
 
   const mergedLayerNameOptions = useMemo(() => {
-    return Array.isArray(DEFAULT_LAYER_NAME_OPTIONS)
-      ? DEFAULT_LAYER_NAME_OPTIONS.map(normalizeOption)
-      : [];
-  }, []);
+    const options =
+      Array.isArray(layerNameOptions) && layerNameOptions.length > 0
+        ? layerNameOptions
+        : DEFAULT_LAYER_NAME_OPTIONS;
+
+    return Array.isArray(options) ? options.map(normalizeOption) : [];
+  }, [layerNameOptions]);
 
   useEffect(() => {
     if (!value?.continent || value?.continent_folder) return;
@@ -188,13 +219,6 @@ export default function MapEditorForm({
       </section>
 
       <section style={styles.section}>
-        <div style={styles.layerHeader}>
-          <h2 style={styles.heading}>レイヤー</h2>
-          <button type="button" onClick={onAddLayer} style={styles.addButton}>
-            レイヤー追加
-          </button>
-        </div>
-
         <div style={styles.layerList}>
           {layers.map((layer, index) => {
             const previewUrl =
@@ -216,20 +240,33 @@ export default function MapEditorForm({
                 <div style={styles.grid(isMobile)}>
                   <label style={styles.field}>
                     <div style={styles.label}>レイヤー名</div>
-                    <select
-                      value={layer?.layer_name ?? ""}
+                   <input
+                    list={`layer-name-options-${index}`}
+                    value={layer?.layer_name ?? ""}
+                    onChange={(e) =>
+                      onChangeLayer?.(index, "layer_name", e.target.value)
+                    }
+                    style={styles.input}
+                  />
+
+                  <datalist id={`layer-name-options-${index}`}>
+                    {mergedLayerNameOptions.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </datalist>
+                  </label>
+
+                  <label style={styles.field}>
+                    <div style={styles.label}>保存ファイル名</div>
+                    <input
+                      value={layer?.layer_file_name ?? ""}
                       onChange={(e) =>
-                        onChangeLayer?.(index, "layer_name", e.target.value)
+                        onChangeLayer?.(index, "layer_file_name", e.target.value)
                       }
                       style={styles.input}
-                    >
-                      <option value="">選択</option>
-                      {mergedLayerNameOptions.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
+                    />
                   </label>
 
                   <label style={styles.field}>
@@ -283,18 +320,32 @@ export default function MapEditorForm({
                     />
                     <div style={styles.helpText}>
                       保存時に自動で
-                      /storage/images/maps/大陸/map_id_xxx/floor_no.拡張子
+                      /storage/images/maps/大陸/map_id_xxx/layer_file_name.webp
                       で保存される
                     </div>
                   </label>
                 </div>
 
                 {previewUrl ? (
-                  <Image src={previewUrl} alt="" style={styles.previewImage} fill />
+                  <div style={styles.previewWrap}>
+                    <Image
+                      src={previewUrl}
+                      alt={`map-layer-${index + 1}`}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 900px"
+                      style={styles.previewImage}
+                    />
+                  </div>
                 ) : null}
               </div>
             );
           })}
+        </div>
+
+        <div style={styles.layerHeader}>
+          <button type="button" onClick={onAddLayer} style={styles.addButton}>
+            レイヤー追加
+          </button>
         </div>
       </section>
     </div>
@@ -351,7 +402,8 @@ const baseStyles = {
   },
   layerHeader: {
     display: "flex",
-    justifyContent: "space-between",
+    justifyContent: "flex-end",
+    marginTop: "20px",
     marginBottom: "10px",
     gap: "12px",
     alignItems: "center",
@@ -398,11 +450,19 @@ const baseStyles = {
     cursor: "pointer",
     fontWeight: 700,
   },
-  previewImage: {
+  previewWrap: {
+    position: "relative",
     width: "100%",
     marginTop: "10px",
+    aspectRatio: "16 / 9",
+    maxHeight: "480px",
+    overflow: "hidden",
     borderRadius: "8px",
-    display: "block",
+    border: "1px solid #e2e8f0",
+    background: "#f8fafc",
+  },
+  previewImage: {
+    objectFit: "contain",
   },
   helpText: {
     fontSize: "12px",

@@ -93,6 +93,7 @@ export function normalizeMapRow(row = {}) {
     layers,
   };
 }
+
 export function normalizeSpawn(row = {}) {
   const area = row?.area ?? "";
   const coords = Array.isArray(row?.coords) ? row.coords : parseCoords(area);
@@ -126,6 +127,8 @@ export function normalizeSpawn(row = {}) {
     area: typeof area === "string" ? area : JSON.stringify(area ?? []),
     coords,
     spawn_time: row?.spawn_time ?? "normal",
+    spawn_count: row?.spawn_count ?? "",
+    symbol_count: row?.symbol_count ?? "",
     note: row?.note ?? "",
     map_name: row?.map_name ?? row?.map?.name ?? "",
     map_layer_name: mapLayerName,
@@ -157,6 +160,8 @@ function buildSpawnPayload(spawn = {}, monsterId = null) {
     map_layer_id: spawn?.map_layer_id ? Number(spawn.map_layer_id) : null,
     area: JSON.stringify(coords),
     spawn_time: spawn?.spawn_time ?? "normal",
+    spawn_count: String(spawn?.spawn_count ?? "").trim(),
+    symbol_count: String(spawn?.symbol_count ?? "").trim(),
     note: spawn?.note ?? "",
   };
 }
@@ -209,7 +214,9 @@ export async function saveMonsterMapSpawns(
   nextSpawns = [],
   prevSpawns = []
 ) {
-  const nextIds = new Set((nextSpawns ?? []).map((row) => row?.id).filter(Boolean));
+  const nextIds = new Set(
+    (nextSpawns ?? []).map((row) => row?.id).filter(Boolean)
+  );
 
   const deleteTargets = (prevSpawns ?? []).filter(
     (row) => row?.id && !nextIds.has(row.id)

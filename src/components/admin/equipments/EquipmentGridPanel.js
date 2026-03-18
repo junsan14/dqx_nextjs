@@ -15,9 +15,7 @@ import {
 
 export default function EquipmentGridPanel({
   row,
-  syncGroup = false,
   onPatch,
-  onGroupPatch,
 }) {
   const [gridRows, setGridRows] = useState(1);
   const [gridCols, setGridCols] = useState(1);
@@ -54,13 +52,10 @@ export default function EquipmentGridPanel({
     setGrid2d(parsed.nextGrid);
   }, [parsed]);
 
-  function patchGrid(data) {
-    if (syncGroup && typeof onGroupPatch === "function") {
-      onGroupPatch(data);
-      return;
-    }
-    onPatch?.(data);
-  }
+  // グリッドは絶対に単体更新
+function patchGrid(data) {
+  onPatch?.(data);
+}
 
   function applyGridResize(nextRows, nextCols) {
     const r = Math.max(0, Number(nextRows) || 0);

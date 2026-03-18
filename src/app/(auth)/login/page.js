@@ -7,13 +7,13 @@ import Label from '@/components/Label'
 import Link from 'next/link'
 import { useAuth } from '@/hooks/auth'
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import AuthSessionStatus from '@/app/(auth)/AuthSessionStatus'
 
 const Login = () => {
-    const router = useRouter()
+    const searchParams = useSearchParams()
 
-    const { login } = useAuth({
+    const { login, authLoading } = useAuth({
         middleware: 'guest',
         redirectIfAuthenticated: '/tool-editor',
     })
@@ -25,17 +25,19 @@ const Login = () => {
     const [status, setStatus] = useState(null)
 
     useEffect(() => {
-        if (router.reset?.length > 0 && errors.length === 0) {
-            setStatus(atob(router.reset))
+        const reset = searchParams.get('reset')
+
+        if (reset && errors.length === 0) {
+            setStatus(atob(reset))
         } else {
             setStatus(null)
         }
-    })
+    }, [searchParams, errors])
 
     const submitForm = async event => {
         event.preventDefault()
 
-        login({
+        await login({
             email,
             password,
             remember: shouldRemember,
@@ -46,6 +48,63 @@ const Login = () => {
 
     return (
         <>
+            {authLoading && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        zIndex: 9999,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: 'rgba(255, 255, 255, 0.75)',
+                        backdropFilter: 'blur(4px)',
+                    }}>
+                    <div
+                        style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '14px',
+                            padding: '24px 32px',
+                            background: '#fff',
+                            borderRadius: '16px',
+                            boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
+                        }}>
+                        <div
+                            style={{
+                                width: '40px',
+                                height: '40px',
+                                border: '4px solid #e2e8f0',
+                                borderTop: '4px solid #2563eb',
+                                borderRadius: '50%',
+                                animation: 'spin 0.8s linear infinite',
+                            }}
+                        />
+                        <p
+                            style={{
+                                margin: 0,
+                                fontSize: '14px',
+                                fontWeight: 600,
+                                color: '#334155',
+                            }}>
+                            ログイン中...
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            <style>{`
+                @keyframes spin {
+                    from {
+                        transform: rotate(0deg);
+                    }
+                    to {
+                        transform: rotate(360deg);
+                    }
+                }
+            `}</style>
+
             <div style={{ marginBottom: '20px' }}>
                 <h2
                     style={{
@@ -79,6 +138,7 @@ const Login = () => {
                         onChange={event => setEmail(event.target.value)}
                         required
                         autoFocus
+                        disabled={authLoading}
                     />
                     <InputError messages={errors.email} className="mt-2" />
                 </div>
@@ -93,6 +153,7 @@ const Login = () => {
                         onChange={event => setPassword(event.target.value)}
                         required
                         autoComplete="current-password"
+                        disabled={authLoading}
                     />
                     <InputError
                         messages={errors.password}
@@ -112,6 +173,7 @@ const Login = () => {
                             onChange={event =>
                                 setShouldRemember(event.target.checked)
                             }
+                            disabled={authLoading}
                         />
                         <span className="ml-2 text-sm text-gray-600">
                             Remember me
@@ -126,7 +188,9 @@ const Login = () => {
                         Forgot your password?
                     </Link>
 
-                    <Button className="ml-3">Login</Button>
+                    <Button className="ml-3" disabled={authLoading}>
+                        {authLoading ? 'Loading...' : 'Login'}
+                    </Button>
                 </div>
             </form>
         </>

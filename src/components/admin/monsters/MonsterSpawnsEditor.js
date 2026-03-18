@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { normalizeMapRow } from "@/lib/monsterMapSpawns";
 import { applyMonsterThemeToStyleTree } from "../theme";
 import Image from "next/image";
+
 const COLS_8 = ["A", "B", "C", "D", "E", "F", "G", "H"];
 const ROWS_8 = [1, 2, 3, 4, 5, 6, 7, 8];
 
@@ -16,6 +17,23 @@ const SPAWN_TIME_OPTIONS = [
   { value: "night", label: "夜のみ" },
   { value: "always", label: "常時" },
 ];
+
+const DEFAULT_MAP_GRID_INSET = {
+  top: "3.4%",
+  right: "0%",
+  bottom: "0%",
+  left: "4%",
+};
+
+function getMapGridInset(mapName = "") {
+  const key = String(mapName ?? "").trim();
+
+  const presets = {
+    // "アグラニの街": { top: "10%", right: "2%", bottom: "2%", left: "10%" },
+  };
+
+  return presets[key] ?? DEFAULT_MAP_GRID_INSET;
+}
 
 function makeSpawn() {
   return {
@@ -30,6 +48,8 @@ function makeSpawn() {
     area: "[]",
     coords: [],
     spawn_time: "normal",
+    spawn_count: "",
+    symbol_count: "",
     note: "",
     grid_mode: "block",
   };
@@ -91,6 +111,7 @@ function isMobileViewport() {
 
 function SpawnMapGrid({
   mapImageUrl = "",
+  mapName = "",
   coords = [],
   onToggle,
   gridMode = "block",
@@ -98,14 +119,36 @@ function SpawnMapGrid({
 }) {
   const activeSet = useMemo(() => new Set(uniqCoords(coords)), [coords]);
   const isMobile = isMobileViewport();
+  const inset = getMapGridInset(mapName);
+
   const overlayStyle =
-    gridMode === "single" ? styles.singleOverlay : styles.gridOverlay;
+    gridMode === "single"
+      ? {
+          ...styles.singleOverlay,
+          top: inset.top,
+          right: inset.right,
+          bottom: inset.bottom,
+          left: inset.left,
+        }
+      : {
+          ...styles.gridOverlay,
+          top: inset.top,
+          right: inset.right,
+          bottom: inset.bottom,
+          left: inset.left,
+        };
 
   return (
     <div style={styles.mapBoardWrap}>
       <div className="monster-spawns-map-board" style={styles.mapBoard}>
         {mapImageUrl ? (
-          <Image src={mapImageUrl} alt="map" style={styles.mapImage}  fill/>
+          <Image
+            src={mapImageUrl}
+            alt="map"
+            fill
+            sizes="(max-width: 768px) calc(100vw - 56px), 560px"
+            style={styles.mapImage}
+          />
         ) : (
           <div style={styles.mapPlaceholder}>マップ画像なし</div>
         )}
@@ -240,6 +283,12 @@ function getDefaultLayerForMap(map = null) {
   const layers = Array.isArray(map?.layers) ? map.layers : [];
   if (layers.length === 0) return null;
   return layers[0] ?? null;
+}
+
+function getSpawnTabLabel(spawn, index) {
+  const mapName = String(spawn?.map_name ?? "").trim();
+  if (mapName) return mapName;
+  return `生息地${index + 1}`;
 }
 
 function MapSearchInput({
@@ -636,14 +685,39 @@ function SpawnCard({
         </label>
       </div>
 
-      <label style={styles.field}>
-        <span style={styles.label}>生息エリア</span>
-        <textarea
-          value={JSON.stringify(spawn?.coords ?? [])}
-          readOnly
-          style={styles.textareaReadonly}
-        />
-      </label>
+      <div className="monster-spawns-area-row" style={styles.areaRow}>
+        <label style={styles.field}>
+          <span style={styles.label}>生息エリア</span>
+          <textarea
+            value={JSON.stringify(spawn?.coords ?? [])}
+            readOnly
+            style={styles.textareaReadonly}
+            rows={1}
+          />
+        </label>
+
+        <label style={styles.field}>
+          <span style={styles.label}>出現数</span>
+          <input
+            type="text"
+            value={spawn?.spawn_count ?? ""}
+            onChange={(e) => setField("spawn_count", e.target.value)}
+            style={styles.input}
+            placeholder="1 / 1〜2 / 2-3"
+          />
+        </label>
+
+        <label style={styles.field}>
+          <span style={styles.label}>シンボル数</span>
+          <input
+            type="text"
+            value={spawn?.symbol_count ?? ""}
+            onChange={(e) => setField("symbol_count", e.target.value)}
+            style={styles.input}
+            placeholder="1 / 2 / 多数"
+          />
+        </label>
+      </div>
 
       <label style={styles.field}>
         <span style={styles.label}>メモ</span>
@@ -657,6 +731,7 @@ function SpawnCard({
 
       <SpawnMapGrid
         mapImageUrl={spawn?.map_image_url ?? ""}
+        mapName={spawn?.map_name ?? ""}
         coords={spawn?.coords ?? []}
         onToggle={handleToggleCoords}
         gridMode={spawn?.grid_mode ?? "block"}
@@ -677,6 +752,7 @@ export default function MonsterSpawnsEditor({
     () => (Array.isArray(maps) ? maps.map(normalizeMapRow) : []),
     [maps]
   );
+  const [activeIndex, setActiveIndex] = useState(0);
 
   const displayLayerNamesByMapId = useMemo(() => {
     const grouped = new Map();
@@ -691,12 +767,25 @@ export default function MonsterSpawnsEditor({
     return grouped;
   }, [mapOptions]);
 
+  useEffect(() => {
+    if (!Array.isArray(spawns) || spawns.length === 0) {
+      if (activeIndex !== 0) setActiveIndex(0);
+      return;
+    }
+
+    if (activeIndex > spawns.length - 1) {
+      setActiveIndex(spawns.length - 1);
+    }
+  }, [spawns, activeIndex]);
+
   function setNextSpawns(nextSpawns) {
     onChange(nextSpawns);
   }
 
   function addSpawn() {
-    setNextSpawns([...(spawns ?? []), makeSpawn()]);
+    const next = [...(spawns ?? []), makeSpawn()];
+    setNextSpawns(next);
+    setActiveIndex(next.length - 1);
   }
 
   function updateSpawn(spawnKey, nextSpawn) {
@@ -708,23 +797,70 @@ export default function MonsterSpawnsEditor({
   }
 
   function removeSpawn(spawnKey) {
-    setNextSpawns((spawns ?? []).filter((spawn) => spawn.__key !== spawnKey));
+    const current = spawns ?? [];
+    const removeIndex = current.findIndex((spawn) => spawn.__key === spawnKey);
+    const next = current.filter((spawn) => spawn.__key !== spawnKey);
+
+    setNextSpawns(next);
+
+    if (next.length === 0) {
+      setActiveIndex(0);
+      return;
+    }
+
+    setActiveIndex((prev) => {
+      if (prev > removeIndex) return prev - 1;
+      if (prev >= next.length) return next.length - 1;
+      return prev;
+    });
   }
+
+  const activeSpawn = spawns?.[activeIndex] ?? null;
 
   return (
     <>
       <style>{`
+        * {
+          box-sizing: border-box;
+        }
+
         @media (max-width: 768px) {
           .monster-spawns-card {
             padding: 14px !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
           }
 
           .monster-spawns-form-grid {
             grid-template-columns: 1fr !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+          }
+
+          .monster-spawns-area-row {
+            grid-template-columns: 1fr !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
           }
 
           .monster-spawns-map-board {
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
             border-radius: 12px !important;
+          }
+
+          .monster-spawns-tabs {
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            overflow-x: auto !important;
+            overflow-y: hidden !important;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
           }
         }
 
@@ -737,7 +873,7 @@ export default function MonsterSpawnsEditor({
 
       <section style={styles.wrapper}>
         <div style={styles.header}>
-          <div>
+          <div style={styles.headerTextBlock}>
             <h2 style={styles.title}>生息地編集</h2>
             <p style={styles.desc}>先に大陸を選んでから地名を検索する</p>
           </div>
@@ -747,23 +883,50 @@ export default function MonsterSpawnsEditor({
           </button>
         </div>
 
+        {spawns.length > 0 ? (
+          <div className="monster-spawns-tabs" style={styles.tabWrap}>
+            {spawns.map((spawn, index) => {
+              const isActive = index === activeIndex;
+
+              return (
+                <button
+                  key={spawn.__key}
+                  type="button"
+                  onClick={() => setActiveIndex(index)}
+                  style={{
+                    ...styles.tab,
+                    ...(isActive ? styles.tabActive : {}),
+                  }}
+                  title={getSpawnTabLabel(spawn, index)}
+                >
+                  {getSpawnTabLabel(spawn, index)}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+
         {spawns.length === 0 ? (
           <div style={styles.empty}>生息地は未登録</div>
         ) : (
           <div style={styles.list}>
-            {spawns.map((spawn) => (
+            {activeSpawn ? (
               <SpawnCard
-                key={spawn.__key}
-                spawn={spawn}
+                key={activeSpawn.__key}
+                spawn={activeSpawn}
                 maps={mapOptions}
                 layerNamesForMap={
-                  displayLayerNamesByMapId.get(String(spawn?.map_id ?? "")) ?? []
+                  displayLayerNamesByMapId.get(
+                    String(activeSpawn?.map_id ?? "")
+                  ) ?? []
                 }
-                onChange={(nextSpawn) => updateSpawn(spawn.__key, nextSpawn)}
-                onRemove={() => removeSpawn(spawn.__key)}
+                onChange={(nextSpawn) =>
+                  updateSpawn(activeSpawn.__key, nextSpawn)
+                }
+                onRemove={() => removeSpawn(activeSpawn.__key)}
                 styles={styles}
               />
-            ))}
+            ) : null}
           </div>
         )}
       </section>
@@ -780,6 +943,11 @@ const baseStyles = {
     display: "flex",
     flexDirection: "column",
     gap: 16,
+    width: "100%",
+    maxWidth: "100%",
+    minWidth: 0,
+    boxSizing: "border-box",
+    overflowX: "hidden",
   },
   header: {
     display: "flex",
@@ -787,16 +955,26 @@ const baseStyles = {
     justifyContent: "space-between",
     gap: 12,
     flexWrap: "wrap",
+    width: "100%",
+    maxWidth: "100%",
+    minWidth: 0,
+  },
+  headerTextBlock: {
+    minWidth: 0,
+    maxWidth: "100%",
+    flex: 1,
   },
   title: {
     margin: 0,
     fontSize: 20,
     color: "#111827",
+    wordBreak: "break-word",
   },
   desc: {
     margin: "6px 0 0",
     color: "#64748b",
     fontSize: 14,
+    wordBreak: "break-word",
   },
   addButton: {
     border: "1px solid #111827",
@@ -807,17 +985,62 @@ const baseStyles = {
     cursor: "pointer",
     fontWeight: 700,
     minHeight: 42,
+    flexShrink: 0,
+    maxWidth: "100%",
+  },
+  tabWrap: {
+    display: "flex",
+    gap: 8,
+    overflowX: "auto",
+    overflowY: "hidden",
+    flexWrap: "nowrap",
+    paddingBottom: 4,
+    marginTop: -2,
+    width: "100%",
+    maxWidth: "100%",
+    minWidth: 0,
+    boxSizing: "border-box",
+  },
+  tab: {
+    flex: "0 0 auto",
+    maxWidth: "calc(100vw - 96px)",
+    border: "1px solid #cbd5e1",
+    background: "#f8fafc",
+    color: "#334155",
+    borderRadius: 999,
+    padding: "8px 12px",
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    fontSize: 13,
+    fontWeight: 700,
+    lineHeight: 1.2,
+    minHeight: 38,
+    boxSizing: "border-box",
+  },
+  tabActive: {
+    borderColor: "#111827",
+    background: "#111827",
+    color: "#ffffff",
   },
   empty: {
     padding: 16,
     borderRadius: 12,
     background: "#f8fafc",
     color: "#64748b",
+    width: "100%",
+    maxWidth: "100%",
+    minWidth: 0,
+    boxSizing: "border-box",
   },
   list: {
     display: "flex",
     flexDirection: "column",
     gap: 16,
+    width: "100%",
+    maxWidth: "100%",
+    minWidth: 0,
   },
   spawnCard: {
     border: "1px solid #e5e7eb",
@@ -827,18 +1050,28 @@ const baseStyles = {
     flexDirection: "column",
     gap: 14,
     background: "#ffffff",
+    width: "100%",
+    maxWidth: "100%",
+    minWidth: 0,
+    boxSizing: "border-box",
+    overflowX: "hidden",
   },
   spawnCardHeader: {
     display: "flex",
     alignItems: "flex-start",
     justifyContent: "space-between",
     gap: 12,
+    width: "100%",
+    maxWidth: "100%",
+    minWidth: 0,
   },
   spawnHeaderMain: {
     minWidth: 0,
+    maxWidth: "100%",
     display: "flex",
     flexDirection: "column",
     gap: 4,
+    flex: 1,
   },
   spawnTitle: {
     margin: 0,
@@ -856,6 +1089,7 @@ const baseStyles = {
     display: "flex",
     gap: 6,
     flexWrap: "wrap",
+    minWidth: 0,
   },
   layerBadge: {
     display: "inline-flex",
@@ -868,6 +1102,7 @@ const baseStyles = {
     fontSize: 12,
     fontWeight: 700,
     lineHeight: 1.2,
+    maxWidth: "100%",
   },
   removeButton: {
     border: "1px solid #fecaca",
@@ -879,6 +1114,7 @@ const baseStyles = {
     fontWeight: 700,
     minHeight: 38,
     flexShrink: 0,
+    maxWidth: "100%",
   },
   modeRow: {
     display: "flex",
@@ -886,6 +1122,9 @@ const baseStyles = {
     justifyContent: "space-between",
     gap: 12,
     flexWrap: "wrap",
+    width: "100%",
+    maxWidth: "100%",
+    minWidth: 0,
   },
   modeLabel: {
     fontSize: 13,
@@ -896,6 +1135,8 @@ const baseStyles = {
     display: "flex",
     gap: 8,
     flexWrap: "wrap",
+    minWidth: 0,
+    maxWidth: "100%",
   },
   modeButton: {
     border: "1px solid #cbd5e1",
@@ -906,6 +1147,7 @@ const baseStyles = {
     cursor: "pointer",
     fontWeight: 700,
     minHeight: 36,
+    maxWidth: "100%",
   },
   modeButtonActive: {
     borderColor: "#111827",
@@ -916,20 +1158,37 @@ const baseStyles = {
     display: "grid",
     gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
     gap: 12,
+    width: "100%",
+    maxWidth: "100%",
+    minWidth: 0,
+  },
+  areaRow: {
+    display: "grid",
+    gridTemplateColumns: "minmax(0, 1fr) minmax(220px, 220px) minmax(220px, 220px)",
+    gap: 12,
+    width: "100%",
+    maxWidth: "100%",
+    minWidth: 0,
+    alignItems: "end",
   },
   field: {
     display: "flex",
     flexDirection: "column",
     gap: 6,
     minWidth: 0,
+    maxWidth: "100%",
+    width: "100%",
   },
   label: {
     fontSize: 13,
     fontWeight: 700,
     color: "#334155",
+    wordBreak: "break-word",
   },
   input: {
     width: "100%",
+    minWidth: 0,
+    maxWidth: "100%",
     minHeight: 42,
     borderRadius: 10,
     border: "1px solid #cbd5e1",
@@ -946,6 +1205,8 @@ const baseStyles = {
   },
   textarea: {
     width: "100%",
+    minWidth: 0,
+    maxWidth: "100%",
     borderRadius: 10,
     border: "1px solid #cbd5e1",
     padding: 12,
@@ -958,35 +1219,48 @@ const baseStyles = {
   },
   textareaReadonly: {
     width: "100%",
+    minWidth: 0,
+    maxWidth: "100%",
     borderRadius: 10,
     border: "1px solid #e2e8f0",
-    padding: 12,
+    padding: "10px 12px",
     background: "#f8fafc",
     color: "#334155",
     outline: "none",
-    resize: "vertical",
-    minHeight: 56,
+    resize: "none",
+    minHeight: 42,
+    height: 42,
+    lineHeight: "20px",
+    overflow: "hidden",
     boxSizing: "border-box",
   },
   mapBoardWrap: {
     display: "flex",
     flexDirection: "column",
     gap: 8,
+    width: "100%",
+    maxWidth: "100%",
+    minWidth: 0,
   },
   mapBoard: {
     position: "relative",
-    width: "100%",
+    width: "min(100%, 560px)",
+    maxWidth: "100%",
+    minWidth: 0,
+    margin: "0 auto",
     aspectRatio: "1 / 1",
     borderRadius: 16,
     overflow: "hidden",
     border: "1px solid #cbd5e1",
     background: "#f8fafc",
+    boxSizing: "border-box",
   },
   mapImage: {
     display: "block",
     width: "100%",
     height: "100%",
     objectFit: "cover",
+    objectPosition: "center 98%",
   },
   mapPlaceholder: {
     width: "100%",
@@ -995,17 +1269,17 @@ const baseStyles = {
     placeItems: "center",
     color: "#64748b",
     fontSize: 14,
+    padding: 12,
+    textAlign: "center",
   },
   gridOverlay: {
     position: "absolute",
-    inset: 0,
     display: "grid",
     gridTemplateColumns: "repeat(4, 1fr)",
     gridTemplateRows: "repeat(4, 1fr)",
   },
   singleOverlay: {
     position: "absolute",
-    inset: 0,
     display: "grid",
     gridTemplateColumns: "repeat(8, 1fr)",
     gridTemplateRows: "repeat(8, 1fr)",
@@ -1019,6 +1293,8 @@ const baseStyles = {
     justifyContent: "space-between",
     padding: 6,
     cursor: "pointer",
+    minWidth: 0,
+    minHeight: 0,
   },
   gridCellSingle: {
     position: "relative",
@@ -1029,6 +1305,8 @@ const baseStyles = {
     justifyContent: "flex-start",
     padding: 2,
     cursor: "pointer",
+    minWidth: 0,
+    minHeight: 0,
   },
   gridCellActive: {
     background: "rgba(37, 99, 235, 0.35)",
@@ -1046,6 +1324,7 @@ const baseStyles = {
     background: "rgba(255,255,255,0.2)",
     borderRadius: 6,
     padding: 2,
+    flexShrink: 0,
   },
   gridCellMini: {
     borderRadius: 2,
@@ -1062,6 +1341,8 @@ const baseStyles = {
     background: "rgba(255,255,255,0.78)",
     padding: "2px 6px",
     borderRadius: 999,
+    maxWidth: "100%",
+    boxSizing: "border-box",
   },
   gridCellLabelMobile: {
     fontSize: 11,
@@ -1074,6 +1355,8 @@ const baseStyles = {
     background: "rgba(255,255,255,0.78)",
     padding: "1px 4px",
     borderRadius: 999,
+    maxWidth: "100%",
+    boxSizing: "border-box",
   },
   gridCellLabelSingleMobile: {
     fontSize: 9,
@@ -1081,6 +1364,9 @@ const baseStyles = {
   },
   mapSearchWrap: {
     position: "relative",
+    width: "100%",
+    maxWidth: "100%",
+    minWidth: 0,
   },
   mapSearchDropdown: {
     position: "absolute",
@@ -1094,6 +1380,8 @@ const baseStyles = {
     boxShadow: "0 10px 30px rgba(15, 23, 42, 0.12)",
     maxHeight: 240,
     overflow: "auto",
+    width: "100%",
+    boxSizing: "border-box",
   },
   mapSearchItem: {
     width: "100%",
@@ -1103,10 +1391,12 @@ const baseStyles = {
     padding: "10px 12px",
     textAlign: "left",
     cursor: "pointer",
+    boxSizing: "border-box",
   },
   mapSearchItemName: {
     fontSize: 14,
     color: "#111827",
+    wordBreak: "break-word",
   },
   mapSearchEmpty: {
     padding: 12,
