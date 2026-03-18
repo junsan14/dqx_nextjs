@@ -2,12 +2,17 @@ import axios from "axios";
 
 let cache = null;
 
+function getApiUrl() {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+  return apiUrl.replace(/\/$/, "");
+}
+
+const API_URL = getApiUrl();
+
 export async function fetchCrystalRules() {
   if (cache) return cache;
 
-  const res = await axios.get(
-    `${process.env.NEXT_PUBLIC_API_URL}/api/crystal-rules`
-  );
+  const res = await axios.get(`${API_URL}/api/crystal-rules`);
 
   cache = res.data?.data ?? [];
   return cache;
