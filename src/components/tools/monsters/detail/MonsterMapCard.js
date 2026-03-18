@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import MonsterMapOverlay from "./MonsterMapOverlay";
 
-const AREA_PREVIEW_COUNT = 3;
+const AREA_PREVIEW_COUNT = 2;
 
 function usePrefersDark() {
   const [isDark, setIsDark] = useState(false);
@@ -227,14 +227,12 @@ function useIsMobile(breakpoint = 920) {
 }
 
 function getContinentName(mapItem = {}) {
-  return (
-    String(
-      mapItem?.continent_name ??
-        mapItem?.continent ??
-        mapItem?.continentLabel ??
-        ""
-    ).trim()
-  );
+  return String(
+    mapItem?.continent_name ??
+      mapItem?.continent ??
+      mapItem?.continentLabel ??
+      ""
+  ).trim();
 }
 
 export default function MonsterMapCard({ mapItem }) {
@@ -294,7 +292,9 @@ export default function MonsterMapCard({ mapItem }) {
   const hasHiddenCoords = hiddenAreaTags.length > 0;
 
   const hasSpawnMeta =
-    previewAreaTags.length > 0 || displayTimes.length > 0 || summary.layerNames.length > 0;
+    previewAreaTags.length > 0 ||
+    displayTimes.length > 0 ||
+    summary.layerNames.length > 0;
 
   return (
     <article style={styles.card}>
@@ -307,7 +307,6 @@ export default function MonsterMapCard({ mapItem }) {
         <div style={styles.titleWrap}>
           <div style={styles.titleLine}>
             <h3 style={styles.mapTitle}>{mapItem?.name || "マップ"}</h3>
-
             {continentName ? (
               <span style={styles.continentText}>{continentName}</span>
             ) : null}
@@ -354,6 +353,7 @@ export default function MonsterMapCard({ mapItem }) {
                     {area}
                   </div>
                 ))}
+
                 {!coordsExpanded && hasHiddenCoords ? (
                   <button
                     type="button"
@@ -364,7 +364,8 @@ export default function MonsterMapCard({ mapItem }) {
                   </button>
                 ) : null}
               </div>
-              <div>
+
+              <div style={styles.timeTagWrap}>
                 {displayTimes.map((time) => (
                   <div
                     key={time}
@@ -379,9 +380,6 @@ export default function MonsterMapCard({ mapItem }) {
                   </div>
                 ))}
               </div>
-
-           
-             
             </div>
           </div>
 
@@ -440,15 +438,13 @@ function getStyles(isDark) {
       border: isDark ? "1px solid #334155" : "1px solid #e5e7eb",
       display: "flex",
       flexDirection: "column",
-      gap: "12px",
+      gap: "14px",
     },
     topRow: {
       display: "flex",
-      alignItems: "flex-start",
       justifyContent: "space-between",
-      gap: "12px",
-      minWidth: 0,
-      flexWrap: "nowrap",
+      alignItems: "flex-start",
+      gap: "14px",
     },
     topRowMobile: {
       flexDirection: "column",
@@ -456,194 +452,207 @@ function getStyles(isDark) {
     },
     titleWrap: {
       minWidth: 0,
-      flex: "1 1 auto",
-      display: "flex",
-      alignItems: "center",
-      gap: "8px",
-      flexWrap: "wrap",
+      flex: 1,
     },
     titleLine: {
       display: "flex",
-      alignItems: "baseline",
-      gap: "8px",
       flexWrap: "wrap",
-      minWidth: 0,
+      alignItems: "center",
+      gap: "8px 10px",
     },
     mapTitle: {
       margin: 0,
       fontSize: "18px",
-      fontWeight: 800,
       lineHeight: 1.35,
+      fontWeight: 900,
       color: isDark ? "#f8fafc" : "#111827",
-      overflowWrap: "anywhere",
       wordBreak: "break-word",
     },
     continentText: {
+      display: "inline-flex",
+      alignItems: "center",
+      minHeight: "28px",
+      padding: "4px 10px",
+      borderRadius: "999px",
       fontSize: "12px",
-      fontWeight: 600,
-      lineHeight: 1.4,
-      color: isDark ? "#94a3b8" : "#64748b",
-      whiteSpace: "normal",
-      wordBreak: "break-word",
+      fontWeight: 800,
     },
     layerSwitchRow: {
       display: "flex",
-      gap: "8px",
       flexWrap: "wrap",
       justifyContent: "flex-end",
-      alignItems: "center",
-      flex: "0 0 auto",
-      maxWidth: "100%",
-      marginLeft: "auto",
+      gap: "8px",
+      flexShrink: 0,
     },
     layerSwitchRowMobile: {
       justifyContent: "flex-start",
-      marginLeft: 0,
     },
     layerSwitchButton: {
       appearance: "none",
-      border: isDark ? "1px solid #475569" : "1px solid #cbd5e1",
-      background: isDark ? "#111827" : "#f8fafc",
+      border: isDark ? "1px solid #334155" : "1px solid #d1d5db",
+      background: isDark ? "#0b1220" : "#f8fafc",
       color: isDark ? "#cbd5e1" : "#334155",
-      padding: "8px 12px",
       borderRadius: "999px",
+      padding: "8px 12px",
       fontSize: "12px",
-      fontWeight: 700,
-      lineHeight: 1.2,
+      fontWeight: 800,
       cursor: "pointer",
-      transition: "all 0.2s ease",
-      whiteSpace: "nowrap",
     },
     layerSwitchButtonActive: {
-      background: isDark ? "#4f46e5" : "#2563eb",
+      background: isDark ? "#4f46e5" : "#111827",
       color: "#fff",
-      border: isDark ? "1px solid #4f46e5" : "1px solid #2563eb",
+      border: isDark ? "1px solid #6366f1" : "1px solid #111827",
       boxShadow: isDark
-        ? "0 8px 20px rgba(79,70,229,0.28)"
-        : "0 8px 20px rgba(37,99,235,0.18)",
+        ? "0 10px 22px rgba(99,102,241,0.24)"
+        : "0 8px 18px rgba(17,24,39,0.12)",
     },
     spawnInfoSection: {
-      display: "flex",
-      flexDirection: "column",
-      gap: "8px",
-      minWidth: 0,
-      padding: "10px 12px",
-      borderRadius: "14px",
-      background: isDark ? "rgba(2,6,23,0.42)" : "#f8fafc",
-      border: isDark ? "1px solid #1e293b" : "1px solid #e2e8f0",
+      display: "grid",
+      gap: "12px",
+      padding: isDark ? "14px" : "13px",
+      borderRadius: "16px",
+      background: isDark
+        ? "linear-gradient(180deg, rgba(15,23,42,0.98) 0%, rgba(2,6,23,0.96) 100%)"
+        : "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
+      border: isDark ? "1px solid rgba(71,85,105,0.85)" : "1px solid #dbe4f0",
+      boxShadow: isDark
+        ? "0 14px 30px rgba(2,6,23,0.34), inset 0 1px 0 rgba(255,255,255,0.04)"
+        : "0 10px 24px rgba(15,23,42,0.08), inset 0 1px 0 rgba(255,255,255,0.9)",
     },
     spawnInfoRow: {
       display: "flex",
-      alignItems: "center",
-      gap: "10px",
-      minWidth: 0,
+      justifyContent:"sapce-between"
     },
     spawnInfoLabel: {
-      flex: "0 0 auto",
-      minWidth: "32px",
-      fontSize: "11px",
-      fontWeight: 800,
- 
-      color: isDark ? "#93c5fd" : "#2563eb",
+      minWidth: "42px",
+      paddingTop: "6px",
+      fontSize: "12px",
+      fontWeight: 900,
+      letterSpacing: "0.04em",
+      color: isDark ? "#94a3b8" : "#64748b",
+      flexShrink: 0,
     },
     spawnInfoLabelSub: {
-      flex: "0 0 auto",
-      minWidth: "32px",
-      fontSize: "11px",
-      fontWeight: 800,
-      lineHeight: 1.9,
-      color: isDark ? "#64748b" : "#94a3b8",
+      minWidth: "42px",
+      paddingTop: "4px",
+      fontSize: "12px",
+      fontWeight: 900,
+      letterSpacing: "0.04em",
+      color: isDark ? "#94a3b8" : "#64748b",
+      flexShrink: 0,
     },
     spawnMetaWrap: {
       display: "flex",
-
-      width:"100%",
       flexWrap: "wrap",
-      alignItems: "center",
-      justifyContent:"space-between",
+      gap: "8px",
+      flex: 1,
       minWidth: 0,
+      alignItems: "center",
+      justifyContent:"space-between"
+      
+
     },
     spawnMetaWrapTag: {
       display: "flex",
       flexWrap: "wrap",
-      alignItems: "center",
-      justifyContent:"space-between",
+      gap: "1px",
       minWidth: 0,
     },
-    coordsAccordion: {
+    timeTagWrap: {
       display: "flex",
-      flexDirection: "column",
-      gap: "8px",
-      paddingTop: "2px",
+      flexWrap: "wrap",
+      gap: "1px",
+      minWidth: 0,
     },
     tag: {
-      fontSize: "11px",
-      fontWeight: 700,
-      padding: "4px 8px",
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      minHeight: "32px",
+      padding: "2px 11px",
       borderRadius: "999px",
-      background: isDark ? "rgba(99,102,241,0.16)" : "#eef2ff",
-      color: isDark ? "#c7d2fe" : "#3730a3",
-      maxWidth: "100%",
+      fontSize: "12px",
+      fontWeight: 900,
+      lineHeight: 1.2,
+      whiteSpace: "nowrap",
       boxSizing: "border-box",
-      border: "1px solid transparent",
-      lineHeight: 1.35,
     },
     tagArea: {
-      background: isDark ? "#111827" : "#ffffff",
-      color: isDark ? "#cbd5e1" : "#334155",
-      border: isDark ? "1px solid #334155" : "1px solid #cbd5e1",
-    },
-    tagLayer: {
-      background: isDark ? "rgba(148,163,184,0.12)" : "#f1f5f9",
-      color: isDark ? "#cbd5e1" : "#475569",
-      border: isDark ? "1px solid #475569" : "1px solid #cbd5e1",
-    },
-    tagDay: {
-      background: isDark ? "rgba(251,146,60,0.16)" : "#ffedd5",
-      color: isDark ? "#fdba74" : "#c2410c",
-      border: isDark ? "1px solid rgba(251,146,60,0.28)" : "1px solid #fdba74",
+      background: isDark ? "rgba(30,41,59,0.95)" : "#ffffff",
+      color: isDark ? "#e2e8f0" : "#0f172a",
+      border: isDark ? "1px solid rgba(100,116,139,0.7)" : "1px solid #cbd5e1",
+      boxShadow: isDark
+        ? "0 6px 16px rgba(2,6,23,0.28)"
+        : "0 4px 12px rgba(15,23,42,0.08)",
     },
     tagNight: {
-      background: isDark ? "#020617" : "#111827",
-      color: "#ffffff",
-      border: isDark ? "1px solid #334155" : "1px solid #374151",
+      background: isDark ? "rgba(91,33,182,0.22)" : "#f5f3ff",
+      color: isDark ? "#c4b5fd" : "#6d28d9",
+      border: isDark ? "1px solid rgba(167,139,250,0.35)" : "1px solid #ddd6fe",
+      boxShadow: isDark
+        ? "0 6px 16px rgba(46,16,101,0.26)"
+        : "0 4px 12px rgba(109,40,217,0.10)",
+    },
+    tagDay: {
+      background: isDark ? "rgba(180,83,9,0.18)" : "#fff7ed",
+      color: isDark ? "#fdba74" : "#c2410c",
+      border: isDark ? "1px solid rgba(251,191,36,0.28)" : "1px solid #fed7aa",
+      boxShadow: isDark
+        ? "0 6px 16px rgba(120,53,15,0.20)"
+        : "0 4px 12px rgba(194,65,12,0.08)",
     },
     tagAnytime: {
-      background: isDark ? "rgba(34,197,94,0.16)" : "#dcfce7",
-      color: isDark ? "#86efac" : "#166534",
-      border: isDark ? "1px solid rgba(34,197,94,0.30)" : "1px solid #86efac",
+      background: isDark ? "rgba(4,120,87,0.18)" : "#ecfdf5",
+      color: isDark ? "#86efac" : "#047857",
+      border: isDark ? "1px solid rgba(52,211,153,0.26)" : "1px solid #a7f3d0",
+      boxShadow: isDark
+        ? "0 6px 16px rgba(6,78,59,0.18)"
+        : "0 4px 12px rgba(4,120,87,0.08)",
     },
     coordsToggleButton: {
       appearance: "none",
-      border: isDark ? "1px solid #334155" : "1px solid #cbd5e1",
-      background: isDark ? "#0f172a" : "#ffffff",
-      color: isDark ? "#cbd5e1" : "#475569",
-      padding: "4px 8px",
+      border: isDark ? "1px solid rgba(129,140,248,0.45)" : "1px solid #c7d2fe",
+      background: isDark ? "rgba(79,70,229,0.16)" : "#eef2ff",
+      color: isDark ? "#c7d2fe" : "#4338ca",
       borderRadius: "999px",
-      fontSize: "11px",
-      fontWeight: 700,
+      minHeight: "32px",
+      padding: "7px 11px",
+      fontSize: "12px",
+      fontWeight: 900,
       cursor: "pointer",
-
+      boxShadow: isDark
+        ? "0 6px 16px rgba(79,70,229,0.18)"
+        : "0 4px 12px rgba(79,70,229,0.10)",
+    },
+    coordsAccordion: {
+      display: "grid",
+      gap: "10px",
+      padding: "12px",
+      borderRadius: "14px",
+      background: isDark ? "rgba(2,6,23,0.58)" : "rgba(248,250,252,0.96)",
+      border: isDark ? "1px solid rgba(51,65,85,0.85)" : "1px solid #dbe4f0",
+      boxShadow: isDark
+        ? "inset 0 1px 0 rgba(255,255,255,0.03), 0 8px 22px rgba(2,6,23,0.18)"
+        : "inset 0 1px 0 rgba(255,255,255,0.9), 0 8px 20px rgba(15,23,42,0.06)",
     },
     coordsCloseButton: {
-      alignSelf: "flex-start",
       appearance: "none",
-      border: "none",
-      background: "transparent",
-      color: isDark ? "#94a3b8" : "#64748b",
+      alignSelf: "flex-start",
+      border: isDark ? "1px solid #334155" : "1px solid #cbd5e1",
+      background: isDark ? "#0f172a" : "#ffffff",
+      color: isDark ? "#cbd5e1" : "#334155",
+      borderRadius: "999px",
+      padding: "8px 12px",
       fontSize: "12px",
-      fontWeight: 700,
+      fontWeight: 800,
       cursor: "pointer",
-      padding: 0,
+      boxShadow: isDark
+        ? "0 6px 16px rgba(2,6,23,0.18)"
+        : "0 4px 12px rgba(15,23,42,0.06)",
     },
     mapWrap: {
-      width: "100%",
-      maxWidth: "100%",
       minWidth: 0,
-      overflow: "hidden",
-      flex: "1 1 auto",
-      display: "flex",
-      flexDirection: "column",
+      width: "100%",
     },
   };
 }

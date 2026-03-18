@@ -314,7 +314,7 @@ const inputStyle = (theme) => ({
   padding: "10px 12px",
   border: `1px solid ${theme.inputBorder}`,
   borderRadius: 8,
-  fontSize: 14,
+  fontSize: 16,
   boxSizing: "border-box",
   background: theme.inputBg,
   color: theme.inputText,

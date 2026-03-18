@@ -1,6 +1,5 @@
 "use client";
 
-import { TOOLS_BY_CRAFT, TOOL_USES } from "@/app/data/tools";
 
 export default function CraftProfitHeaderCard({
   setQuery,
@@ -17,12 +16,15 @@ export default function CraftProfitHeaderCard({
   toolPrice,
   setToolPriceOverride,
 }) {
+  const hasToolOptions = Array.isArray(toolOptions) && toolOptions.length > 1;
 
   return (
     <section className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 shadow-sm space-y-4 h-full">
       <div className="space-y-3">
         <div className="min-w-0 relative">
-          <label className="text-xs text-slate-500 dark:text-slate-400">装備セット</label>
+          <label className="text-xs text-slate-500 dark:text-slate-400">
+            装備セット
+          </label>
           <input
             type="text"
             value={setQuery}
@@ -37,19 +39,25 @@ export default function CraftProfitHeaderCard({
 
           {openSetList && (
             <div className="absolute z-20 mt-1 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow max-h-60 overflow-auto">
-              {filteredSets.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => {
-                    onChangeSet(s.id);
-                    setOpenSetList(false);
-                  }}
-                  className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 text-sm text-slate-900 dark:text-slate-100"
-                >
-                  {s.name}
-                </button>
-              ))}
+              {filteredSets.length > 0 ? (
+                filteredSets.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => {
+                      onChangeSet(s.id);
+                      setOpenSetList(false);
+                    }}
+                    className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 text-sm text-slate-900 dark:text-slate-100"
+                  >
+                    {s.name}
+                  </button>
+                ))
+              ) : (
+                <div className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">
+                  該当なし
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -64,10 +72,10 @@ export default function CraftProfitHeaderCard({
           </div>
         </div>
 
-        {TOOLS_BY_CRAFT[craftType] && (
+        {hasToolOptions && (
           <div className="min-w-0">
             <label className="text-xs text-slate-500 dark:text-slate-400">
-              使用する道具（{TOOL_USES}回）
+              使用する道具（30回）
             </label>
 
             <div className="mt-1 grid grid-cols-1 gap-2">

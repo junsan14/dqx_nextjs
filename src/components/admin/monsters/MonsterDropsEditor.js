@@ -754,6 +754,38 @@ export default function MonsterDropsEditor({ drops = [], onChange, theme }) {
           gap: 18px;
         }
 
+        .monster-drops-editor-input::placeholder {
+          color: ${styles.placeholderColor};
+          opacity: 1;
+        }
+
+        .monster-drops-editor-input,
+        .monster-drops-editor-select,
+        .monster-drops-editor-suggest-item,
+        .monster-drops-editor-tab {
+          transition:
+            background-color 0.18s ease,
+            border-color 0.18s ease,
+            color 0.18s ease,
+            box-shadow 0.18s ease;
+        }
+
+        .monster-drops-editor-input:focus,
+        .monster-drops-editor-select:focus {
+          outline: none;
+          border-color: ${styles.focusRingColor};
+          box-shadow: 0 0 0 3px ${styles.focusRingShadow};
+        }
+
+        .monster-drops-editor-suggest-item:hover {
+          background: ${styles.suggestItemHover.background} !important;
+        }
+
+        .monster-drops-editor-tab:hover {
+          background: ${styles.tabButtonHover.background} !important;
+          color: ${styles.tabButtonHover.color} !important;
+        }
+
         @media (max-width: 768px) {
           .monster-drops-editor-title {
             font-size: 18px !important;
@@ -915,12 +947,13 @@ const baseStyles = {
     flexWrap: "wrap",
     padding: 6,
     borderRadius: 14,
-    background: "#e2e8f0",
+    background: "#f8fafc",
+    border: "1px solid #e2e8f0",
   },
   tabButton: {
     border: "none",
     background: "transparent",
-    color: "#334155",
+    color: "#64748b",
     borderRadius: 10,
     padding: "10px 16px",
     fontWeight: 700,
@@ -928,10 +961,14 @@ const baseStyles = {
     display: "inline-flex",
     alignItems: "center",
   },
+  tabButtonHover: {
+    background: "#ffffff",
+    color: "#111827",
+  },
   tabButtonActive: {
     background: "#ffffff",
     color: "#111827",
-    boxShadow: "0 1px 2px rgba(15, 23, 42, 0.08)",
+    boxShadow: "0 1px 2px rgba(15, 23, 42, 0.06)",
   },
   panel: {
     display: "flex",
@@ -942,12 +979,11 @@ const baseStyles = {
   section: {
     background: "#ffffff",
     border: "1px solid #e2e8f0",
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: 14,
+    padding: 16,
     display: "flex",
     flexDirection: "column",
     gap: 16,
-    boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)",
     minWidth: 0,
   },
   sectionHeader: {
@@ -959,7 +995,7 @@ const baseStyles = {
   },
   sectionTitle: {
     margin: 0,
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 800,
     color: "#111827",
   },
@@ -980,12 +1016,12 @@ const baseStyles = {
     alignItems: "center",
     maxWidth: "100%",
     padding: "10px 14px 8px",
-    borderRadius: 14,
-    background: "#eef2ff",
-    color: "#3730a3",
+    borderRadius: 999,
+    background: "#f8fafc",
+    color: "#334155",
     fontSize: 13,
     fontWeight: 700,
-    border: "1px solid #c7d2fe",
+    border: "1px solid #e2e8f0",
     minHeight: 40,
   },
   tagText: {
@@ -1001,7 +1037,7 @@ const baseStyles = {
     width: 22,
     height: 22,
     borderRadius: "9999px",
-    border: "1px solid #cbd5e1",
+    border: "1px solid #e2e8f0",
     background: "#ffffff",
     color: "#b91c1c",
     fontSize: 14,
@@ -1011,11 +1047,10 @@ const baseStyles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    boxShadow: "0 1px 2px rgba(15, 23, 42, 0.12)",
     flexShrink: 0,
   },
   emptyTags: {
-    color: "#94a3b8",
+    color: "#64748b",
     fontSize: 14,
   },
   addComposer: {
@@ -1031,9 +1066,9 @@ const baseStyles = {
     minWidth: 0,
   },
   label: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 700,
-    color: "#334155",
+    color: "#64748b",
   },
   input: {
     width: "100%",
@@ -1042,7 +1077,7 @@ const baseStyles = {
     border: "1px solid #cbd5e1",
     background: "#ffffff",
     fontSize: 14,
-    color: "#0f172a",
+    color: "#111827",
     minWidth: 0,
     boxSizing: "border-box",
   },
@@ -1076,6 +1111,10 @@ const baseStyles = {
     justifyContent: "space-between",
     gap: 12,
     minWidth: 0,
+    color: "#111827",
+  },
+  suggestItemHover: {
+    background: "#f8fafc",
   },
   suggestItemActive: {
     background: "#eff6ff",
@@ -1092,8 +1131,110 @@ const baseStyles = {
     whiteSpace: "nowrap",
     flexShrink: 0,
   },
+  focusRingColor: "#93c5fd",
+  focusRingShadow: "rgba(147, 197, 253, 0.25)",
+  placeholderColor: "#94a3b8",
 };
 
+function withTheme(base, theme) {
+  const t = theme ?? {};
+
+  return {
+    ...base,
+    pageTitle: {
+      ...base.pageTitle,
+      color: t.title ?? base.pageTitle.color,
+    },
+    tabBar: {
+      ...base.tabBar,
+      background: t.softBg ?? base.tabBar.background,
+      border: `1px solid ${t.softBorder ?? "#e2e8f0"}`,
+    },
+    tabButton: {
+      ...base.tabButton,
+      color: t.mutedText ?? base.tabButton.color,
+    },
+    tabButtonHover: {
+      ...base.tabButtonHover,
+      background: t.cardBg ?? base.tabButtonHover.background,
+      color: t.text ?? base.tabButtonHover.color,
+    },
+    tabButtonActive: {
+      ...base.tabButtonActive,
+      background: t.cardBg ?? base.tabButtonActive.background,
+      color: t.text ?? base.tabButtonActive.color,
+    },
+    section: {
+      ...base.section,
+      background: t.cardBg ?? base.section.background,
+      border: `1px solid ${t.cardBorder ?? "#e2e8f0"}`,
+    },
+    sectionTitle: {
+      ...base.sectionTitle,
+      color: t.title ?? base.sectionTitle.color,
+    },
+    tag: {
+      ...base.tag,
+      background: t.softBg ?? base.tag.background,
+      color: t.text ?? base.tag.color,
+      border: `1px solid ${t.softBorder ?? "#e2e8f0"}`,
+    },
+    tagDelete: {
+      ...base.tagDelete,
+      background: t.cardBg ?? base.tagDelete.background,
+      border: `1px solid ${t.softBorder ?? "#e2e8f0"}`,
+      color: t.dangerText ?? base.tagDelete.color,
+    },
+    emptyTags: {
+      ...base.emptyTags,
+      color: t.mutedText ?? base.emptyTags.color,
+    },
+    label: {
+      ...base.label,
+      color: t.mutedText ?? base.label.color,
+    },
+    input: {
+      ...base.input,
+      background: t.inputBg ?? base.input.background,
+      border: `1px solid ${t.inputBorder ?? "#cbd5e1"}`,
+      color: t.inputText ?? base.input.color,
+    },
+    suggestBox: {
+      ...base.suggestBox,
+      background: t.softBg ?? base.suggestBox.background,
+      border: `1px solid ${t.softBorder ?? "#e2e8f0"}`,
+    },
+    emptySuggest: {
+      ...base.emptySuggest,
+      color: t.mutedText ?? base.emptySuggest.color,
+    },
+    suggestItem: {
+      ...base.suggestItem,
+      background: t.cardBg ?? base.suggestItem.background,
+      borderBottom: `1px solid ${t.softBorder ?? "#e2e8f0"}`,
+      color: t.text ?? base.suggestItem.color,
+    },
+    suggestItemHover: {
+      ...base.suggestItemHover,
+      background: t.softBg ?? base.suggestItemHover.background,
+    },
+    suggestItemActive: {
+      ...base.suggestItemActive,
+      background: t.selectedBg ?? base.suggestItemActive.background,
+    },
+    suggestMeta: {
+      ...base.suggestMeta,
+      color: t.mutedText ?? base.suggestMeta.color,
+    },
+    focusRingColor: t.primaryBorder ?? base.focusRingColor,
+    focusRingShadow:
+      t.selectedBg === "#eff6ff"
+        ? "rgba(147, 197, 253, 0.25)"
+        : "rgba(148, 163, 184, 0.18)",
+    placeholderColor: t.mutedText ?? base.placeholderColor,
+  };
+}
+
 function getComponentStyles(theme) {
-  return applyMonsterThemeToStyleTree(baseStyles, theme);
+  return applyMonsterThemeToStyleTree(withTheme(baseStyles, theme), theme);
 }

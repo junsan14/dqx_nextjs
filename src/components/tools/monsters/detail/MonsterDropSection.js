@@ -226,10 +226,10 @@ function OrbTagList({ items, styles, isDark }) {
   );
 }
 
-function Panel({ title, children, styles }) {
+function Panel({ title, children, styles, showTitle = true }) {
   return (
     <section style={styles.panel}>
-      <h3 style={styles.panelTitle}>{title}</h3>
+      {showTitle ? <h3 style={styles.panelTitle}>{title}</h3> : null}
       <div style={styles.panelBody}>{children}</div>
     </section>
   );
@@ -270,7 +270,7 @@ export default function MonsterDropSection({
         key: "drops",
         label: "ドロップ",
         content: (
-          <Panel title="ドロップ" styles={styles}>
+          <Panel title="ドロップ" styles={styles} showTitle={!isMobile}>
             <DropTagList items={mergedDrops} styles={styles} />
           </Panel>
         ),
@@ -279,7 +279,7 @@ export default function MonsterDropSection({
         key: "equipment",
         label: "白宝箱",
         content: (
-          <Panel title="白宝箱" styles={styles}>
+          <Panel title="白宝箱" styles={styles} showTitle={!isMobile}>
             <PlainTagList items={equipment} styles={styles} />
           </Panel>
         ),
@@ -288,13 +288,13 @@ export default function MonsterDropSection({
         key: "orb",
         label: "宝珠",
         content: (
-          <Panel title="宝珠" styles={styles}>
+          <Panel title="宝珠" styles={styles} showTitle={!isMobile}>
             <OrbTagList items={orbs} styles={styles} isDark={isDark} />
           </Panel>
         ),
       },
     ];
-  }, [normalDrops, rareDrops, equipmentDrops, orbDrops, styles, isDark]);
+  }, [normalDrops, rareDrops, equipmentDrops, orbDrops, styles, isDark, isMobile]);
 
   useEffect(() => {
     if (!isMobile) return;
@@ -371,7 +371,7 @@ export default function MonsterDropSection({
       ) : (
         <div style={styles.desktopGrid}>
           {data.map((tab) => (
-            <div key={tab.key} style={styles.desktopCol}>
+            <div key={tab.key} style={styles.desktopItem}>
               {tab.content}
             </div>
           ))}
@@ -384,169 +384,158 @@ export default function MonsterDropSection({
 function getStyles(isDark) {
   return {
     section: {
-      marginTop: "18px",
-      display: "grid",
-      gap: "12px",
-    },
-
-    tabListMobile: {
-      display: "grid",
-      gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-      gap: "8px",
+      marginTop: "8px",
       width: "100%",
+      maxWidth: "100%",
+      minWidth: 0,
+      boxSizing: "border-box",
+    },
+    tabListMobile: {
+      display: "flex",
+      justifyContent:"center",
+  
+      overflowX: "auto",
+      marginBottom: "12px",
+      paddingBottom: "4px",
+      scrollbarWidth: "thin",
+      WebkitOverflowScrolling: "touch",
+      width:"100%"
     },
     tabButton: {
       appearance: "none",
-      border: "none",
-      background: isDark ? "#1e293b" : "#eef2ff",
+      border: isDark ? "1px solid #334155" : "1px solid #dbe3f0",
+      background: isDark ? "#0f172a" : "#ffffff",
       color: isDark ? "#cbd5e1" : "#475569",
-      padding: "14px 10px",
-      borderRadius: "14px",
-      fontSize: "14px",
-      fontWeight: 900,
+     
+      padding: "10px 14px",
+      fontSize: "13px",
+      fontWeight: 800,
       cursor: "pointer",
-      transition: "all .18s ease",
+      whiteSpace: "nowrap",
+      width:"33%",
+      flexShrink: 0,
     },
     tabButtonActive: {
-      background: isDark
-        ? "linear-gradient(180deg, #4f46e5 0%, #4338ca 100%)"
-        : "linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%)",
-      color: "#fff",
-      boxShadow: isDark
-        ? "0 10px 24px rgba(79,70,229,0.35)"
-        : "0 10px 24px rgba(37,99,235,0.20)",
-    },
+      background: isDark ? "#4f46e5" : "#111827",
+      color: "#ffffff",
+      border: isDark ? "1px solid #6366f1" : "1px solid #111827",
 
+    },
+    mobileScroller: {
+      display: "flex",
+      overflowX: "auto",
+      scrollSnapType: "x mandatory",
+      WebkitOverflowScrolling: "touch",
+      scrollbarWidth: "none",
+      msOverflowStyle: "none",
+    },
+    mobilePage: {
+      minWidth: "100%",
+      width: "100%",
+      flex: "0 0 100%",
+      scrollSnapAlign: "start",
+      boxSizing: "border-box",
+    },
     desktopGrid: {
       display: "grid",
-      gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+      gridTemplateColumns: "repeat(3, minmax(0,1fr))",
       gap: "14px",
-      alignItems: "stretch",
     },
-    desktopCol: {
-      display: "flex",
-    },
-
-    panel: {
-      background: isDark ? "#0f172a" : "#fff",
-      border: isDark ? "1px solid #334155" : "1px solid transparent",
-      borderRadius: "20px",
-      padding: "16px",
+    desktopItem: {
       minWidth: 0,
-      width: "100%",
+    },
+    panel: {
+      borderRadius: "18px",
+      background: isDark ? "rgba(15,23,42,0.82)" : "rgba(255,255,255,0.9)",
+      border: isDark ? "1px solid #334155" : "1px solid #e5e7eb",
       boxShadow: isDark
-        ? "0 8px 24px rgba(2,6,23,0.28)"
-        : "0 8px 24px rgba(15,23,42,0.04)",
-      display: "flex",
-      flexDirection: "column",
-      height: "100%",
+        ? "0 10px 28px rgba(2,6,23,0.24)"
+        : "0 8px 24px rgba(15,23,42,0.05)",
+      padding: "14px",
+      minHeight: "100%",
+      boxSizing: "border-box",
+      display:"flex",
+      alignItems:"center"
     },
     panelTitle: {
-      margin: "0 0 14px",
+      margin: "0 0 12px",
       fontSize: "16px",
       fontWeight: 900,
       color: isDark ? "#f8fafc" : "#111827",
     },
     panelBody: {
-      flex: 1,
-      alignContent: "flex-start",
+      minWidth: 0,
     },
-
     tagList: {
       display: "flex",
       flexWrap: "wrap",
+      alignItems:"center",
       gap: "10px",
-      alignContent: "flex-start",
+      height:"100%"
     },
     itemTag: {
       display: "inline-flex",
       alignItems: "center",
       gap: "8px",
-      padding: "8px 12px",
+      padding: "2px 12px",
       borderRadius: "999px",
-      background: isDark ? "#111827" : "#f8fbff",
-      color: isDark ? "#f8fafc" : "#0f172a",
-      fontSize: "13px",
-      fontWeight: 800,
-      lineHeight: 1.3,
-      boxShadow: isDark
-        ? "none"
-        : "0 1px 0 rgba(255,255,255,0.8) inset",
-      border: isDark ? "1px solid #334155" : "1px solid transparent",
-      minHeight: "38px",
+      background: isDark ? "#1e293b" : "#f8fafc",
+     
+      maxWidth: "100%",
+      boxSizing: "border-box",
     },
     itemTagNormal: {
-      background: isDark ? "#111827" : "#f8fafc",
+      background: isDark ? "#1e293b" : "#f8fafc",
     },
     itemTagRare: {
-      background: isDark ? "rgba(249,115,22,0.14)" : "#fff7ed",
-      border: isDark ? "1px solid rgba(251,146,60,0.28)" : "1px solid transparent",
+      background: isDark ? "rgba(91,33,182,0.22)" : "#f5f3ff",
+     
     },
     kindBadge: {
       display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
-      padding: "4px 7px",
       borderRadius: "999px",
-      fontSize: "10px",
+      padding: "4px 8px",
+      fontSize: "11px",
       fontWeight: 900,
-      lineHeight: 1,
       flexShrink: 0,
     },
     kindBadgeNormal: {
-      background: isDark ? "#334155" : "#e2e8f0",
+
       color: isDark ? "#cbd5e1" : "#475569",
     },
     kindBadgeRare: {
-      background: "#fb923c",
-      color: "#fff",
+     
+      color: isDark ? "#c4b5fd" : "#6d28d9",
     },
     orbColorBadge: {
       display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
-      padding: "4px 8px",
       borderRadius: "999px",
-      fontSize: "10px",
+      padding: "4px 8px",
+      fontSize: "11px",
       fontWeight: 900,
-      lineHeight: 1,
       flexShrink: 0,
     },
     itemTagText: {
-      fontSize: "13px",
-      fontWeight: 800,
+      fontSize: "14px",
+      lineHeight: 1.5,
+      fontWeight: 700,
       color: isDark ? "#f8fafc" : "#0f172a",
+      overflowWrap: "anywhere",
+      wordBreak: "break-word",
     },
     emptyBox: {
-      background: isDark ? "#111827" : "#f8fafc",
-      color: isDark ? "#64748b" : "#94a3b8",
-      border: isDark ? "1px solid #334155" : "1px solid transparent",
       borderRadius: "14px",
-      minHeight: "92px",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontSize: "13px",
+      padding: "14px",
+      background: isDark ? "#0f172a" : "#f8fafc",
+      border: isDark ? "1px dashed #334155" : "1px dashed #cbd5e1",
+      color: isDark ? "#94a3b8" : "#64748b",
+      fontSize: "14px",
       fontWeight: 700,
-    },
-
-    mobileScroller: {
-      display: "flex",
-      overflowX: "auto",
-      overflowY: "hidden",
-      scrollSnapType: "x mandatory",
-      WebkitOverflowScrolling: "touch",
-      scrollbarWidth: "thin",
-      gap: 0,
-      overscrollBehaviorX: "contain",
-    },
-    mobilePage: {
-      flex: "0 0 100%",
-      width: "100%",
-      minWidth: "100%",
-      scrollSnapAlign: "start",
-      scrollSnapStop: "always",
-      boxSizing: "border-box",
+      textAlign: "center",
     },
   };
 }

@@ -11,6 +11,8 @@ export default function MonsterSearchSidebar({
   isOpen = true,
   onToggle,
   theme,
+  createDisabled = false,
+  createLabel = "新規",
 }) {
   return (
     <>
@@ -76,10 +78,12 @@ export default function MonsterSearchSidebar({
             <button
               type="button"
               onClick={onCreateNew}
+              disabled={createDisabled}
+              title={createDisabled ? "管理者のみ" : ""}
               className="monster-search-sidebar-new"
-              style={newButtonStyle(theme)}
+              style={newButtonStyle(theme, createDisabled)}
             >
-              新規
+              {createLabel}
             </button>
 
             <button
@@ -183,15 +187,18 @@ const headerActionsStyle = {
   flexWrap: "wrap",
 };
 
-const newButtonStyle = (theme) => ({
-  border: `1px solid ${theme.primaryBorder}`,
-  background: theme.primaryBg,
-  color: theme.primaryText,
+const newButtonStyle = (theme, disabled = false) => ({
+  border: `1px solid ${
+    disabled ? theme.disabledBorder : theme.primaryBorder
+  }`,
+  background: disabled ? theme.disabledBg : theme.primaryBg,
+  color: disabled ? theme.disabledText : theme.primaryText,
   borderRadius: 8,
   padding: "8px 12px",
-  cursor: "pointer",
+  cursor: disabled ? "not-allowed" : "pointer",
   minHeight: 38,
   flexShrink: 0,
+  opacity: disabled ? 0.7 : 1,
 });
 
 const toggleButtonStyle = (theme) => ({

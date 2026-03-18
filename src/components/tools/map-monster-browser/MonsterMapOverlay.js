@@ -1,53 +1,21 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import Image from "next/image";
-import { getMonsterAssetUrl } from "@/lib/monsters";
+import { resolveMapImageUrl } from "@/lib/maps";
 
 const GRID_SIZE = 8;
-
-/**
- * 元画像サイズ
- * 490 x 565
- *
- * まず上の余白 75px を落として 490 x 490 の範囲を見る
- * その中にさらに
- * - 上の 1,2,3... バー
- * - 左の A,B,C... バー
- * があるので、それも除いた範囲を実際の 8x8 グリッドとして扱う
- */
 const ORIGINAL_IMAGE_WIDTH = 490;
 const ORIGINAL_IMAGE_HEIGHT = 565;
-const CROP_TOP_PX = ORIGINAL_IMAGE_HEIGHT - ORIGINAL_IMAGE_WIDTH; // 75
+const CROP_TOP_PX = ORIGINAL_IMAGE_HEIGHT - ORIGINAL_IMAGE_WIDTH;
 
-/**
- * ここを微調整してくれ
- * 上の数字バー、左のABCバーの厚み
- */
 const TOP_AXIS_PX = 2;
 const LEFT_AXIS_PX = 2.5;
-
-/**
- * 必要なら右下も微調整できるようにしてある
- * 基本は 0 でOK
- */
 const RIGHT_TRIM_PX = 0;
 const BOTTOM_TRIM_PX = 0;
 
-/**
- * 生息エリアの表示数
- */
-//const MAX_VISIBLE_AREA_CHIPS = 3;
-
-/**
- * ツールチップ配置用のしきい値
- */
 const TOOLTIP_EDGE_THRESHOLD = 18;
 
-/**
- * 実際に表示する「グリッド本体」の切り抜き範囲
- */
 const GRID_SOURCE_X = LEFT_AXIS_PX;
 const GRID_SOURCE_Y = CROP_TOP_PX + TOP_AXIS_PX;
 
@@ -200,13 +168,6 @@ function hasAllCellsInRect(cellMap, minCol, maxCol, minRow, maxRow) {
   return true;
 }
 
-function buildRectLabel(cells = []) {
-  return cells
-    .map((cell) => cell.label)
-    .sort((a, b) => a.localeCompare(b, "ja"))
-    .join(", ");
-}
-
 function compareCells(a, b) {
   const colDiff = a.col - b.col;
   if (colDiff !== 0) return colDiff;
@@ -218,22 +179,22 @@ function buildShortLabel(rectCells = []) {
 
   const sorted = [...rectCells].sort(compareCells);
 
-  if (sorted.length === 1) {
-    return sorted[0].label;
-  }
+  if (sorted.length === 1) return sorted[0].label;
 
   const first = sorted[0];
   const last = sorted[sorted.length - 1];
 
-  if (first.row === last.row) {
-    return `${first.label}〜${last.label}`;
-  }
-
-  if (first.col === last.col) {
-    return `${first.label}〜${last.label}`;
-  }
+  if (first.row === last.row) return `${first.label}〜${last.label}`;
+  if (first.col === last.col) return `${first.label}〜${last.label}`;
 
   return `${first.label}〜${last.label}`;
+}
+
+function buildRectLabel(cells = []) {
+  return cells
+    .map((cell) => cell.label)
+    .sort((a, b) => a.localeCompare(b, "ja"))
+    .join(", ");
 }
 
 function buildMergedGroups(cells = []) {
@@ -358,7 +319,30 @@ function joinUniqueValues(values = []) {
   return uniq.join(" / ");
 }
 
-function getBubblePosition(group, spawns = []) {
+function buildMonsterLines(spawns = [], monstersById = {}) {
+  const map = new Map();
+
+  for (const spawn of spawns) {
+    const monster = monstersById?.[spawn.monster_id];
+    const monsterName = monster?.name || `monster_id: ${spawn.monster_id}`;
+    const key = `${spawn.monster_id}:${spawn.spawn_time ?? ""}:${spawn.spawn_count ?? ""}:${spawn.symbol_count ?? ""}`;
+
+    if (!map.has(key)) {
+      map.set(key, {
+        monsterName,
+        spawnTime: normalizeSpawnTime(spawn?.spawn_time),
+        spawnCount: normalizeMetaValue(spawn?.spawn_count),
+        symbolCount: normalizeMetaValue(spawn?.symbol_count),
+      });
+    }
+  }
+
+  return Array.from(map.values()).sort((a, b) =>
+    String(a.monsterName).localeCompare(String(b.monsterName), "ja")
+  );
+}
+
+function getBubblePosition(group, spawns = [], monstersById = {}) {
   const cellPercent = 100 / GRID_SIZE;
 
   const widthCells = group.maxCol - group.minCol + 1;
@@ -401,21 +385,10 @@ function getBubblePosition(group, spawns = []) {
     spawnCount,
     spawnTimes,
     relatedSpawns,
+    monsterLines: buildMonsterLines(relatedSpawns, monstersById),
   };
 }
-/*
-function buildAreaInfo(cells = []) {
-  const labels = [...new Set(cells.map((cell) => cell.label))].sort((a, b) =>
-    a.localeCompare(b, "ja")
-  );
 
-  return {
-    visible: labels.slice(0, MAX_VISIBLE_AREA_CHIPS),
-    hiddenCount: Math.max(labels.length - MAX_VISIBLE_AREA_CHIPS, 0),
-    all: labels,
-  };
-}
-*/
 function getTooltipPlacement(bubble) {
   if (!bubble) {
     return {
@@ -481,9 +454,7 @@ function BubbleInfoContent({ bubble, styles }) {
 
   return (
     <div style={styles.infoCardContent}>
-
       <div style={styles.infoRows}>
-
         {bubble.symbolCount ? (
           <div style={styles.infoRow}>
             <span style={styles.infoLabel}>シンボル数</span>
@@ -505,21 +476,42 @@ function BubbleInfoContent({ bubble, styles }) {
           </div>
         ) : null}
       </div>
+
+      {bubble.monsterLines?.length ? (
+        <div style={styles.monsterSection}>
+          <div style={styles.monsterSectionTitle}>出現モンスター</div>
+
+          <div style={styles.monsterList}>
+            {bubble.monsterLines.map((line, index) => (
+              <div key={`${line.monsterName}-${index}`} style={styles.monsterListItem}>
+                <div style={styles.monsterName}>{line.monsterName}</div>
+
+                <div style={styles.monsterMeta}>
+                  {line.spawnTime ? <span>時間: {line.spawnTime}</span> : null}
+                  {line.spawnCount ? <span>出現数: {line.spawnCount}</span> : null}
+                  {line.symbolCount ? <span>シンボル: {line.symbolCount}</span> : null}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
 
 export default function MonsterMapOverlay({
   spawns = [],
-  imagePath,
-  href,
+  imagePath = "",
+  size = "sm",
+  monstersById = {},
 }) {
   const isDark = usePrefersDark();
   const isMobile = useIsMobile();
-  const styles = getStyles(isDark);
+  const styles = getStyles(isDark, size);
 
   const resolvedImageUrl = useMemo(
-    () => getMonsterAssetUrl(imagePath),
+    () => resolveMapImageUrl(imagePath),
     [imagePath]
   );
 
@@ -529,19 +521,20 @@ export default function MonsterMapOverlay({
 
   useEffect(() => {
     setImageLoaded(false);
+  }, [resolvedImageUrl]);
+
+  useEffect(() => {
     setHoveredBubbleKey("");
     setSelectedBubbleKey("");
-  }, [resolvedImageUrl, spawns]);
+  }, [spawns]);
 
   const cells = useMemo(() => collectUniqueCells(spawns), [spawns]);
 
   const bubbles = useMemo(() => {
     return buildMergedGroups(cells)
-      .map((group) => getBubblePosition(group, spawns))
+      .map((group) => getBubblePosition(group, spawns, monstersById))
       .filter(Boolean);
-  }, [cells, spawns]);
-
-  //const areaInfo = useMemo(() => buildAreaInfo(cells), [cells]);
+  }, [cells, spawns, monstersById]);
 
   const activeDesktopBubble = useMemo(() => {
     if (!hoveredBubbleKey) return null;
@@ -555,7 +548,6 @@ export default function MonsterMapOverlay({
 
   function handleBubbleClick(bubbleKey) {
     if (!isMobile) return;
-
     setSelectedBubbleKey((prev) => (prev === bubbleKey ? "" : bubbleKey));
   }
 
@@ -567,16 +559,13 @@ export default function MonsterMapOverlay({
     );
   }
 
-  const content = (
+  return (
     <div style={styles.mapCard}>
-
       <div style={styles.mapImageFrame}>
         <div
           style={styles.mapImageBox}
           onClick={() => {
-            if (isMobile) {
-              setSelectedBubbleKey("");
-            }
+            if (isMobile) setSelectedBubbleKey("");
           }}
         >
           <div
@@ -612,7 +601,6 @@ export default function MonsterMapOverlay({
               <div style={styles.loadingText}>読み込み中...</div>
             </div>
           )}
-
 
           {imageLoaded && bubbles.length > 0 && (
             <div style={styles.bubbleLayer}>
@@ -665,28 +653,27 @@ export default function MonsterMapOverlay({
 
           {!isMobile && imageLoaded && activeDesktopBubble ? (
             <div style={getDesktopTooltipStyle(activeDesktopBubble, styles)}>
-              <BubbleInfoContent
-                bubble={activeDesktopBubble}
-                styles={styles}
-              />
+              <BubbleInfoContent bubble={activeDesktopBubble} styles={styles} />
             </div>
           ) : null}
         </div>
 
         {isMobile && imageLoaded && activeMobileBubble ? (
-          <div style={styles.mobileInfoCard}>
-            <button
-              type="button"
-              onClick={() => setSelectedBubbleKey("")}
-              style={styles.mobileInfoClose}
-              aria-label="閉じる"
-            >
-              ×
-            </button>
+          <div style={styles.mobileInfoWrap}>
+            <div style={styles.mobileInfoCard}>
+              <button
+                type="button"
+                onClick={() => setSelectedBubbleKey("")}
+                style={styles.mobileInfoClose}
+                aria-label="閉じる"
+              >
+                ×
+              </button>
 
-            <div style={styles.mobileInfoTop}>
-              <div style={styles.mobileInfoBody}>
-                <BubbleInfoContent bubble={activeMobileBubble} styles={styles} />
+              <div style={styles.mobileInfoTop}>
+                <div style={styles.mobileInfoBody}>
+                  <BubbleInfoContent bubble={activeMobileBubble} styles={styles} />
+                </div>
               </div>
             </div>
           </div>
@@ -705,19 +692,11 @@ export default function MonsterMapOverlay({
       `}</style>
     </div>
   );
-
-  if (href) {
-    return (
-      <Link href={href} style={styles.linkWrap}>
-        {content}
-      </Link>
-    );
-  }
-
-  return content;
 }
 
-function getStyles(isDark) {
+function getStyles(isDark, size = "sm") {
+  const isSmall = size === "sm";
+
   return {
     mapCard: {
       width: "100%",
@@ -725,17 +704,14 @@ function getStyles(isDark) {
       flexDirection: "column",
       gap: "10px",
       height: "100%",
+      maxWidth: isSmall ? "460px" : "720px",
+      margin: "0 auto",
     },
     mapImageFrame: {
       width: "100%",
       display: "flex",
       flexDirection: "column",
-      gap: "10px",
-    },
-    linkWrap: {
-      display: "block",
-      textDecoration: "none",
-      height: "100%",
+      gap: "12px",
     },
     mapImageBox: {
       position: "relative",
@@ -746,6 +722,9 @@ function getStyles(isDark) {
       background: isDark ? "#020617" : "#e5e7eb",
       border: isDark ? "1px solid #334155" : "1px solid #d1d5db",
       flexShrink: 0,
+      touchAction: "pan-y",
+      WebkitUserSelect: "none",
+      userSelect: "none",
     },
     loadingOverlay: {
       position: "absolute",
@@ -800,30 +779,6 @@ function getStyles(isDark) {
       height: "100%",
       objectFit: "fill",
       filter: isDark ? "brightness(0.92)" : "none",
-    },
-    mapGuideBadge: {
-      position: "absolute",
-      top: "10px",
-      right: "10px",
-      zIndex: 4,
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      minHeight: "30px",
-      padding: "6px 10px",
-      borderRadius: "999px",
-      fontSize: "12px",
-      fontWeight: 800,
-      lineHeight: 1.2,
-      color: isDark ? "#e2e8f0" : "#0f172a",
-      background: isDark
-        ? "rgba(15,23,42,0.86)"
-        : "rgba(255,255,255,0.9)",
-      border: isDark ? "1px solid #334155" : "1px solid #cbd5e1",
-      boxShadow: isDark
-        ? "0 8px 24px rgba(2,6,23,0.34)"
-        : "0 8px 24px rgba(15,23,42,0.12)",
-      backdropFilter: "blur(8px)",
       pointerEvents: "none",
     },
     bubbleLayer: {
@@ -852,7 +807,7 @@ function getStyles(isDark) {
       padding: "2px",
       textAlign: "center",
       pointerEvents: "auto",
-      cursor: isDark ? "pointer" : "pointer",
+      cursor: "pointer",
       appearance: "none",
       transition: "transform 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease",
     },
@@ -874,7 +829,7 @@ function getStyles(isDark) {
       pointerEvents: "none",
     },
     bubbleText: {
-      fontSize: "10px",
+      fontSize: isSmall ? "10px" : "11px",
       fontWeight: 800,
       color: isDark ? "#e2e8f0" : "#0f172a",
       background: isDark ? "rgba(15,23,42,0.92)" : "rgba(255,255,255,0.9)",
@@ -908,21 +863,27 @@ function getStyles(isDark) {
     hoverTooltip: {
       position: "absolute",
       zIndex: 4,
-      minWidth: "180px",
-      maxWidth: "260px",
+      minWidth: "220px",
+      maxWidth: "320px",
       pointerEvents: "none",
     },
+    mobileInfoWrap: {
+      position: "relative",
+      paddingTop: "2px",
+    },
     mobileInfoCard: {
-    position: "relative",
-    width: "100%",
-    borderRadius: "16px",
-    background: isDark ? "#020617" : "#ffffff",
-    border: "none",
-    boxShadow: "none",
-    padding: "12px 14px",
-    boxSizing: "border-box",
-    overflow: "visible",
-  },
+      position: "relative",
+      width: "100%",
+      borderRadius: "16px",
+      background: isDark ? "#020617" : "#ffffff",
+      border: isDark ? "1px solid #1e293b" : "1px solid #e2e8f0",
+      boxShadow: isDark
+        ? "0 10px 24px rgba(2,6,23,0.35)"
+        : "0 10px 24px rgba(15,23,42,0.10)",
+      padding: "14px 14px 12px",
+      boxSizing: "border-box",
+      overflow: "visible",
+    },
     mobileInfoTop: {
       display: "flex",
       alignItems: "flex-start",
@@ -935,50 +896,40 @@ function getStyles(isDark) {
       flex: 1,
     },
     mobileInfoClose: {
-    appearance: "none",
-    position: "absolute",
-    top: "-10px",
-    right: "-10px",
-    border: "none",
-    background: isDark ? "#0f172a" : "#ffffff",
-    color: isDark ? "#e2e8f0" : "#334155",
-    width: "32px",
-    height: "32px",
-    borderRadius: "999px",
-    fontSize: "20px",
-    fontWeight: 700,
-    lineHeight: 1,
-    cursor: "pointer",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 0,
-    boxShadow: isDark
-      ? "0 8px 20px rgba(2,6,23,0.42)"
-      : "0 8px 20px rgba(15,23,42,0.16)",
-    zIndex: 2,
-  },
+      appearance: "none",
+      position: "absolute",
+      top: "8px",
+      right: "8px",
+      border: "none",
+      background: isDark ? "#0f172a" : "#f8fafc",
+      color: isDark ? "#e2e8f0" : "#334155",
+      width: "28px",
+      height: "28px",
+      borderRadius: "999px",
+      fontSize: "18px",
+      fontWeight: 700,
+      lineHeight: 1,
+      cursor: "pointer",
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 0,
+      boxShadow: "none",
+      zIndex: 2,
+    },
     infoCardContent: {
       minWidth: 0,
       display: "flex",
       flexDirection: "column",
-      gap: "8px",
-      padding: "10px 12px",
+      gap: "10px",
+      padding: "0",
       borderRadius: "14px",
-      background: isDark ? "rgba(2,6,23,0.96)" : "rgba(255,255,255,0.98)",
-      
-      boxShadow: isDark
-        ? "0 14px 28px rgba(2,6,23,0.42)"
-        : "0 12px 24px rgba(15,23,42,0.14)",
-      backdropFilter: "blur(8px)",
+      background: "transparent",
+      boxShadow: "none",
+      backdropFilter: "none",
       width: "100%",
       boxSizing: "border-box",
-    },
-    infoTitle: {
-      fontSize: "13px",
-      fontWeight: 800,
-      lineHeight: 1.35,
-      color: isDark ? "#f8fafc" : "#0f172a",
+      paddingRight: "28px",
     },
     infoRows: {
       display: "flex",
@@ -1009,82 +960,42 @@ function getStyles(isDark) {
       lineHeight: 1.5,
       wordBreak: "break-word",
     },
-    areaBar: {
-      minHeight: "48px",
-      height: "48px",
+    monsterSection: {
+      borderTop: isDark ? "1px solid #1e293b" : "1px solid #e2e8f0",
+      paddingTop: "8px",
       display: "flex",
-      alignItems: "center",
+      flexDirection: "column",
       gap: "8px",
-      padding: "10px 12px",
-      borderRadius: "14px",
-      background: isDark ? "rgba(15,23,42,0.92)" : "rgba(248,250,252,0.96)",
-      border: isDark ? "1px solid #334155" : "1px solid #e2e8f0",
-      color: isDark ? "#e2e8f0" : "#0f172a",
-      overflow: "hidden",
-      boxSizing: "border-box",
-      flexShrink: 0,
     },
-    areaBarLabel: {
-      flexShrink: 0,
-      fontSize: "12px",
+    monsterSectionTitle: {
+      fontSize: "11px",
       fontWeight: 800,
       color: isDark ? "#93c5fd" : "#1d4ed8",
-      background: isDark ? "rgba(30,41,59,0.9)" : "rgba(219,234,254,0.9)",
-      borderRadius: "999px",
-      padding: "4px 8px",
-      lineHeight: 1,
-      border: isDark ? "1px solid #334155" : "1px solid #bfdbfe",
     },
-    areaChipWrap: {
-      minWidth: 0,
+    monsterList: {
       display: "flex",
-      alignItems: "center",
-      gap: "6px",
-      overflow: "hidden",
-      flexWrap: "nowrap",
-      whiteSpace: "nowrap",
-      flex: 1,
+      flexDirection: "column",
+      gap: "8px",
     },
-    areaChip: {
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      flexShrink: 0,
-      maxWidth: "82px",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap",
-      fontSize: "12px",
-      fontWeight: 700,
-      color: isDark ? "#cbd5e1" : "#334155",
-      background: isDark ? "rgba(30,41,59,0.95)" : "#ffffff",
-      border: isDark ? "1px solid #475569" : "1px solid #cbd5e1",
-      borderRadius: "999px",
-      padding: "5px 8px",
-      lineHeight: 1,
-      boxSizing: "border-box",
+    monsterListItem: {
+      display: "flex",
+      flexDirection: "column",
+      gap: "4px",
+      padding: "8px",
+      borderRadius: "10px",
+      background: isDark ? "#0f172a" : "#f8fafc",
     },
-    areaChipMore: {
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      flexShrink: 0,
+    monsterName: {
       fontSize: "12px",
       fontWeight: 800,
-      color: isDark ? "#e2e8f0" : "#1e293b",
-      background: isDark ? "rgba(59,130,246,0.28)" : "rgba(191,219,254,0.95)",
-      border: isDark ? "1px solid rgba(96,165,250,0.45)" : "1px solid #93c5fd",
-      borderRadius: "999px",
-      padding: "5px 8px",
-      lineHeight: 1,
-      boxSizing: "border-box",
+      color: isDark ? "#f8fafc" : "#0f172a",
     },
-    areaBarValue: {
-      fontSize: "13px",
-      fontWeight: 700,
-      lineHeight: 1.4,
-      color: isDark ? "#64748b" : "#94a3b8",
-      wordBreak: "break-word",
+    monsterMeta: {
+      display: "flex",
+      flexDirection: "column",
+      gap: "2px",
+      fontSize: "11px",
+      color: isDark ? "#cbd5e1" : "#475569",
     },
     noImageBox: {
       borderRadius: "18px",
@@ -1097,6 +1008,8 @@ function getStyles(isDark) {
       fontSize: "13px",
       fontWeight: 700,
       border: isDark ? "1px solid #334155" : "1px solid transparent",
+      maxWidth: isSmall ? "460px" : "720px",
+      margin: "0 auto",
     },
   };
 }

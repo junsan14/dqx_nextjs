@@ -659,7 +659,7 @@ const searchInputStyle = (theme) => ({
   border: `1px solid ${theme.inputBorder}`,
   borderRadius: "12px",
   padding: "10px 12px",
-  fontSize: "14px",
+  fontSize: "16px",
   outline: "none",
   background: theme.inputBg,
   color: theme.inputText,

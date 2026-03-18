@@ -16,6 +16,7 @@ export default function Header() {
     () => [
       { href: "/tools/craft-profit", label: "職人" },
       { href: "/tools/monster-search", label: "モンスター検索" },
+     /* { href: "/tools/map-monster-browser", label: "MAP別モンスター検索" },*/
     ],
     []
   );
@@ -32,7 +33,14 @@ export default function Header() {
     []
   );
 
-  const isAdmin = !!user;
+  const limitedAdminMenus = useMemo(
+    () => [{ href: "/tool-editor/monsters", label: "モンスター管理" }],
+    []
+  );
+
+  const isAdmin = Boolean(user?.is_admin);
+  const canShowAdminMenu = Boolean(user);
+  const visibleAdminMenus = isAdmin ? adminMenus : limitedAdminMenus;
 
   useEffect(() => {
     const updateHeaderHeight = () => {
@@ -169,7 +177,7 @@ export default function Header() {
             </button>
           </div>
 
-          {isAdmin && (
+          {canShowAdminMenu && (
             <div className="mt-3 hidden border-t border-slate-200 pt-3 md:block dark:border-white/10">
               <div className="mb-2 flex items-center gap-2">
                 <span className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
@@ -181,7 +189,7 @@ export default function Header() {
 
               <nav className="overflow-x-auto">
                 <div className="flex min-w-max items-center gap-2">
-                  {adminMenus.map((menu) => (
+                  {visibleAdminMenus.map((menu) => (
                     <Link
                       key={menu.href}
                       href={menu.href}
@@ -199,7 +207,7 @@ export default function Header() {
 
       {open && (
         <div
-          className="fixed inset-x-0 z-40 md:hidden"
+          className={`fixed inset-x-0 z-40 md:hidden ${mochiy.className}`}
           style={{
             top: `${headerHeight}px`,
             height: `calc(100dvh - ${headerHeight}px)`,
@@ -241,14 +249,14 @@ export default function Header() {
                 </nav>
               </section>
 
-              {isAdmin && (
+              {canShowAdminMenu && (
                 <section className="w-full">
                   <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.25em] text-indigo-500 dark:text-indigo-300">
                     Admin
                   </div>
 
                   <nav className="flex flex-col items-center gap-2">
-                    {adminMenus.map((menu) => (
+                    {visibleAdminMenus.map((menu) => (
                       <Link
                         key={menu.href}
                         href={menu.href}

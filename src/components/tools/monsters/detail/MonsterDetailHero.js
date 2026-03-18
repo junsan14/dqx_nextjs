@@ -94,9 +94,7 @@ export default function MonsterDetailHero({ monster }) {
             ) : null}
           </div>
 
-          {monster?.system_type ? (
-            <div style={styles.systemType}>{monster.system_type}</div>
-          ) : null}
+ 
         </div>
 
         {description ? <p style={styles.description}>{description}</p> : null}

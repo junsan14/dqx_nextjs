@@ -106,26 +106,7 @@ function LoginContent() {
                 }
             `}</style>
 
-            <div style={{ marginBottom: '20px' }}>
-                <h2
-                    style={{
-                        margin: 0,
-                        fontSize: '1.8rem',
-                        fontWeight: 800,
-                        color: '#0f172a',
-                    }}>
-                    Login
-                </h2>
-                <p
-                    style={{
-                        marginTop: '8px',
-                        color: '#475569',
-                        lineHeight: 1.7,
-                    }}>
-                    メールアドレスとパスワードを入力してログイン
-                </p>
-            </div>
-
+ 
             <AuthSessionStatus className="mb-4" status={status} />
 
             <form onSubmit={submitForm}>

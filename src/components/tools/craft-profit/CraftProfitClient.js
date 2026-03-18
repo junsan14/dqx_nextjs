@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { TOOLS_BY_CRAFT, TOOL_USES } from "@/app/data/tools";
 import { clamp0 } from "@/lib/money";
 import { fetchItemsByIds } from "@/lib/items";
-import { fetchEquipments } from "@/lib/equipments";
+import { fetchCraftTools, fetchEquipments } from "@/lib/equipments";
+import { fetchCrystalRules } from "@/lib/crystalRules";
 import CraftProfitHeaderCard from "./CraftProfitHeaderCard";
 import CraftProfitSummaryCard from "./CraftProfitSummaryCard";
 import CraftProfitMaterialsCard from "./CraftProfitMaterialsCard";
@@ -22,6 +22,8 @@ import {
   getDisplayJobs,
   recommendFromP3,
 } from "./craftProfitHelpers";
+
+const TOOL_USES = 30;
 
 function extractEquipmentRows(payload) {
   if (Array.isArray(payload?.data)) return payload.data;
@@ -65,6 +67,8 @@ function extractMaterialIds(rows) {
 
 export default function CraftProfitClient() {
   const [sets, setSets] = useState([]);
+  const [craftTools, setCraftTools] = useState([]);
+  const [crystalRules, setCrystalRules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
 
@@ -88,23 +92,29 @@ export default function CraftProfitClient() {
         setLoading(true);
         setLoadError("");
 
-        const equipments = await fetchEquipments();
+        const [equipments, tools, crystalRulesRes] = await Promise.all([
+          fetchEquipments(),
+          fetchCraftTools(),
+          fetchCrystalRules(),
+        ]);
+
         const equipmentRows = extractEquipmentRows(equipments);
-
-        const materialIds = extractMaterialIds(equipmentRows);
-        const items = materialIds.length
-          ? await fetchItemsByIds(materialIds)
-          : [];
-
-        const itemMap = new Map(
-          (items || []).map((item) => [Number(item.id), item])
+        const toolRows = extractEquipmentRows(tools).filter(
+          (row) =>
+            String(row?.groupKind ?? row?.group_kind ?? "") === "craft_tool_set"
         );
 
+        const materialIds = extractMaterialIds(equipmentRows);
+        const items = materialIds.length ? await fetchItemsByIds(materialIds) : [];
+
+        const itemMap = new Map((items || []).map((item) => [Number(item.id), item]));
         const nextSets = buildSetsFromEquipments(equipmentRows, itemMap);
 
         if (cancelled) return;
 
         setSets(nextSets);
+        setCraftTools(toolRows);
+        setCrystalRules(Array.isArray(crystalRulesRes) ? crystalRulesRes : []);
       } catch (error) {
         if (cancelled) return;
         console.error("CraftProfit load error:", error);
@@ -122,7 +132,7 @@ export default function CraftProfitClient() {
   }, []);
 
   const selectedSet = useMemo(
-    () => sets.find((s) => s.id === setId) || null,
+    () => sets.find((s) => String(s.id) === String(setId)) || null,
     [sets, setId]
   );
 
@@ -176,12 +186,49 @@ export default function CraftProfitClient() {
   const feeRate = useMemo(() => clamp0(feeRatePct) / 100, [feeRatePct]);
 
   const toolOptions = useMemo(() => {
-    return (
-      TOOLS_BY_CRAFT[craftType] ?? [
-        { id: "none", name: "選択なし", defaultPrice: 0 },
-      ]
-    );
-  }, [craftType]);
+    const base = [{ id: "none", name: "選択なし", defaultPrice: 0 }];
+    if (!craftType) return base;
+
+    const matchersByCraftType = {
+      武器鍛冶: ["道具ハンマー", "ハンマー"],
+      防具鍛冶: ["道具ハンマー", "ハンマー"],
+      木工: ["道具木工刀", "木工刀"],
+      裁縫: ["道具さいほう針", "さいほう針"],
+      調理: ["道具フライパン", "フライパン"],
+      ランプ錬金: ["道具錬金ランプ", "錬金ランプ"],
+      ツボ錬金: ["道具錬金ツボ", "錬金ツボ"],
+    };
+
+    const keywords = matchersByCraftType[String(craftType)] ?? [];
+
+    const rows = craftTools.filter((row) => {
+      const slotGridType = String(row?.slotGridType ?? row?.slot_grid_type ?? "");
+      const itemName = String(row?.itemName ?? row?.item_name ?? row?.name ?? "");
+      return keywords.some(
+        (keyword) => slotGridType.includes(keyword) || itemName.includes(keyword)
+      );
+    });
+
+    const mapped = rows
+      .map((row) => ({
+        id: String(row?.itemId ?? row?.item_id ?? row?.id),
+        name: row?.itemName ?? row?.item_name ?? row?.name ?? "名称未設定",
+        defaultPrice: Number(
+          row?.defaultPrice ??
+            row?.default_price ??
+            row?.price ??
+            row?.buy_price ??
+            0
+        ),
+        craftLevel: Number(row?.craftLevel ?? row?.craft_level ?? 0) || 0,
+      }))
+      .sort((a, b) => {
+        if (a.craftLevel !== b.craftLevel) return a.craftLevel - b.craftLevel;
+        return a.name.localeCompare(b.name, "ja");
+      });
+
+    return [...base, ...mapped];
+  }, [craftTools, craftType]);
 
   useEffect(() => {
     setToolId("none");
@@ -203,11 +250,11 @@ export default function CraftProfitClient() {
   }, [toolPrice]);
 
   const toolEnabled = useMemo(() => {
-    return !!TOOLS_BY_CRAFT[craftType] && selectedTool?.id !== "none";
-  }, [craftType, selectedTool]);
+    return toolOptions.length > 1 && selectedTool?.id !== "none";
+  }, [toolOptions, selectedTool]);
 
   const mobileToolRow = useMemo(() => {
-    if (!TOOLS_BY_CRAFT[craftType]) return null;
+    if (toolOptions.length <= 1) return null;
     if (!selectedTool || selectedTool.id === "none") return null;
 
     return {
@@ -216,7 +263,7 @@ export default function CraftProfitClient() {
       toolCostPerCraft,
       onChangeToolPrice: (v) => setToolPriceOverride(v),
     };
-  }, [craftType, selectedTool, toolPrice, toolCostPerCraft]);
+  }, [toolOptions, selectedTool, toolPrice, toolCostPerCraft]);
 
   const { slots, rows, slotGrids, slotGridMeta } = useMemo(() => {
     return buildMatrix(selectedSet);
@@ -231,7 +278,7 @@ export default function CraftProfitClient() {
   const onChangeSet = (nextId) => {
     setSetId(nextId);
 
-    const nextSet = sets.find((s) => s.id === nextId) || null;
+    const nextSet = sets.find((s) => String(s.id) === String(nextId)) || null;
     if (!nextSet) {
       setSetQuery("");
       return;
@@ -316,8 +363,8 @@ export default function CraftProfitClient() {
   }, [selectedSet]);
 
   const crystalByEquipLevel = useMemo(() => {
-    return getCrystalInfo(selectedSet);
-  }, [selectedSet]);
+    return getCrystalInfo(selectedSet, crystalRules);
+  }, [selectedSet, crystalRules]);
 
   if (loading) {
     return (

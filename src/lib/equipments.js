@@ -14,8 +14,6 @@ const api = axios.create({
   },
 });
 
-
-
 function normalizeEquipment(row = {}) {
   return {
     __key: row?.id ?? crypto.randomUUID?.() ?? String(Math.random()),
@@ -115,13 +113,8 @@ function toApiPayload(data = {}) {
   };
 }
 
-export async function fetchEquipments(q = "", slot = "") {
+export async function fetchEquipments(params = {}) {
   try {
-    const params = {};
-
-    if (q) params.q = q;
-    if (slot) params.slot = slot;
-
     const res = await api.get(`${API_URL}/api/equipments`, { params });
     const json = res.data;
 
@@ -135,6 +128,17 @@ export async function fetchEquipments(q = "", slot = "") {
   } catch (error) {
     console.error(error);
     throw new Error("装備一覧取得失敗");
+  }
+}
+
+export async function fetchCraftTools() {
+  try {
+    return await fetchEquipments({
+      group_kind: "craft_tool_set",
+    });
+  } catch (error) {
+    console.error(error);
+    throw new Error("職人道具一覧取得失敗");
   }
 }
 

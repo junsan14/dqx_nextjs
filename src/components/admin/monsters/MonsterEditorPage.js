@@ -32,8 +32,12 @@ import {
   usePrefersDarkMode,
   getMonsterEditorTheme,
 } from "../theme";
+import { useAuth } from "@/hooks/auth";
 
 export default function MonsterEditorPage() {
+  const { user } = useAuth();
+  const isAdmin = Boolean(user?.is_admin);
+
   const [loadingList, setLoadingList] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -55,7 +59,37 @@ export default function MonsterEditorPage() {
   const [parentCandidates, setParentCandidates] = useState([]);
 
   const isDark = usePrefersDarkMode();
-  const theme = useMemo(() => getMonsterEditorTheme(isDark), [isDark]);
+  const rawTheme = useMemo(() => getMonsterEditorTheme(isDark), [isDark]);
+
+  const theme = useMemo(
+    () => ({
+      pageBg: rawTheme?.pageBg ?? "#f8fafc",
+      pageText: rawTheme?.pageText ?? rawTheme?.text ?? "#0f172a",
+      cardBg: rawTheme?.cardBg ?? "#ffffff",
+      cardBorder: rawTheme?.cardBorder ?? "#e2e8f0",
+      title: rawTheme?.title ?? "#0f172a",
+      text: rawTheme?.text ?? "#111827",
+      mutedText: rawTheme?.mutedText ?? "#64748b",
+      softBorder: rawTheme?.softBorder ?? "#e2e8f0",
+      softBg: rawTheme?.softBg ?? "#f8fafc",
+      selectedBorder: rawTheme?.selectedBorder ?? "#93c5fd",
+      selectedBg: rawTheme?.selectedBg ?? "#eff6ff",
+      primaryBorder: rawTheme?.primaryBorder ?? "#93c5fd",
+      primaryBg: rawTheme?.primaryBg ?? "#dbeafe",
+      primaryText: rawTheme?.primaryText ?? "#1d4ed8",
+      dangerBorder: rawTheme?.dangerBorder ?? "#fecaca",
+      dangerBg: rawTheme?.dangerBg ?? "#fee2e2",
+      dangerText: rawTheme?.dangerText ?? "#b91c1c",
+      disabledBorder: rawTheme?.softBorder ?? "#cbd5e1",
+      disabledBg: rawTheme?.softBg ?? "#e2e8f0",
+      disabledText: rawTheme?.mutedText ?? "#64748b",
+      inputBorder: rawTheme?.inputBorder ?? rawTheme?.softBorder ?? "#cbd5e1",
+      inputBg: rawTheme?.inputBg ?? rawTheme?.softBg ?? "#ffffff",
+      inputText: rawTheme?.inputText ?? rawTheme?.text ?? "#111827",
+      secondaryBg: rawTheme?.secondaryBg ?? rawTheme?.softBg ?? "#f8fafc",
+    }),
+    [rawTheme]
+  );
 
   const mapOptions = useMemo(
     () => (Array.isArray(maps) ? maps.map(normalizeMapRow) : []),
@@ -64,6 +98,7 @@ export default function MonsterEditorPage() {
 
   const orderPreviewRows = useMemo(() => {
     const currentOrder = Number(selectedMonster?.display_order ?? 0);
+
     if (!currentOrder) {
       return { above: [], below: [], current: null };
     }
@@ -72,6 +107,7 @@ export default function MonsterEditorPage() {
       (a, b) => {
         const orderDiff =
           Number(a?.display_order ?? 0) - Number(b?.display_order ?? 0);
+
         if (orderDiff !== 0) return orderDiff;
 
         return String(a?.name ?? "").localeCompare(String(b?.name ?? ""), "ja");
@@ -150,23 +186,22 @@ export default function MonsterEditorPage() {
   }
 
   async function searchReincarnationParents(nextKeyword = "") {
-    const keyword = String(nextKeyword ?? "").trim();
+    const next = String(nextKeyword ?? "").trim();
 
-    if (!keyword) {
+    if (!next) {
       setParentCandidates([]);
       return;
     }
 
     try {
-      const rows = await searchMonsters(keyword, "monster");
+      const rows = await searchMonsters(next, "monster");
       const normalized = Array.isArray(rows) ? rows : [];
-
       const currentId = Number(selectedMonster?.id ?? 0);
 
       setParentCandidates(
         normalized
           .filter((row) => Number(row?.id ?? 0) > 0)
-          .filter((row) => Number(row.id) !== currentId)
+          .filter((row) => Number(row?.id ?? 0) !== currentId)
           .slice(0, 20)
       );
     } catch (error) {
@@ -260,6 +295,8 @@ export default function MonsterEditorPage() {
   }
 
   function handleCreateNew() {
+    if (!isAdmin) return;
+
     setSelectedMonster(emptyMonster());
     setInitialSpawns([]);
     setAroundMonsters([]);
@@ -274,6 +311,11 @@ export default function MonsterEditorPage() {
     try {
       const payload = buildMonsterPayload(selectedMonster);
 
+      if (!selectedMonster?.id && !isAdmin) {
+        alert("新規追加は管理者のみ");
+        return;
+      }
+
       if (!payload.name) {
         alert("名前は必須");
         return;
@@ -281,25 +323,33 @@ export default function MonsterEditorPage() {
 
       setSaving(true);
 
+      let monsterId = selectedMonster?.id ?? null;
       let savedMonster = null;
 
-      if (selectedMonster?.id) {
-        savedMonster = await updateMonster(selectedMonster.id, payload);
+      if (monsterId) {
+        if (isAdmin) {
+          savedMonster = await updateMonster(monsterId, payload);
+        }
+
+        await saveMonsterMapSpawns(
+          monsterId,
+          Array.isArray(selectedMonster?.spawns) ? selectedMonster.spawns : [],
+          initialSpawns
+        );
       } else {
         savedMonster = await createMonster(payload);
+        monsterId = savedMonster?.id ?? null;
+
+        if (!monsterId) {
+          throw new Error("モンスター保存後のID取得に失敗");
+        }
+
+        await saveMonsterMapSpawns(
+          monsterId,
+          Array.isArray(selectedMonster?.spawns) ? selectedMonster.spawns : [],
+          initialSpawns
+        );
       }
-
-      const monsterId = savedMonster?.id;
-
-      if (!monsterId) {
-        throw new Error("モンスター保存後のID取得に失敗");
-      }
-
-      const nextSpawns = Array.isArray(selectedMonster?.spawns)
-        ? selectedMonster.spawns
-        : [];
-
-      await saveMonsterMapSpawns(monsterId, nextSpawns, initialSpawns);
 
       const [freshMonster, freshSpawns] = await Promise.all([
         fetchMonsterDetail(monsterId),
@@ -326,6 +376,8 @@ export default function MonsterEditorPage() {
   }
 
   async function handleDelete() {
+    if (!isAdmin) return;
+
     if (!selectedMonster?.id) {
       setSelectedMonster(emptyMonster());
       setInitialSpawns([]);
@@ -355,16 +407,28 @@ export default function MonsterEditorPage() {
     }
   }
 
+  const saveDisabled = saving;
+  const deleteDisabled = saving || !isAdmin || !selectedMonster?.id;
+  const createDisabled = !isAdmin;
+
   return (
     <>
       <style>{`
+        * {
+          box-sizing: border-box;
+        }
+
         @media (max-width: 960px) {
           .monster-editor-page {
             flex-direction: column;
+            min-height: auto !important;
           }
 
           .monster-editor-main {
+            width: 100% !important;
+            min-width: 0 !important;
             padding: 16px !important;
+            overflow-x: hidden !important;
           }
         }
 
@@ -375,6 +439,8 @@ export default function MonsterEditorPage() {
 
           .monster-editor-header {
             margin-bottom: 16px !important;
+            flex-direction: column !important;
+            align-items: stretch !important;
           }
 
           .monster-editor-title {
@@ -396,13 +462,10 @@ export default function MonsterEditorPage() {
         }
       `}</style>
 
-      <div
-        className="monster-editor-page"
-        style={pageStyle(theme)}
-      >
+      <div className="monster-editor-page" style={pageStyle(theme)}>
         <MonsterSearchSidebar
           theme={theme}
-          open={sidebarOpen}
+          isOpen={sidebarOpen}
           onToggle={() => setSidebarOpen((prev) => !prev)}
           keyword={keyword}
           onKeywordChange={setKeyword}
@@ -411,40 +474,33 @@ export default function MonsterEditorPage() {
           loading={loadingList}
           onSelect={handleSelect}
           onCreateNew={handleCreateNew}
+          createDisabled={createDisabled}
+          createLabel={!isAdmin ? "新規追加（管理者のみ）" : "新規追加"}
         />
 
-        <main
-          className="monster-editor-main"
-          style={mainStyle}
-        >
-          <header
-            className="monster-editor-header"
-            style={headerStyle}
-          >
+        <main className="monster-editor-main" style={mainStyle}>
+          <header className="monster-editor-header" style={headerStyle}>
             <div style={headerTextStyle}>
-              <h1
-                className="monster-editor-title"
-                style={titleStyle(theme)}
-              >
+              <h1 className="monster-editor-title" style={titleStyle(theme)}>
                 モンスター管理
               </h1>
-              <p
-                className="monster-editor-desc"
-                style={descStyle(theme)}
-              >
+              <p className="monster-editor-desc" style={descStyle(theme)}>
                 モンスター基本情報、ドロップ、出現マップを管理する
               </p>
+              {!isAdmin && (
+                <p style={adminNoticeStyle(theme)}>
+                  基本情報の編集・削除・新規追加は管理者のみ。出現情報の保存は可能。
+                </p>
+              )}
             </div>
 
-            <div
-              className="monster-editor-actions"
-              style={actionsStyle}
-            >
+            <div className="monster-editor-actions" style={actionsStyle}>
               <button
                 type="button"
                 onClick={handleSave}
-                disabled={saving}
-                style={saveButtonStyle(theme)}
+                disabled={saveDisabled}
+                aria-disabled={saveDisabled}
+                style={saveButtonStyle(theme, saveDisabled)}
               >
                 {saving ? "保存中..." : "保存"}
               </button>
@@ -452,8 +508,10 @@ export default function MonsterEditorPage() {
               <button
                 type="button"
                 onClick={handleDelete}
-                disabled={saving}
-                style={deleteButtonStyle(theme)}
+                disabled={deleteDisabled}
+                title={!isAdmin ? "管理者のみ削除できます" : ""}
+                aria-disabled={deleteDisabled}
+                style={deleteButtonStyle(theme, deleteDisabled)}
               >
                 削除
               </button>
@@ -464,19 +522,22 @@ export default function MonsterEditorPage() {
             <div style={loadingStyle(theme)}>読み込み中...</div>
           ) : (
             <div style={contentStyle}>
-              <MonsterForm
-                monster={selectedMonster}
-                onChange={setSelectedMonster}
-                theme={theme}
-                parentCandidates={parentCandidates}
-                onSearchParents={searchReincarnationParents}
-              />
-
+             <MonsterForm
+              monster={selectedMonster}
+              onChange={setSelectedMonster}
+              theme={theme}
+              parentCandidates={parentCandidates}
+              onSearchParents={searchReincarnationParents}
+              disabled={!isAdmin}
+              defaultOpen={false}
+            >
               <OrderPreviewCard
                 theme={theme}
                 loading={loadingAround}
                 rows={orderPreviewRows}
+                embedded
               />
+            </MonsterForm>
 
               <MonsterDropsEditor
                 theme={theme}
@@ -517,9 +578,7 @@ function OrderPreviewCard({ theme, loading, rows }) {
     <section style={cardStyle(theme)}>
       <div style={orderPreviewHeaderStyle}>
         <h2 style={sectionTitleStyle(theme)}>表示順プレビュー</h2>
-        <p style={sectionDescStyle(theme)}>
-          前後の表示順を確認できる
-        </p>
+        <p style={sectionDescStyle(theme)}>前後の表示順を確認できる</p>
       </div>
 
       {loading ? (
@@ -530,7 +589,10 @@ function OrderPreviewCard({ theme, loading, rows }) {
             <div style={columnTitleStyle(theme)}>前</div>
             {(rows?.above ?? []).length > 0 ? (
               rows.above.map((row) => (
-                <div key={`above-${row.id ?? row.display_order}`} style={rowCardStyle(theme)}>
+                <div
+                  key={`above-${row.id ?? row.display_order}`}
+                  style={rowCardStyle(theme)}
+                >
                   <div style={rowNameStyle(theme)}>{row.name}</div>
                   <div style={rowMetaStyle(theme)}>No.{row.display_order}</div>
                 </div>
@@ -554,7 +616,10 @@ function OrderPreviewCard({ theme, loading, rows }) {
                 <div style={orderPreviewConflictListStyle}>
                   <div style={conflictTitleStyle(theme)}>同じ表示順</div>
                   {rows.current.conflicts.map((row) => (
-                    <div key={`conflict-${row.id ?? row.name}`} style={conflictItemStyle(theme)}>
+                    <div
+                      key={`conflict-${row.id ?? row.name}`}
+                      style={conflictItemStyle(theme)}
+                    >
                       {row.name}
                     </div>
                   ))}
@@ -567,7 +632,10 @@ function OrderPreviewCard({ theme, loading, rows }) {
             <div style={columnTitleStyle(theme)}>後</div>
             {(rows?.below ?? []).length > 0 ? (
               rows.below.map((row) => (
-                <div key={`below-${row.id ?? row.display_order}`} style={rowCardStyle(theme)}>
+                <div
+                  key={`below-${row.id ?? row.display_order}`}
+                  style={rowCardStyle(theme)}
+                >
                   <div style={rowNameStyle(theme)}>{row.name}</div>
                   <div style={rowMetaStyle(theme)}>No.{row.display_order}</div>
                 </div>
@@ -586,6 +654,7 @@ const mainStyle = {
   flex: 1,
   minWidth: 0,
   padding: 24,
+  overflowX: "hidden",
 };
 
 const headerStyle = {
@@ -624,6 +693,7 @@ const orderPreviewColumnStyle = {
   display: "flex",
   flexDirection: "column",
   gap: 8,
+  minWidth: 0,
 };
 
 const orderPreviewBodyStyle = {
@@ -653,6 +723,9 @@ const pageStyle = (theme) => ({
   background: theme.pageBg,
   color: theme.pageText,
   alignItems: "flex-start",
+  width: "100%",
+  maxWidth: "100%",
+  overflowX: "hidden",
 });
 
 const titleStyle = (theme) => ({
@@ -666,28 +739,42 @@ const descStyle = (theme) => ({
   color: theme.mutedText,
 });
 
-const saveButtonStyle = (theme) => ({
-  border: `1px solid ${theme.primaryBorder}`,
-  background: theme.primaryBg,
-  color: theme.primaryText,
-  borderRadius: 10,
-  padding: "10px 16px",
-  cursor: "pointer",
-  minHeight: 42,
-  display: "inline-flex",
-  alignItems: "center",
+const adminNoticeStyle = (theme) => ({
+  margin: "8px 0 0",
+  color: theme.mutedText,
+  fontSize: 13,
 });
 
-const deleteButtonStyle = (theme) => ({
-  border: `1px solid ${theme.dangerBorder}`,
-  background: theme.dangerBg,
-  color: theme.dangerText,
+const saveButtonStyle = (theme, disabled = false) => ({
+  border: `1px solid ${
+    disabled ? theme.disabledBorder : theme.primaryBorder
+  }`,
+  background: disabled ? theme.disabledBg : theme.primaryBg,
+  color: disabled ? theme.disabledText : theme.primaryText,
   borderRadius: 10,
   padding: "10px 16px",
-  cursor: "pointer",
+  cursor: disabled ? "not-allowed" : "pointer",
   minHeight: 42,
   display: "inline-flex",
   alignItems: "center",
+  justifyContent: "center",
+  opacity: disabled ? 0.6 : 1,
+});
+
+const deleteButtonStyle = (theme, disabled = false) => ({
+  border: `1px solid ${
+    disabled ? theme.disabledBorder : theme.dangerBorder
+  }`,
+  background: disabled ? theme.disabledBg : theme.dangerBg,
+  color: disabled ? theme.disabledText : theme.dangerText,
+  borderRadius: 10,
+  padding: "10px 16px",
+  cursor: disabled ? "not-allowed" : "pointer",
+  minHeight: 42,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  opacity: disabled ? 0.6 : 1,
 });
 
 const loadingStyle = (theme) => ({
@@ -706,6 +793,7 @@ const cardStyle = (theme) => ({
   display: "flex",
   flexDirection: "column",
   gap: 16,
+  minWidth: 0,
 });
 
 const sectionTitleStyle = (theme) => ({
@@ -742,6 +830,7 @@ const rowCardStyle = (theme) => ({
   display: "flex",
   flexDirection: "column",
   gap: 4,
+  minWidth: 0,
 });
 
 const currentRowCardStyle = (theme) => ({
@@ -752,11 +841,13 @@ const currentRowCardStyle = (theme) => ({
   display: "flex",
   flexDirection: "column",
   gap: 4,
+  minWidth: 0,
 });
 
 const rowNameStyle = (theme) => ({
   color: theme.text,
   fontWeight: 700,
+  wordBreak: "break-word",
 });
 
 const rowMetaStyle = (theme) => ({
@@ -773,4 +864,5 @@ const conflictTitleStyle = (theme) => ({
 const conflictItemStyle = (theme) => ({
   color: theme.text,
   fontSize: 13,
+  wordBreak: "break-word",
 });

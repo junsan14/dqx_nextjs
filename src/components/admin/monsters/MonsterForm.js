@@ -8,6 +8,9 @@ export default function MonsterForm({
   theme,
   parentCandidates = [],
   onSearchParents,
+  disabled = false,
+  defaultOpen = false,
+  children = null,
 }) {
   const containerRef = useRef(null);
   const debounceRef = useRef(null);
@@ -17,6 +20,7 @@ export default function MonsterForm({
   );
   const [parentOpen, setParentOpen] = useState(false);
   const [loadingParents, setLoadingParents] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
 
   useEffect(() => {
     setParentKeyword(monster?.reincarnation_parent_name ?? "");
@@ -34,7 +38,7 @@ export default function MonsterForm({
   }, []);
 
   useEffect(() => {
-    if (!parentOpen) return;
+    if (!parentOpen || disabled) return;
 
     const keyword = String(parentKeyword ?? "").trim();
 
@@ -62,7 +66,7 @@ export default function MonsterForm({
         clearTimeout(debounceRef.current);
       }
     };
-  }, [parentKeyword, parentOpen, onSearchParents]);
+  }, [parentKeyword, parentOpen, onSearchParents, disabled]);
 
   const safeCandidates = useMemo(() => {
     const currentId = Number(monster?.id ?? 0);
@@ -78,6 +82,8 @@ export default function MonsterForm({
   }, [parentCandidates, monster?.id]);
 
   const patch = (key, value) => {
+    if (disabled) return;
+
     onChange((prev) => ({
       ...prev,
       [key]: value,
@@ -85,6 +91,8 @@ export default function MonsterForm({
   };
 
   const selectParent = (row) => {
+    if (disabled) return;
+
     onChange((prev) => ({
       ...prev,
       reincarnation_parent_id: row?.id ?? null,
@@ -97,6 +105,8 @@ export default function MonsterForm({
   };
 
   const clearParent = () => {
+    if (disabled) return;
+
     onChange((prev) => ({
       ...prev,
       reincarnation_parent_id: null,
@@ -110,6 +120,8 @@ export default function MonsterForm({
   };
 
   const handleParentInputChange = (event) => {
+    if (disabled) return;
+
     const value = event.target.value;
     setParentKeyword(value);
     setParentOpen(true);
@@ -123,6 +135,7 @@ export default function MonsterForm({
   };
 
   const handleParentFocus = () => {
+    if (disabled) return;
     setParentOpen(true);
   };
 
@@ -134,115 +147,150 @@ export default function MonsterForm({
 
   return (
     <section style={cardStyle(theme)}>
-      <h2 style={titleStyle(theme)}>基本情報</h2>
-
-      <div style={gridStyle}>
-        <label style={fieldStyle}>
-          <span style={labelStyle(theme)}>表示順</span>
-          <input
-            type="number"
-            min="1"
-            value={monster?.display_order ?? ""}
-            onChange={(e) => patch("display_order", Number(e.target.value || 0))}
-            style={inputStyle(theme)}
-          />
-        </label>
-
-        <label style={fieldStyle}>
-          <span style={labelStyle(theme)}>名前</span>
-          <input
-            type="text"
-            value={monster?.name ?? ""}
-            onChange={(e) => patch("name", e.target.value)}
-            style={inputStyle(theme)}
-          />
-        </label>
-
-        <label style={fieldStyle}>
-          <span style={labelStyle(theme)}>系統</span>
-          <input
-            type="text"
-            value={monster?.system_type ?? ""}
-            onChange={(e) => patch("system_type", e.target.value)}
-            style={inputStyle(theme)}
-          />
-        </label>
-
-        <label style={fieldStyle}>
-          <span style={labelStyle(theme)}>参照URL</span>
-          <input
-            type="text"
-            value={monster?.source_url ?? ""}
-            onChange={(e) => patch("source_url", e.target.value)}
-            style={inputStyle(theme)}
-          />
-        </label>
-
-        <div
-          ref={containerRef}
-          style={{ ...fieldStyle, gridColumn: "1 / -1", position: "relative" }}
-        >
-          <span style={labelStyle(theme)}>転生元モンスター</span>
-
-          <div style={searchRowStyle}>
-            <input
-              type="text"
-              value={parentKeyword}
-              onChange={handleParentInputChange}
-              onFocus={handleParentFocus}
-              onKeyDown={handleParentKeyDown}
-              placeholder="モンスター名を入力して候補から選ぶ"
-              style={inputStyle(theme)}
-            />
-
-            <button
-              type="button"
-              onClick={clearParent}
-              style={clearButtonStyle(theme)}
-            >
-              クリア
-            </button>
-          </div>
-
-          {parentOpen && (
-            <div style={suggestionBoxStyle(theme)}>
-              {loadingParents ? (
-                <div style={suggestionEmptyStyle(theme)}>検索中...</div>
-              ) : safeCandidates.length > 0 ? (
-                safeCandidates.map((row) => (
-                  <button
-                    key={row.id}
-                    type="button"
-                    onClick={() => selectParent(row)}
-                    style={suggestionItemStyle(theme)}
-                  >
-                    <span style={suggestionNameStyle(theme)}>{row.name}</span>
-                    <span style={suggestionMetaStyle(theme)}>
-                      {row.display_order > 0 ? `No.${row.display_order}` : ""}
-                    </span>
-                  </button>
-                ))
-              ) : (
-                <div style={suggestionEmptyStyle(theme)}>候補なし</div>
-              )}
-            </div>
-          )}
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        style={accordionButtonStyle(theme)}
+        aria-expanded={open}
+      >
+        <div style={accordionHeaderMainStyle}>
+          <h2 style={titleStyle(theme)}>基本情報</h2>
+        
         </div>
 
-        {monster?.reincarnation_parent_name && monster?.reincarnation_parent_id ? (
-          <div style={{ ...fieldStyle, gridColumn: "1 / -1" }}>
-            <span style={labelStyle(theme)}>転生状態</span>
-            <div style={badgeStyle(theme)}>
-              転生モンスター / 元: {monster.reincarnation_parent_name}
+        <div style={accordionRightStyle}>
+          <span style={accordionHintStyle(theme)}>
+            {open ? "閉じる" : "開く"}
+          </span>
+          <span style={accordionIconStyle(theme, open)}>⌄</span>
+        </div>
+      </button>
+
+      {open && (
+        <div style={accordionBodyStyle}>
+          <div style={gridStyle}>
+            <label style={fieldStyle}>
+              <span style={labelStyle(theme)}>表示順</span>
+              <input
+                type="number"
+                min="1"
+                value={monster?.display_order ?? ""}
+                disabled={disabled}
+                onChange={(e) =>
+                  patch("display_order", Number(e.target.value || 0))
+                }
+                style={inputStyle(theme, disabled)}
+              />
+            </label>
+
+            <label style={fieldStyle}>
+              <span style={labelStyle(theme)}>名前</span>
+              <input
+                type="text"
+                value={monster?.name ?? ""}
+                disabled={disabled}
+                onChange={(e) => patch("name", e.target.value)}
+                style={inputStyle(theme, disabled)}
+              />
+            </label>
+
+            <label style={fieldStyle}>
+              <span style={labelStyle(theme)}>系統</span>
+              <input
+                type="text"
+                value={monster?.system_type ?? ""}
+                disabled={disabled}
+                onChange={(e) => patch("system_type", e.target.value)}
+                style={inputStyle(theme, disabled)}
+              />
+            </label>
+
+            <label style={fieldStyle}>
+              <span style={labelStyle(theme)}>参照URL</span>
+              <input
+                type="text"
+                value={monster?.source_url ?? ""}
+                disabled={disabled}
+                onChange={(e) => patch("source_url", e.target.value)}
+                style={inputStyle(theme, disabled)}
+              />
+            </label>
+
+            <div
+              ref={containerRef}
+              style={{ ...fieldStyle, gridColumn: "1 / -1", position: "relative" }}
+            >
+              <span style={labelStyle(theme)}>転生元モンスター</span>
+
+              <div style={searchRowStyle}>
+                <input
+                  type="text"
+                  value={parentKeyword}
+                  disabled={disabled}
+                  onChange={handleParentInputChange}
+                  onFocus={handleParentFocus}
+                  onKeyDown={handleParentKeyDown}
+                  placeholder="モンスター名を入力して候補から選ぶ"
+                  style={inputStyle(theme, disabled)}
+                />
+
+                <button
+                  type="button"
+                  onClick={clearParent}
+                  disabled={disabled}
+                  style={clearButtonStyle(theme, disabled)}
+                >
+                  クリア
+                </button>
+              </div>
+
+              {!disabled && parentOpen && (
+                <div style={suggestionBoxStyle(theme)}>
+                  {loadingParents ? (
+                    <div style={suggestionEmptyStyle(theme)}>検索中...</div>
+                  ) : safeCandidates.length > 0 ? (
+                    safeCandidates.map((row) => (
+                      <button
+                        key={row.id}
+                        type="button"
+                        onClick={() => selectParent(row)}
+                        style={suggestionItemStyle(theme)}
+                      >
+                        <span style={suggestionNameStyle(theme)}>{row.name}</span>
+                        <span style={suggestionMetaStyle(theme)}>
+                          {row.display_order > 0 ? `No.${row.display_order}` : ""}
+                        </span>
+                      </button>
+                    ))
+                  ) : (
+                    <div style={suggestionEmptyStyle(theme)}>候補なし</div>
+                  )}
+                </div>
+              )}
             </div>
+
+            {monster?.reincarnation_parent_name && monster?.reincarnation_parent_id ? (
+              <div style={{ ...fieldStyle, gridColumn: "1 / -1" }}>
+                <span style={labelStyle(theme)}>転生状態</span>
+                <div style={badgeStyle(theme)}>
+                  転生モンスター / 元: {monster.reincarnation_parent_name}
+                </div>
+              </div>
+            ) : (
+              <div style={{ ...fieldStyle, gridColumn: "1 / -1" }}>
+                <span style={labelStyle(theme)}>転生状態</span>
+                <div style={mutedBoxStyle(theme)}>通常モンスター</div>
+              </div>
+            )}
           </div>
-        ) : (
-          <div style={{ ...fieldStyle, gridColumn: "1 / -1" }}>
-            <span style={labelStyle(theme)}>転生状態</span>
-            <div style={mutedBoxStyle(theme)}>通常モンスター</div>
-          </div>
-        )}
-      </div>
+
+          {children ? (
+            <div style={embeddedSectionStyle(theme)}>
+              {children}
+            </div>
+          ) : null}
+        </div>
+      )}
     </section>
   );
 }
@@ -254,7 +302,62 @@ const cardStyle = (theme) => ({
   padding: 16,
   display: "flex",
   flexDirection: "column",
+  gap: 0,
+});
+
+const accordionButtonStyle = () => ({
+  width: "100%",
+  border: "none",
+  background: "transparent",
+  padding: 0,
+  margin: 0,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 12,
+  cursor: "pointer",
+  textAlign: "left",
+});
+
+const accordionHeaderMainStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: 12,
+  flexWrap: "wrap",
+  minWidth: 0,
+};
+
+const accordionRightStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  flexShrink: 0,
+};
+
+const accordionHintStyle = (theme) => ({
+  color: theme.mutedText,
+  fontSize: 12,
+  fontWeight: 700,
+});
+
+const accordionIconStyle = (theme, open) => ({
+  color: theme.mutedText,
+  fontSize: 18,
+  lineHeight: 1,
+  transform: open ? "rotate(180deg)" : "rotate(0deg)",
+  transition: "transform 0.2s ease",
+});
+
+const accordionBodyStyle = {
+  display: "flex",
+  flexDirection: "column",
   gap: 16,
+  marginTop: 16,
+};
+
+const embeddedSectionStyle = (theme) => ({
+  borderTop: `1px solid ${theme.softBorder}`,
+  paddingTop: 16,
 });
 
 const titleStyle = (theme) => ({
@@ -262,7 +365,17 @@ const titleStyle = (theme) => ({
   fontSize: 18,
   color: theme.title,
 });
-
+/*
+const lockedBadgeStyle = (theme) => ({
+  border: `1px solid ${theme.softBorder}`,
+  background: theme.softBg,
+  color: theme.mutedText,
+  borderRadius: 999,
+  padding: "6px 10px",
+  fontSize: 12,
+  fontWeight: 700,
+});
+*/
 const gridStyle = {
   display: "grid",
   gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
@@ -282,15 +395,17 @@ const labelStyle = (theme) => ({
   color: theme.mutedText,
 });
 
-const inputStyle = (theme) => ({
+const inputStyle = (theme, disabled = false) => ({
   width: "100%",
   minHeight: 42,
   borderRadius: 10,
   border: `1px solid ${theme.softBorder}`,
-  background: theme.softBg,
-  color: theme.text,
+  background: disabled ? theme.disabledBg : theme.softBg,
+  color: disabled ? theme.disabledText : theme.text,
   padding: "10px 12px",
   outline: "none",
+  cursor: disabled ? "not-allowed" : "text",
+  opacity: disabled ? 0.8 : 1,
 });
 
 const searchRowStyle = {
@@ -299,15 +414,16 @@ const searchRowStyle = {
   gap: 8,
 };
 
-const clearButtonStyle = (theme) => ({
+const clearButtonStyle = (theme, disabled = false) => ({
   minHeight: 42,
   borderRadius: 10,
   border: `1px solid ${theme.softBorder}`,
-  background: theme.cardBg,
-  color: theme.text,
+  background: disabled ? theme.disabledBg : theme.cardBg,
+  color: disabled ? theme.disabledText : theme.text,
   padding: "0 12px",
-  cursor: "pointer",
+  cursor: disabled ? "not-allowed" : "pointer",
   whiteSpace: "nowrap",
+  opacity: disabled ? 0.8 : 1,
 });
 
 const suggestionBoxStyle = (theme) => ({

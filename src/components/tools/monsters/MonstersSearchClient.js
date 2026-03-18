@@ -138,9 +138,9 @@ export default function MonstersSearchClient() {
   const [searched, setSearched] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  const [expandedId, setExpandedId] = useState(null);
+  const [expandedIds, setExpandedIds] = useState(() => new Set());
   const [detailCache, setDetailCache] = useState({});
-  const [detailLoadingId, setDetailLoadingId] = useState(null);
+  const [detailLoadingIds, setDetailLoadingIds] = useState(() => new Set());
   const [detailErrors, setDetailErrors] = useState({});
 
   const debounceRef = useRef(null);
@@ -252,13 +252,13 @@ export default function MonstersSearchClient() {
       setMonsters(list);
       setSuggestions(buildUniqueSuggestions(list));
       setSearched(true);
-      setExpandedId(null);
+      setExpandedIds(new Set());
     } catch (error) {
       console.error(error);
       setMonsters([]);
       setSuggestions([]);
       setSearched(true);
-      setExpandedId(null);
+      setExpandedIds(new Set());
     } finally {
       setLoading(false);
       if (isInitial) setInitialLoading(false);
@@ -293,15 +293,31 @@ export default function MonstersSearchClient() {
     const clickedEl = itemRefs.current[monsterId];
     const beforeTop = clickedEl?.getBoundingClientRect().top ?? null;
 
-    const nextOpen = expandedId !== monsterId;
-    setExpandedId(nextOpen ? monsterId : null);
+    const isCurrentlyOpen = expandedIds.has(monsterId);
+
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+
+      if (next.has(monsterId)) {
+        next.delete(monsterId);
+      } else {
+        next.add(monsterId);
+      }
+
+      return next;
+    });
 
     restoreCardPosition(monsterId, beforeTop);
 
-    if (!nextOpen || detailCache[monsterId]) return;
+    if (isCurrentlyOpen || detailCache[monsterId]) return;
 
     try {
-      setDetailLoadingId(monsterId);
+      setDetailLoadingIds((prev) => {
+        const next = new Set(prev);
+        next.add(monsterId);
+        return next;
+      });
+
       setDetailErrors((prev) => {
         const next = { ...prev };
         delete next[monsterId];
@@ -324,7 +340,11 @@ export default function MonstersSearchClient() {
       }));
       restoreCardPosition(monsterId, beforeTop);
     } finally {
-      setDetailLoadingId((current) => (current === monsterId ? null : current));
+      setDetailLoadingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(monsterId);
+        return next;
+      });
     }
   }
 
@@ -473,10 +493,10 @@ export default function MonstersSearchClient() {
       {monsters.length > 0 && (
         <section style={styles.list}>
           {monsters.map((monster) => {
-            const isOpen = expandedId === monster.id;
+            const isOpen = expandedIds.has(monster.id);
             const detail = detailCache[monster.id];
             const errorText = detailErrors[monster.id];
-            const isDetailLoading = detailLoadingId === monster.id;
+            const isDetailLoading = detailLoadingIds.has(monster.id);
 
             return (
               <article
