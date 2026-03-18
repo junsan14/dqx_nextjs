@@ -240,8 +240,7 @@ export function normalizeEquipmentRow(row, itemMap = new Map()) {
 
 export function buildSetsFromEquipments(rows, itemMap = new Map()) {
   const normalized = (rows || [])
-    .map((row) => normalizeEquipmentRow(row, itemMap))
-    .filter((item) => item.groupKind !== "craft_tool_set");
+  .map((row) => normalizeEquipmentRow(row, itemMap));
 
   const groups = new Map();
   const singles = [];
