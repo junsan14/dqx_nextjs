@@ -127,7 +127,7 @@ export async function fetchMonstersAroundDisplayOrder(
   { range = 5, excludeId = null } = {}
 ) {
   try {
-    const res = await api.get(`${API_URL}/api/monsters/around-display-order`, {
+    const res = await api.get("/api/monsters/around-display-order", {
       params: {
         display_order: displayOrder,
         range,
@@ -140,5 +140,38 @@ export async function fetchMonstersAroundDisplayOrder(
   } catch (error) {
     console.error(error);
     throw new Error("前後モンスター取得失敗");
+  }
+}
+export async function fetchMonsterZukanPage(page = 1, perPage = 16, sort = "no") {
+  try {
+    const safePage = Math.max(1, Number(page) || 1);
+    const safePerPage = Math.max(1, Number(perPage) || 16);
+    const safeSort = sort === "kana" ? "kana" : "no";
+
+    const res = await api.get("/api/monsters/zukan", {
+      params: {
+        page: safePage,
+        per_page: safePerPage,
+        sort: safeSort,
+      },
+    });
+
+    const payload = res.data ?? {};
+
+    return {
+      data: Array.isArray(payload.data) ? payload.data : [],
+      current_page: Number(payload.current_page) || safePage,
+      last_page: Number(payload.last_page) || 1,
+      per_page: Number(payload.per_page) || safePerPage,
+      total: Number(payload.total) || 0,
+    };
+  } catch (error) {
+    console.error(error);
+
+    if (error.response) {
+      throw new Error(`モンスター図鑑取得失敗: ${error.response.status}`);
+    }
+
+    throw new Error("モンスター図鑑取得失敗");
   }
 }

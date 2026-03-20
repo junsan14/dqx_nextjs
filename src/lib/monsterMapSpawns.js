@@ -129,7 +129,9 @@ export function normalizeSpawn(row = {}) {
     spawn_time: row?.spawn_time ?? "normal",
     spawn_count: row?.spawn_count ?? "",
     symbol_count: row?.symbol_count ?? "",
+    imported_note: row?.imported_note ?? "",
     note: row?.note ?? "",
+    is_hunting_ground: Boolean(row?.is_hunting_ground ?? false),
     map_name: row?.map_name ?? row?.map?.name ?? "",
     map_layer_name: mapLayerName,
     map_layer_floor_no:
@@ -163,6 +165,7 @@ function buildSpawnPayload(spawn = {}, monsterId = null) {
     spawn_count: String(spawn?.spawn_count ?? "").trim(),
     symbol_count: String(spawn?.symbol_count ?? "").trim(),
     note: spawn?.note ?? "",
+    is_hunting_ground: Boolean(spawn?.is_hunting_ground ?? false),
   };
 }
 

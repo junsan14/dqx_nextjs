@@ -13,7 +13,208 @@ const SEARCH_OPTIONS = [
   { value: "equipment", label: "装備" },
 ];
 
-export default function MonstersSearchClient() {
+function getStyles() {
+  return {
+    page: {
+      minHeight: "100vh",
+      background:
+        "linear-gradient(180deg, var(--page-bg) 0%, color-mix(in srgb, var(--soft-bg) 70%, var(--page-bg)) 42%, var(--page-bg) 100%)",
+      padding: "28px 16px 64px",
+      color: "var(--page-text)",
+      width: "100%",
+      maxWidth: "100%",
+      minWidth: 0,
+      overflowX: "hidden",
+      boxSizing: "border-box",
+    },
+    searchSection: {
+      maxWidth: "1100px",
+      margin: "0 auto 28px",
+      width: "100%",
+      minWidth: 0,
+      boxSizing: "border-box",
+      position: "relative",
+      zIndex: 10,
+    },
+    searchCard: {
+      position: "relative",
+      border: `1px solid var(--panel-border)`,
+      background:
+        "color-mix(in srgb, var(--panel-bg) 82%, transparent)",
+      backdropFilter: "blur(14px)",
+      WebkitBackdropFilter: "blur(14px)",
+      borderRadius: "24px",
+      padding: "18px",
+      boxShadow:
+        "0 18px 50px color-mix(in srgb, var(--page-text) 8%, transparent)",
+      width: "100%",
+      maxWidth: "100%",
+      minWidth: 0,
+      boxSizing: "border-box",
+      overflow: "visible",
+      zIndex: 60,
+    },
+    segment: {
+      display: "flex",
+      flexWrap: "wrap",
+      gap: "8px",
+      marginBottom: "14px",
+      minWidth: 0,
+    },
+    segmentButton: {
+      border: `1px solid var(--soft-border)`,
+      background: "var(--panel-bg)",
+      color: "var(--text-sub)",
+      borderRadius: "999px",
+      padding: "10px 14px",
+      fontSize: "14px",
+      fontWeight: 700,
+      cursor: "pointer",
+      maxWidth: "100%",
+      boxSizing: "border-box",
+      transition: "all 0.18s ease",
+    },
+    segmentButtonActive: {
+      background: "var(--primary-bg)",
+      color: "var(--primary-text)",
+      border: `1px solid var(--primary-border)`,
+      boxShadow:
+        "0 10px 24px color-mix(in srgb, var(--primary-border) 18%, transparent)",
+    },
+    searchArea: {
+      position: "relative",
+      minWidth: 0,
+    },
+    searchIcon: {
+      position: "absolute",
+      left: "16px",
+      top: "50%",
+      transform: "translateY(-50%)",
+      color: "var(--text-muted)",
+      fontSize: "18px",
+      zIndex: 2,
+    },
+    input: {
+      width: "100%",
+      height: "58px",
+      borderRadius: "18px",
+      border: `1px solid var(--input-border)`,
+      background: "var(--input-bg)",
+      fontSize: "16px",
+      padding: "0 18px 0 46px",
+      outline: "none",
+      color: "var(--input-text)",
+      boxSizing: "border-box",
+      minWidth: 0,
+      maxWidth: "100%",
+    },
+    suggestionBox: {
+      position: "absolute",
+      top: "64px",
+      left: 0,
+      right: 0,
+      background: "var(--panel-bg)",
+      border: `1px solid var(--input-border)`,
+      borderRadius: "18px",
+      boxShadow:
+        "0 18px 40px color-mix(in srgb, var(--page-text) 12%, transparent)",
+      overflow: "hidden",
+      zIndex: 999,
+      minWidth: 0,
+      maxWidth: "100%",
+      boxSizing: "border-box",
+    },
+    suggestionHeader: {
+      padding: "12px 14px 8px",
+      fontSize: "12px",
+      fontWeight: 800,
+      color: "var(--text-muted)",
+      letterSpacing: "0.08em",
+    },
+    suggestionList: {
+      margin: 0,
+      padding: "0 0 6px",
+      listStyle: "none",
+      minWidth: 0,
+    },
+    suggestionButton: {
+      width: "100%",
+      display: "block",
+      textAlign: "left",
+      padding: "12px 14px",
+      background: "transparent",
+      border: "none",
+      cursor: "pointer",
+      color: "inherit",
+      borderTop: `1px solid var(--soft-border)`,
+      boxSizing: "border-box",
+    },
+    suggestionMain: {
+      fontSize: "15px",
+      fontWeight: 800,
+      color: "var(--text-title)",
+      overflowWrap: "anywhere",
+      wordBreak: "break-word",
+    },
+    statusRow: {
+      marginTop: "12px",
+      display: "flex",
+      justifyContent: "flex-end",
+      minWidth: 0,
+    },
+    statusText: {
+      fontSize: "13px",
+      color: "var(--text-muted)",
+      fontWeight: 700,
+    },
+    empty: {
+      maxWidth: "1100px",
+      margin: "24px auto 0",
+      borderRadius: "24px",
+      padding: "38px 18px",
+      textAlign: "center",
+      background: "var(--panel-bg)",
+      border: `1px solid var(--soft-border)`,
+      width: "100%",
+      minWidth: 0,
+      boxSizing: "border-box",
+    },
+    emptyIcon: {
+      fontSize: "28px",
+      color: "var(--text-muted)",
+      marginBottom: "8px",
+    },
+    emptyTitle: {
+      margin: "0 0 8px",
+      fontSize: "22px",
+      fontWeight: 900,
+      color: "var(--text-title)",
+    },
+    emptyText: {
+      margin: 0,
+      color: "var(--text-muted)",
+    },
+    grid: {
+      maxWidth: "1100px",
+      margin: "0 auto",
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+      gap: "16px",
+      width: "100%",
+      minWidth: 0,
+      boxSizing: "border-box",
+    },
+    linkReset: {
+      textDecoration: "none",
+      color: "inherit",
+      minWidth: 0,
+    },
+  };
+}
+
+export default function MonsterDetailClient() {
+  const styles = useMemo(() => getStyles(), []);
+
   const [searchType, setSearchType] = useState("monster");
   const [keyword, setKeyword] = useState("");
   const [monsters, setMonsters] = useState([]);
@@ -104,7 +305,9 @@ export default function MonstersSearchClient() {
   } = {}) => {
     try {
       setLoading(true);
+
       const list = await searchMonsters(searchKeyword, currentSearchType);
+
       setMonsters(list);
       setSuggestions(buildUniqueSuggestions(list));
       setSearched(true);
@@ -119,7 +322,10 @@ export default function MonstersSearchClient() {
   };
 
   useEffect(() => {
-    runSearch({ keyword: "", searchType: "monster" });
+    runSearch({
+      keyword: "",
+      searchType: "monster",
+    });
   }, []);
 
   useEffect(() => {
@@ -156,7 +362,6 @@ export default function MonstersSearchClient() {
 
   return (
     <main style={styles.page}>
- 
       <MonsterSearchHero />
 
       <section style={styles.searchSection}>
@@ -230,18 +435,18 @@ export default function MonstersSearchClient() {
       {!loading && searched && monsters.length === 0 && (
         <div style={styles.empty}>
           <div style={styles.emptyIcon}>◌</div>
-          <h2 style={styles.emptyTitle}>見つからなかった</h2>
-          <p style={styles.emptyText}>キーワードを変えて試してみてくれ</p>
+          <h2 style={styles.emptyTitle}>見つかりませんでした</h2>
+          <p style={styles.emptyText}>キーワードを変えて試してください</p>
         </div>
       )}
 
-      {!loading && monsters.length > 0 && (
+      {monsters.length > 0 && (
         <section style={styles.grid}>
           {monsters.map((monster) => (
             <Link
               key={monster.id}
               href={`/tools/monster-search/${monster.id}`}
-              style={{ textDecoration: "none", color: "inherit" }}
+              style={styles.linkReset}
             >
               <MonsterSearchCard
                 monster={monster}
@@ -255,152 +460,3 @@ export default function MonstersSearchClient() {
     </main>
   );
 }
-
-const styles = {
-  page: {
-    minHeight: "100vh",
-    background: "linear-gradient(180deg, #f8fafc 0%, #eef2ff 42%, #f8fafc 100%)",
-    padding: "28px 16px 64px",
-    color: "#0f172a",
-  },
-  searchSection: {
-    maxWidth: "1100px",
-    margin: "0 auto 28px",
-  },
-  searchCard: {
-    position: "relative",
-    border: "1px solid rgba(255,255,255,0.75)",
-    background: "rgba(255,255,255,0.82)",
-    backdropFilter: "blur(14px)",
-    WebkitBackdropFilter: "blur(14px)",
-    borderRadius: "24px",
-    padding: "18px",
-    boxShadow: "0 18px 50px rgba(15,23,42,0.08)",
-  },
-  segment: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "8px",
-    marginBottom: "14px",
-  },
-  segmentButton: {
-    border: "1px solid #e2e8f0",
-    background: "#fff",
-    color: "#334155",
-    borderRadius: "999px",
-    padding: "10px 14px",
-    fontSize: "14px",
-    fontWeight: 700,
-    cursor: "pointer",
-  },
-  segmentButtonActive: {
-    background: "#111827",
-    color: "#fff",
-    border: "1px solid #111827",
-    boxShadow: "0 10px 24px rgba(17,24,39,0.18)",
-  },
-  searchArea: {
-    position: "relative",
-  },
-  searchIcon: {
-    position: "absolute",
-    left: "16px",
-    top: "50%",
-    transform: "translateY(-50%)",
-    color: "#94a3b8",
-    fontSize: "18px",
-    zIndex: 2,
-  },
-  input: {
-    width: "100%",
-    height: "58px",
-    borderRadius: "18px",
-    border: "1px solid #e2e8f0",
-    background: "#fff",
-    fontSize: "16px",
-    padding: "0 18px 0 46px",
-    outline: "none",
-    color: "#0f172a",
-    boxSizing: "border-box",
-  },
-  suggestionBox: {
-    position: "absolute",
-    top: "64px",
-    left: 0,
-    right: 0,
-    background: "rgba(255,255,255,0.97)",
-    border: "1px solid #e2e8f0",
-    borderRadius: "18px",
-    boxShadow: "0 18px 40px rgba(15,23,42,0.12)",
-    overflow: "hidden",
-    zIndex: 20,
-  },
-  suggestionHeader: {
-    padding: "12px 14px 8px",
-    fontSize: "12px",
-    fontWeight: 800,
-    color: "#64748b",
-    letterSpacing: "0.08em",
-  },
-  suggestionList: {
-    margin: 0,
-    padding: "0 0 6px",
-    listStyle: "none",
-  },
-  suggestionButton: {
-    width: "100%",
-    display: "block",
-    textAlign: "left",
-    padding: "12px 14px",
-    background: "transparent",
-    border: "none",
-    cursor: "pointer",
-    color: "inherit",
-    borderTop: "1px solid #f1f5f9",
-  },
-  suggestionMain: {
-    fontSize: "15px",
-    fontWeight: 800,
-    color: "#0f172a",
-  },
-  statusRow: {
-    marginTop: "12px",
-    display: "flex",
-    justifyContent: "flex-end",
-  },
-  statusText: {
-    fontSize: "13px",
-    color: "#64748b",
-    fontWeight: 700,
-  },
-  empty: {
-    maxWidth: "1100px",
-    margin: "24px auto 0",
-    borderRadius: "24px",
-    padding: "38px 18px",
-    textAlign: "center",
-    background: "rgba(255,255,255,0.72)",
-    border: "1px solid #e2e8f0",
-  },
-  emptyIcon: {
-    fontSize: "28px",
-    color: "#94a3b8",
-    marginBottom: "8px",
-  },
-  emptyTitle: {
-    margin: "0 0 8px",
-    fontSize: "22px",
-    fontWeight: 900,
-  },
-  emptyText: {
-    margin: 0,
-    color: "#64748b",
-  },
-  grid: {
-    maxWidth: "1100px",
-    margin: "0 auto",
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-    gap: "16px",
-  },
-};

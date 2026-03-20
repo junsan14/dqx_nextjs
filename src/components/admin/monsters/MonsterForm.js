@@ -5,7 +5,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 export default function MonsterForm({
   monster,
   onChange,
-  theme,
   parentCandidates = [],
   onSearchParents,
   disabled = false,
@@ -146,23 +145,22 @@ export default function MonsterForm({
   };
 
   return (
-    <section style={cardStyle(theme)}>
+    <section style={cardStyle()}>
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        style={accordionButtonStyle(theme)}
+        style={accordionButtonStyle()}
         aria-expanded={open}
       >
         <div style={accordionHeaderMainStyle}>
-          <h2 style={titleStyle(theme)}>基本情報</h2>
-        
+          <h2 style={titleStyle()}>基本情報</h2>
         </div>
 
         <div style={accordionRightStyle}>
-          <span style={accordionHintStyle(theme)}>
+          <span style={accordionHintStyle()}>
             {open ? "閉じる" : "開く"}
           </span>
-          <span style={accordionIconStyle(theme, open)}>⌄</span>
+          <span style={accordionIconStyle(open)}>⌄</span>
         </div>
       </button>
 
@@ -170,7 +168,7 @@ export default function MonsterForm({
         <div style={accordionBodyStyle}>
           <div style={gridStyle}>
             <label style={fieldStyle}>
-              <span style={labelStyle(theme)}>表示順</span>
+              <span style={labelStyle()}>表示順</span>
               <input
                 type="number"
                 min="1"
@@ -179,40 +177,40 @@ export default function MonsterForm({
                 onChange={(e) =>
                   patch("display_order", Number(e.target.value || 0))
                 }
-                style={inputStyle(theme, disabled)}
+                style={inputStyle(disabled)}
               />
             </label>
 
             <label style={fieldStyle}>
-              <span style={labelStyle(theme)}>名前</span>
+              <span style={labelStyle()}>名前</span>
               <input
                 type="text"
                 value={monster?.name ?? ""}
                 disabled={disabled}
                 onChange={(e) => patch("name", e.target.value)}
-                style={inputStyle(theme, disabled)}
+                style={inputStyle(disabled)}
               />
             </label>
 
             <label style={fieldStyle}>
-              <span style={labelStyle(theme)}>系統</span>
+              <span style={labelStyle()}>系統</span>
               <input
                 type="text"
                 value={monster?.system_type ?? ""}
                 disabled={disabled}
                 onChange={(e) => patch("system_type", e.target.value)}
-                style={inputStyle(theme, disabled)}
+                style={inputStyle(disabled)}
               />
             </label>
 
             <label style={fieldStyle}>
-              <span style={labelStyle(theme)}>参照URL</span>
+              <span style={labelStyle()}>参照URL</span>
               <input
                 type="text"
                 value={monster?.source_url ?? ""}
                 disabled={disabled}
                 onChange={(e) => patch("source_url", e.target.value)}
-                style={inputStyle(theme, disabled)}
+                style={inputStyle(disabled)}
               />
             </label>
 
@@ -220,7 +218,7 @@ export default function MonsterForm({
               ref={containerRef}
               style={{ ...fieldStyle, gridColumn: "1 / -1", position: "relative" }}
             >
-              <span style={labelStyle(theme)}>転生元モンスター</span>
+              <span style={labelStyle()}>転生元モンスター</span>
 
               <div style={searchRowStyle}>
                 <input
@@ -231,39 +229,39 @@ export default function MonsterForm({
                   onFocus={handleParentFocus}
                   onKeyDown={handleParentKeyDown}
                   placeholder="モンスター名を入力して候補から選ぶ"
-                  style={inputStyle(theme, disabled)}
+                  style={inputStyle(disabled)}
                 />
 
                 <button
                   type="button"
                   onClick={clearParent}
                   disabled={disabled}
-                  style={clearButtonStyle(theme, disabled)}
+                  style={clearButtonStyle(disabled)}
                 >
                   クリア
                 </button>
               </div>
 
               {!disabled && parentOpen && (
-                <div style={suggestionBoxStyle(theme)}>
+                <div style={suggestionBoxStyle()}>
                   {loadingParents ? (
-                    <div style={suggestionEmptyStyle(theme)}>検索中...</div>
+                    <div style={suggestionEmptyStyle()}>検索中...</div>
                   ) : safeCandidates.length > 0 ? (
                     safeCandidates.map((row) => (
                       <button
                         key={row.id}
                         type="button"
                         onClick={() => selectParent(row)}
-                        style={suggestionItemStyle(theme)}
+                        style={suggestionItemStyle()}
                       >
-                        <span style={suggestionNameStyle(theme)}>{row.name}</span>
-                        <span style={suggestionMetaStyle(theme)}>
+                        <span style={suggestionNameStyle()}>{row.name}</span>
+                        <span style={suggestionMetaStyle()}>
                           {row.display_order > 0 ? `No.${row.display_order}` : ""}
                         </span>
                       </button>
                     ))
                   ) : (
-                    <div style={suggestionEmptyStyle(theme)}>候補なし</div>
+                    <div style={suggestionEmptyStyle()}>候補なし</div>
                   )}
                 </div>
               )}
@@ -271,21 +269,21 @@ export default function MonsterForm({
 
             {monster?.reincarnation_parent_name && monster?.reincarnation_parent_id ? (
               <div style={{ ...fieldStyle, gridColumn: "1 / -1" }}>
-                <span style={labelStyle(theme)}>転生状態</span>
-                <div style={badgeStyle(theme)}>
+                <span style={labelStyle()}>転生状態</span>
+                <div style={badgeStyle()}>
                   転生モンスター / 元: {monster.reincarnation_parent_name}
                 </div>
               </div>
             ) : (
               <div style={{ ...fieldStyle, gridColumn: "1 / -1" }}>
-                <span style={labelStyle(theme)}>転生状態</span>
-                <div style={mutedBoxStyle(theme)}>通常モンスター</div>
+                <span style={labelStyle()}>転生状態</span>
+                <div style={mutedBoxStyle()}>通常モンスター</div>
               </div>
             )}
           </div>
 
           {children ? (
-            <div style={embeddedSectionStyle(theme)}>
+            <div style={embeddedSectionStyle()}>
               {children}
             </div>
           ) : null}
@@ -295,9 +293,9 @@ export default function MonsterForm({
   );
 }
 
-const cardStyle = (theme) => ({
-  background: theme.cardBg,
-  border: `1px solid ${theme.cardBorder}`,
+const cardStyle = () => ({
+  background: "var(--card-bg)",
+  border: "1px solid var(--card-border)",
   borderRadius: 14,
   padding: 16,
   display: "flex",
@@ -334,14 +332,14 @@ const accordionRightStyle = {
   flexShrink: 0,
 };
 
-const accordionHintStyle = (theme) => ({
-  color: theme.mutedText,
+const accordionHintStyle = () => ({
+  color: "var(--text-muted)",
   fontSize: 12,
   fontWeight: 700,
 });
 
-const accordionIconStyle = (theme, open) => ({
-  color: theme.mutedText,
+const accordionIconStyle = (open) => ({
+  color: "var(--text-muted)",
   fontSize: 18,
   lineHeight: 1,
   transform: open ? "rotate(180deg)" : "rotate(0deg)",
@@ -355,27 +353,17 @@ const accordionBodyStyle = {
   marginTop: 16,
 };
 
-const embeddedSectionStyle = (theme) => ({
-  borderTop: `1px solid ${theme.softBorder}`,
+const embeddedSectionStyle = () => ({
+  borderTop: "1px solid var(--soft-border)",
   paddingTop: 16,
 });
 
-const titleStyle = (theme) => ({
+const titleStyle = () => ({
   margin: 0,
   fontSize: 18,
-  color: theme.title,
+  color: "var(--text-title)",
 });
-/*
-const lockedBadgeStyle = (theme) => ({
-  border: `1px solid ${theme.softBorder}`,
-  background: theme.softBg,
-  color: theme.mutedText,
-  borderRadius: 999,
-  padding: "6px 10px",
-  fontSize: 12,
-  fontWeight: 700,
-});
-*/
+
 const gridStyle = {
   display: "grid",
   gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
@@ -389,19 +377,19 @@ const fieldStyle = {
   minWidth: 0,
 };
 
-const labelStyle = (theme) => ({
+const labelStyle = () => ({
   fontSize: 13,
   fontWeight: 700,
-  color: theme.mutedText,
+  color: "var(--text-muted)",
 });
 
-const inputStyle = (theme, disabled = false) => ({
+const inputStyle = (disabled = false) => ({
   width: "100%",
   minHeight: 42,
   borderRadius: 10,
-  border: `1px solid ${theme.softBorder}`,
-  background: disabled ? theme.disabledBg : theme.softBg,
-  color: disabled ? theme.disabledText : theme.text,
+  border: "1px solid var(--soft-border)",
+  background: disabled ? "var(--input-disabled-bg)" : "var(--soft-bg)",
+  color: disabled ? "var(--text-muted)" : "var(--text-main)",
   padding: "10px 12px",
   outline: "none",
   cursor: disabled ? "not-allowed" : "text",
@@ -414,26 +402,26 @@ const searchRowStyle = {
   gap: 8,
 };
 
-const clearButtonStyle = (theme, disabled = false) => ({
+const clearButtonStyle = (disabled = false) => ({
   minHeight: 42,
   borderRadius: 10,
-  border: `1px solid ${theme.softBorder}`,
-  background: disabled ? theme.disabledBg : theme.cardBg,
-  color: disabled ? theme.disabledText : theme.text,
+  border: "1px solid var(--soft-border)",
+  background: disabled ? "var(--input-disabled-bg)" : "var(--card-bg)",
+  color: disabled ? "var(--text-muted)" : "var(--text-main)",
   padding: "0 12px",
   cursor: disabled ? "not-allowed" : "pointer",
   whiteSpace: "nowrap",
   opacity: disabled ? 0.8 : 1,
 });
 
-const suggestionBoxStyle = (theme) => ({
+const suggestionBoxStyle = () => ({
   position: "absolute",
   top: "100%",
   left: 0,
   right: 0,
   marginTop: 6,
-  background: theme.cardBg,
-  border: `1px solid ${theme.cardBorder}`,
+  background: "var(--card-bg)",
+  border: "1px solid var(--card-border)",
   borderRadius: 12,
   boxShadow: "0 12px 30px rgba(0,0,0,0.18)",
   overflow: "hidden",
@@ -442,12 +430,12 @@ const suggestionBoxStyle = (theme) => ({
   overflowY: "auto",
 });
 
-const suggestionItemStyle = (theme) => ({
+const suggestionItemStyle = () => ({
   width: "100%",
   border: "none",
-  borderBottom: `1px solid ${theme.softBorder}`,
+  borderBottom: "1px solid var(--soft-border)",
   background: "transparent",
-  color: theme.text,
+  color: "var(--text-main)",
   padding: "10px 12px",
   cursor: "pointer",
   textAlign: "left",
@@ -456,41 +444,41 @@ const suggestionItemStyle = (theme) => ({
   gap: 12,
 });
 
-const suggestionNameStyle = (theme) => ({
-  color: theme.text,
+const suggestionNameStyle = () => ({
+  color: "var(--text-main)",
   fontWeight: 600,
 });
 
-const suggestionMetaStyle = (theme) => ({
-  color: theme.mutedText,
+const suggestionMetaStyle = () => ({
+  color: "var(--text-muted)",
   fontSize: 12,
   flexShrink: 0,
 });
 
-const suggestionEmptyStyle = (theme) => ({
+const suggestionEmptyStyle = () => ({
   padding: "12px",
-  color: theme.mutedText,
+  color: "var(--text-muted)",
 });
 
-const badgeStyle = (theme) => ({
+const badgeStyle = () => ({
   minHeight: 42,
   display: "flex",
   alignItems: "center",
   borderRadius: 10,
-  border: `1px solid ${theme.selectedBorder}`,
-  background: theme.selectedBg,
-  color: theme.text,
+  border: "1px solid var(--selected-border)",
+  background: "var(--selected-bg)",
+  color: "var(--text-main)",
   padding: "10px 12px",
   fontWeight: 700,
 });
 
-const mutedBoxStyle = (theme) => ({
+const mutedBoxStyle = () => ({
   minHeight: 42,
   display: "flex",
   alignItems: "center",
   borderRadius: 10,
-  border: `1px solid ${theme.softBorder}`,
-  background: theme.softBg,
-  color: theme.mutedText,
+  border: "1px solid var(--soft-border)",
+  background: "var(--soft-bg)",
+  color: "var(--text-muted)",
   padding: "10px 12px",
 });

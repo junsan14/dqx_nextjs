@@ -2,7 +2,7 @@
 
 import { clamp0 } from "@/lib/money";
 
-const SLOT_ORDER_MAP = {
+export const SLOT_ORDER_MAP = {
   頭: 1,
   体上: 2,
   体下: 3,
@@ -17,6 +17,92 @@ const SLOT_ORDER_MAP = {
 const collator = new Intl.Collator("ja");
 
 export const DEFAULT_FEE_RATE = 5;
+
+export function normalizeSlotName(slot) {
+  const text = String(slot ?? "").trim();
+
+  if (!text) return "その他";
+
+  if (
+    text === "頭" ||
+    text.includes("頭") ||
+    text.includes("アタマ")
+  ) {
+    return "頭";
+  }
+
+  if (
+    text === "体上" ||
+    text === "上" ||
+    text.includes("体上")
+  ) {
+    return "体上";
+  }
+
+  if (
+    text === "体下" ||
+    text === "下" ||
+    text.includes("体下")
+  ) {
+    return "体下";
+  }
+
+  if (
+    text === "腕" ||
+    text.includes("腕") ||
+    text.includes("ウデ")
+  ) {
+    return "腕";
+  }
+
+  if (
+    text === "足" ||
+    text.includes("足")
+  ) {
+    return "足";
+  }
+
+  if (text === "顔" || text.includes("顔")) return "顔";
+  if (text === "盾" || text.includes("盾")) return "盾";
+  if (text === "武器" || text.includes("武器")) return "武器";
+
+  return text;
+}
+
+export function getSlotOrder(slot) {
+  return SLOT_ORDER_MAP[normalizeSlotName(slot)] ?? 999;
+}
+
+export function sortSlots(slots = []) {
+  return [...slots].sort((a, b) => {
+    const ia = getSlotOrder(a);
+    const ib = getSlotOrder(b);
+
+    if (ia !== ib) return ia - ib;
+
+    return collator.compare(String(a), String(b));
+  });
+}
+
+export function sortItemsBySlot(items = []) {
+  return [...items].sort((a, b) => {
+    const ia = getSlotOrder(a?.slot);
+    const ib = getSlotOrder(b?.slot);
+
+    if (ia !== ib) return ia - ib;
+
+    return collator.compare(String(a?.name ?? ""), String(b?.name ?? ""));
+  });
+}
+
+export function formatSlotLabel(slot) {
+  const normalized = normalizeSlotName(slot);
+
+  if (normalized === "体上") return "上";
+  if (normalized === "体下") return "下";
+
+  return normalized;
+}
 
 export function safeJsonParse(value, fallback) {
   if (value == null || value === "") return fallback;
@@ -190,7 +276,7 @@ export function normalizeEquipmentRow(row, itemMap = new Map()) {
       "",
 
     name: row?.itemName ?? row?.item_name ?? row?.name ?? "",
-    slot: row?.slot ?? "その他",
+    slot: normalizeSlotName(row?.slot ?? "その他"),
 
     craftType:
       row?.equipmentType?.craftType?.name ??
@@ -240,7 +326,7 @@ export function normalizeEquipmentRow(row, itemMap = new Map()) {
 
 export function buildSetsFromEquipments(rows, itemMap = new Map()) {
   const normalized = (rows || [])
-  .map((row) => normalizeEquipmentRow(row, itemMap));
+    .map((row) => normalizeEquipmentRow(row, itemMap));
 
   const groups = new Map();
   const singles = [];
@@ -286,13 +372,7 @@ export function buildSetsFromEquipments(rows, itemMap = new Map()) {
   }
 
   const grouped = Array.from(groups.values()).map((group) => {
-    group.items.sort((a, b) => {
-      const sa = SLOT_ORDER_MAP[a.slot] ?? 99;
-      const sb = SLOT_ORDER_MAP[b.slot] ?? 99;
-      if (sa !== sb) return sa - sb;
-      return collator.compare(a.name, b.name);
-    });
-
+    group.items = sortItemsBySlot(group.items);
     return group;
   });
 
@@ -314,17 +394,10 @@ export function defaultStarPrices(setObj) {
 
 export function normalizeSlots(items) {
   const slots = Array.from(
-    new Set((items || []).map((item) => item.slot || "その他"))
+    new Set((items || []).map((item) => normalizeSlotName(item.slot || "その他")))
   );
 
-  slots.sort((a, b) => {
-    const ia = SLOT_ORDER_MAP[a] ?? 99;
-    const ib = SLOT_ORDER_MAP[b] ?? 99;
-    if (ia !== ib) return ia - ib;
-    return collator.compare(a, b);
-  });
-
-  return slots;
+  return sortSlots(slots);
 }
 
 function isCraftToolSet(selectedSet) {
@@ -345,7 +418,7 @@ function getAxisMeta(selectedSet, normalizedItems) {
         shortLabel: item.name || `道具${index + 1}`,
         label: item.name || `道具${index + 1}`,
         itemName: item.name || `道具${index + 1}`,
-        slot: item.slot || "その他",
+        slot: normalizeSlotName(item.slot || "その他"),
       };
     });
 
@@ -356,11 +429,14 @@ function getAxisMeta(selectedSet, normalizedItems) {
   const axisMeta = {};
 
   axisKeys.forEach((slot) => {
-    const item = normalizedItems.find((x) => (x.slot || "その他") === slot);
+    const item = normalizedItems.find(
+      (x) => normalizeSlotName(x.slot || "その他") === slot
+    );
+
     axisMeta[slot] = {
       key: slot,
-      shortLabel: slot,
-      label: slot,
+      shortLabel: formatSlotLabel(slot),
+      label: formatSlotLabel(slot),
       itemName: item?.name ?? null,
       slot,
     };
@@ -381,13 +457,16 @@ export function buildMatrix(selectedSet) {
 
   const normalizedItems =
     Array.isArray(selectedSet.items) && selectedSet.items.length
-      ? selectedSet.items
+      ? selectedSet.items.map((item) => ({
+          ...item,
+          slot: normalizeSlotName(item.slot || "その他"),
+        }))
       : Array.isArray(selectedSet.materials) || selectedSet.slotGrid
       ? [
           {
             id: selectedSet.id,
             name: selectedSet.name,
-            slot: selectedSet.slot || "その他",
+            slot: normalizeSlotName(selectedSet.slot || "その他"),
             materials: Array.isArray(selectedSet.materials)
               ? selectedSet.materials
               : [],
@@ -404,7 +483,7 @@ export function buildMatrix(selectedSet) {
   normalizedItems.forEach((item, index) => {
     const axisKey = isCraftToolSet(selectedSet)
       ? String(item.id || item.name || `tool_${index}`)
-      : item.slot || "その他";
+      : normalizeSlotName(item.slot || "その他");
 
     for (const material of item.materials || []) {
       const key = `${material.item_id ?? "noid"}::${material.name}`;
@@ -457,11 +536,17 @@ export function getSlotItemName(selectedSet, slot) {
       return item?.name ?? null;
     }
 
-    const item = selectedSet.items.find((it) => it.slot === slot);
+    const normalizedSlot = normalizeSlotName(slot);
+    const item = selectedSet.items.find(
+      (it) => normalizeSlotName(it.slot) === normalizedSlot
+    );
     return item?.name ?? null;
   }
 
-  if (selectedSet.slot === slot) return selectedSet.name;
+  if (normalizeSlotName(selectedSet.slot) === normalizeSlotName(slot)) {
+    return selectedSet.name;
+  }
+
   return null;
 }
 

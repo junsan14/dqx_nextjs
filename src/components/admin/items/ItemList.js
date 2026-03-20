@@ -1,22 +1,17 @@
 "use client";
 
-import { useMemo } from "react";
-
 export default function ItemList({
   items = [],
   loading = false,
   selectedId = null,
   onSelect,
-  theme,
 }) {
-  const mergedTheme = useMemo(() => normalizeItemListTheme(theme), [theme]);
-
   if (loading) {
-    return <div style={loadingStyle(mergedTheme)}>読み込み中...</div>;
+    return <div style={loadingStyle}>読み込み中...</div>;
   }
 
   if (!items.length) {
-    return <div style={emptyStyle(mergedTheme)}>アイテムがない</div>;
+    return <div style={emptyStyle}>アイテムがない</div>;
   }
 
   return (
@@ -30,12 +25,12 @@ export default function ItemList({
             type="button"
             onClick={() => onSelect?.(item.id)}
             style={{
-              ...rowStyle(mergedTheme),
-              ...(active ? activeRowStyle(mergedTheme) : {}),
+              ...rowStyle,
+              ...(active ? activeRowStyle : {}),
             }}
           >
-            <div style={nameStyle(mergedTheme)}>{item.name}</div>
-            <div style={subStyle(mergedTheme)}>
+            <div style={nameStyle}>{item.name}</div>
+            <div style={subStyle}>
               ID: {item.id}
               {item.category ? ` / ${item.category}` : ""}
             </div>
@@ -46,58 +41,49 @@ export default function ItemList({
   );
 }
 
-function normalizeItemListTheme(theme) {
-  return {
-    text: theme?.text ?? theme?.pageText ?? "#111827",
-    subText: theme?.subText ?? theme?.mutedText ?? "#666",
-    empty: theme?.mutedText ?? theme?.subText ?? "#666",
-    rowBg: theme?.cardBg ?? "#fff",
-    rowBorder: theme?.cardBorder ?? "#ddd",
-    activeBorder: theme?.selectedBorder ?? theme?.primaryBorder ?? "#111",
-    activeBg: theme?.selectedBg ?? "#f5f5f5",
-  };
-}
-
 const listStyle = {
   display: "grid",
   gap: 8,
   minWidth: 0,
+  maxHeight: "min(60vh, 560px)",
+  overflowY: "auto",
+
 };
 
-const rowStyle = (theme) => ({
+const rowStyle = {
   textAlign: "left",
   padding: 12,
-  border: `1px solid ${theme.rowBorder}`,
+  border: "1px solid var(--card-border, #ddd)",
   borderRadius: 10,
-  background: theme.rowBg,
+  background: "var(--card-bg, #ffffff)",
   cursor: "pointer",
   width: "100%",
   minWidth: 0,
-});
+};
 
-const activeRowStyle = (theme) => ({
-  border: `1px solid ${theme.activeBorder}`,
-  background: theme.activeBg,
-});
+const activeRowStyle = {
+  border: "1px solid var(--primary-border, #111111)",
+  background: "var(--soft-bg, #f5f5f5)",
+};
 
-const nameStyle = (theme) => ({
+const nameStyle = {
   fontWeight: 700,
   wordBreak: "break-word",
-  color: theme.text,
-});
+  color: "var(--text-main, var(--page-text, #111827))",
+};
 
-const subStyle = (theme) => ({
+const subStyle = {
   marginTop: 6,
   fontSize: 13,
-  color: theme.subText,
+  color: "var(--text-muted, #666)",
   wordBreak: "break-word",
-});
+};
 
-const emptyStyle = (theme) => ({
+const emptyStyle = {
   padding: 16,
-  color: theme.empty,
-});
+  color: "var(--text-muted, #666)",
+};
 
-const loadingStyle = (theme) => ({
-  color: theme.subText,
-});
+const loadingStyle = {
+  color: "var(--text-muted, #666)",
+};

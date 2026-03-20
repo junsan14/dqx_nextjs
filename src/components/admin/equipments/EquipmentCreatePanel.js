@@ -1,6 +1,5 @@
 "use client";
 
-import styles from "./EquipmentForm.module.css";
 import LabeledField from "./LabeledField";
 import {
   buildEmptyGroupMembers,
@@ -42,9 +41,6 @@ export default function EquipmentCreatePanel({
   newGroup,
   setNewGroup,
   equipmentTypes = [],
-  saving,
-  onCreateItem,
-  onCreateGroup,
 }) {
   const safeNewItem = newItem ?? FALLBACK_NEW_ITEM;
   const safeNewGroup = newGroup ?? FALLBACK_NEW_GROUP;
@@ -114,59 +110,33 @@ export default function EquipmentCreatePanel({
   }
 
   return (
-    <section className={styles.card}>
-      <div className={styles.sectionHead}>
-        <div className={styles.sectionTitle}>新規追加</div>
-
-        <div className={styles.actionsInline}>
-          {newMode === "single" ? (
-            <button
-              type="button"
-              className={styles.buttonPrimary}
-              disabled={saving}
-              onClick={onCreateItem}
-            >
-              保存
-            </button>
-          ) : (
-            <button
-              type="button"
-              className={styles.buttonPrimary}
-              disabled={saving}
-              onClick={onCreateGroup}
-            >
-              保存
-            </button>
-          )}
-        </div>
+    <section style={styles.card}>
+      <div style={styles.sectionHead}>
+        <div style={styles.sectionTitle}>新規追加</div>
       </div>
 
-      <div className={styles.segment}>
+      <div style={styles.segment}>
         <button
           type="button"
           onClick={() => setNewMode("single")}
-          className={`${styles.segmentButton} ${
-            newMode === "single" ? styles.segmentButtonActive : ""
-          }`}
+          style={segmentButtonStyle(newMode === "single")}
         >
-          単体追加
+          単体
         </button>
         <button
           type="button"
           onClick={() => setNewMode("group")}
-          className={`${styles.segmentButton} ${
-            newMode === "group" ? styles.segmentButtonActive : ""
-          }`}
+          style={segmentButtonStyle(newMode === "group")}
         >
-          セット追加
+          セット
         </button>
       </div>
 
       {newMode === "single" ? (
-        <div className={styles.grid2}>
+        <div style={styles.grid2}>
           <LabeledField label="装備名">
             <input
-              className={styles.input}
+              style={styles.input}
               value={safeNewItem.itemName}
               onChange={(e) =>
                 setNewItem((prev) => ({
@@ -181,7 +151,7 @@ export default function EquipmentCreatePanel({
           <LabeledField label="装備レベル">
             <input
               type="number"
-              className={styles.input}
+              style={styles.input}
               value={safeNewItem.equipLevel ?? ""}
               onChange={(e) =>
                 setNewItem((prev) => ({
@@ -196,7 +166,7 @@ export default function EquipmentCreatePanel({
 
           <LabeledField label="装備タイプ">
             <select
-              className={styles.select}
+              style={styles.select}
               value={safeNewItem.equipmentTypeId}
               onChange={(e) => updateSingleEquipmentType(e.target.value)}
             >
@@ -211,10 +181,10 @@ export default function EquipmentCreatePanel({
         </div>
       ) : (
         <>
-          <div className={styles.grid2}>
+          <div style={styles.grid2}>
             <LabeledField label="セット名">
               <input
-                className={styles.input}
+                style={styles.input}
                 value={safeNewGroup.groupName}
                 onChange={(e) =>
                   setNewGroup((prev) => ({
@@ -230,7 +200,7 @@ export default function EquipmentCreatePanel({
 
             <LabeledField label="セット種類">
               <select
-                className={styles.select}
+                style={styles.select}
                 value={safeNewGroup.groupKind}
                 onChange={(e) => updateGroupKind(e.target.value)}
               >
@@ -247,7 +217,7 @@ export default function EquipmentCreatePanel({
                 <LabeledField label="装備レベル">
                   <input
                     type="number"
-                    className={styles.input}
+                    style={styles.input}
                     value={safeNewGroup.equipLevel ?? ""}
                     onChange={(e) =>
                       setNewGroup((prev) => ({
@@ -262,7 +232,7 @@ export default function EquipmentCreatePanel({
 
                 <LabeledField label="装備タイプ">
                   <select
-                    className={styles.select}
+                    style={styles.select}
                     value={safeNewGroup.equipmentTypeId}
                     onChange={(e) => updateGroupEquipmentType(e.target.value)}
                   >
@@ -278,58 +248,48 @@ export default function EquipmentCreatePanel({
             ) : null}
           </div>
 
-          <div className={styles.stack}>
+          <div style={styles.membersWrap}>
             {safeMembers.map((member, index) => (
-              <div key={member.key} className={styles.memberCard}>
-                <label className={styles.checkRow}>
+              <div key={member.key ?? index} style={styles.memberCard}>
+                <label style={styles.checkRow}>
                   <input
                     type="checkbox"
                     checked={!!member.enabled}
-                    onChange={(e) => {
-                      const checked = e.target.checked;
+                    onChange={(e) =>
                       setNewGroup((prev) => {
                         const base = prev ?? FALLBACK_NEW_GROUP;
                         const members = Array.isArray(base.members)
-                          ? base.members
+                          ? [...base.members]
                           : [];
-
-                        return {
-                          ...base,
-                          members: members.map((m, i) =>
-                            i === index ? { ...m, enabled: checked } : m
-                          ),
+                        members[index] = {
+                          ...members[index],
+                          enabled: e.target.checked,
                         };
-                      });
-                    }}
+                        return { ...base, members };
+                      })
+                    }
                   />
                   <span>{member.slotLabel}</span>
                 </label>
 
-                <div className={styles.grid2}>
-                  <LabeledField label="装備名">
-                    <input
-                      className={styles.input}
-                      value={member.itemName}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setNewGroup((prev) => {
-                          const base = prev ?? FALLBACK_NEW_GROUP;
-                          const members = Array.isArray(base.members)
-                            ? base.members
-                            : [];
-
-                          return {
-                            ...base,
-                            members: members.map((m, i) =>
-                              i === index ? { ...m, itemName: value } : m
-                            ),
-                          };
-                        });
-                      }}
-                      placeholder={member.slotLabel}
-                    />
-                  </LabeledField>
-                </div>
+                <input
+                  style={styles.input}
+                  value={member.itemName ?? ""}
+                  placeholder="名前を個別指定"
+                  onChange={(e) =>
+                    setNewGroup((prev) => {
+                      const base = prev ?? FALLBACK_NEW_GROUP;
+                      const members = Array.isArray(base.members)
+                        ? [...base.members]
+                        : [];
+                      members[index] = {
+                        ...members[index],
+                        itemName: e.target.value,
+                      };
+                      return { ...base, members };
+                    })
+                  }
+                />
               </div>
             ))}
           </div>
@@ -338,3 +298,98 @@ export default function EquipmentCreatePanel({
     </section>
   );
 }
+
+const styles = {
+  card: {
+    background: "var(--card-bg)",
+    border: "1px solid var(--card-border)",
+    borderRadius: 14,
+    padding: 16,
+    display: "flex",
+    flexDirection: "column",
+    gap: 16,
+    minWidth: 0,
+  },
+
+  sectionHead: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+    flexWrap: "wrap",
+  },
+
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 700,
+    color: "var(--text-title)",
+  },
+
+  segment: {
+    display: "flex",
+    gap: 8,
+    flexWrap: "wrap",
+  },
+
+  grid2: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+    gap: 12,
+  },
+
+  input: {
+    width: "100%",
+    boxSizing: "border-box",
+    border: "1px solid var(--input-border)",
+    background: "var(--input-bg)",
+    color: "var(--input-text)",
+    borderRadius: 10,
+    padding: "10px 12px",
+  },
+
+  select: {
+    width: "100%",
+    boxSizing: "border-box",
+    border: "1px solid var(--input-border)",
+    background: "var(--input-bg)",
+    color: "var(--input-text)",
+    borderRadius: 10,
+    padding: "10px 12px",
+  },
+
+  membersWrap: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+    gap: 12,
+  },
+
+  memberCard: {
+    border: "1px solid var(--soft-border)",
+    background: "var(--soft-bg)",
+    borderRadius: 12,
+    padding: 12,
+    display: "flex",
+    flexDirection: "column",
+    gap: 10,
+  },
+
+  checkRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    color: "var(--text-main)",
+    fontWeight: 700,
+  },
+};
+
+const segmentButtonStyle = (active) => ({
+  border: `1px solid ${
+    active ? "var(--selected-border)" : "var(--soft-border)"
+  }`,
+  background: active ? "var(--selected-bg)" : "var(--soft-bg)",
+  color: "var(--text-main)",
+  borderRadius: 10,
+  padding: "10px 14px",
+  cursor: "pointer",
+  fontWeight: 700,
+});

@@ -1,55 +1,61 @@
 "use client";
 
-import { useMemo } from "react";
-
 export default function OrbList({
   orbs = [],
   selectedId,
   onSelect,
-  theme,
 }) {
-  const mergedTheme = useMemo(() => normalizeOrbListTheme(theme), [theme]);
-
   if (!orbs.length) {
-    return <div style={emptyStyle(mergedTheme)}>オーブがない</div>;
+    return <div style={emptyStyle()}>オーブがない</div>;
   }
 
   return (
-    <div style={listWrapStyle}>
-      {orbs.map((orb) => {
-        const active = orb.id === selectedId;
+    <>
+      <style>{`
+        .orb-list-item {
+          transition:
+            background-color 0.18s ease,
+            border-color 0.18s ease,
+            color 0.18s ease,
+            box-shadow 0.18s ease;
+        }
 
-        return (
-          <button
-            key={orb.id}
-            type="button"
-            onClick={() => onSelect(orb.id)}
-            style={{
-              ...itemStyle(mergedTheme),
-              ...(active ? activeItemStyle(mergedTheme) : {}),
-            }}
-          >
-            <div style={nameStyle(mergedTheme)}>{orb.name}</div>
-            <div style={metaStyle(mergedTheme)}>
-              {orb.color || "色なし"} / ID: {orb.id}
-            </div>
-          </button>
-        );
-      })}
-    </div>
+        .orb-list-item:hover {
+          background: var(--hover-bg) !important;
+        }
+
+        .orb-list-item:focus {
+          outline: none;
+          border-color: var(--selected-border);
+          box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.18);
+        }
+      `}</style>
+
+      <div style={listWrapStyle}>
+        {orbs.map((orb) => {
+          const active = orb.id === selectedId;
+
+          return (
+            <button
+              key={orb.id}
+              type="button"
+              onClick={() => onSelect(orb.id)}
+              className="orb-list-item"
+              style={{
+                ...itemStyle(),
+                ...(active ? activeItemStyle() : {}),
+              }}
+            >
+              <div style={nameStyle()}>{orb.name}</div>
+              <div style={metaStyle()}>
+                {orb.color || "色なし"} / ID: {orb.id}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </>
   );
-}
-
-function normalizeOrbListTheme(theme) {
-  return {
-    empty: theme?.mutedText ?? theme?.subText ?? "#666",
-    itemBg: theme?.cardBg ?? theme?.panelBg ?? "#fff",
-    itemBorder: theme?.cardBorder ?? theme?.panelBorder ?? "#ddd",
-    itemText: theme?.text ?? theme?.pageText ?? "#111827",
-    metaText: theme?.subText ?? "#666",
-    activeBorder: theme?.selectedBorder ?? theme?.primaryBorder ?? "#111",
-    activeBg: theme?.selectedBg ?? "#f3f7ff",
-  };
 }
 
 const listWrapStyle = {
@@ -58,38 +64,38 @@ const listWrapStyle = {
   padding: 8,
 };
 
-const emptyStyle = (theme) => ({
+const emptyStyle = () => ({
   padding: 16,
-  color: theme.empty,
+  color: "var(--text-muted)",
 });
 
-const itemStyle = (theme) => ({
+const itemStyle = () => ({
   display: "grid",
   gap: 4,
   width: "100%",
   textAlign: "left",
   padding: 12,
-  border: `1px solid ${theme.itemBorder}`,
+  border: "1px solid var(--card-border)",
   borderRadius: 10,
-  background: theme.itemBg,
+  background: "var(--card-bg)",
   cursor: "pointer",
-  color: theme.itemText,
+  color: "var(--text-main)",
 });
 
-const activeItemStyle = (theme) => ({
-  background: theme.activeBg,
-  borderColor: theme.activeBorder,
+const activeItemStyle = () => ({
+  background: "var(--selected-bg)",
+  borderColor: "var(--selected-border)",
 });
 
-const nameStyle = (theme) => ({
+const nameStyle = () => ({
   fontSize: 15,
   fontWeight: 700,
   wordBreak: "break-word",
-  color: theme.itemText,
+  color: "var(--text-main)",
 });
 
-const metaStyle = (theme) => ({
+const metaStyle = () => ({
   fontSize: 12,
-  color: theme.metaText,
+  color: "var(--text-muted)",
   wordBreak: "break-word",
 });

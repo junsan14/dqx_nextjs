@@ -6,9 +6,11 @@ import { fetchItemsByIds } from "@/lib/items";
 import { fetchCraftTools, fetchEquipments } from "@/lib/equipments";
 import { fetchCrystalRules } from "@/lib/crystalRules";
 import CraftProfitHeaderCard from "./CraftProfitHeaderCard";
-import CraftProfitSummaryCard from "./CraftProfitSummaryCard";
 import CraftProfitMaterialsCard from "./CraftProfitMaterialsCard";
 import CraftProfitSkeleton from "@/components/ui/CraftProfitSkeleton";
+import EquipmentInfoCard from "./EquipmentInfoCard";
+import SalePriceCard from "./SalePriceCard";
+import PageHeroTitle from "@/components/PageHeroTitle";
 import {
   DEFAULT_FEE_RATE,
   buildInitialUnitCostMap,
@@ -35,7 +37,7 @@ function extractEquipmentRows(payload) {
 function extractMaterialIds(rows) {
   return Array.from(
     new Set(
-      rows.flatMap((row) => {
+      (Array.isArray(rows) ? rows : []).flatMap((row) => {
         let materials = [];
 
         try {
@@ -107,13 +109,19 @@ export default function CraftProfitClient() {
         const materialIds = extractMaterialIds(equipmentRows);
         const items = materialIds.length ? await fetchItemsByIds(materialIds) : [];
 
-        const itemMap = new Map((items || []).map((item) => [Number(item.id), item]));
+        const itemMap = new Map(
+          (Array.isArray(items) ? items : []).map((item) => [
+            Number(item.id),
+            item,
+          ])
+        );
+
         const nextSets = buildSetsFromEquipments(equipmentRows, itemMap);
 
         if (cancelled) return;
 
-        setSets(nextSets);
-        setCraftTools(toolRows);
+        setSets(Array.isArray(nextSets) ? nextSets : []);
+        setCraftTools(Array.isArray(toolRows) ? toolRows : []);
         setCrystalRules(Array.isArray(crystalRulesRes) ? crystalRulesRes : []);
       } catch (error) {
         if (cancelled) return;
@@ -148,7 +156,7 @@ export default function CraftProfitClient() {
   }, [selectedSet]);
 
   const filteredSets = useMemo(() => {
-    const q = setQuery.toLowerCase().trim();
+    const q = String(setQuery ?? "").toLowerCase().trim();
     if (!q) return sets;
 
     const groupedMatches = [];
@@ -265,12 +273,14 @@ export default function CraftProfitClient() {
     };
   }, [toolOptions, selectedTool, toolPrice, toolCostPerCraft]);
 
-  const { slots, rows, slotGrids, slotGridMeta } = useMemo(() => {
-    return buildMatrix(selectedSet);
-  }, [selectedSet]);
+  const matrix = useMemo(() => buildMatrix(selectedSet), [selectedSet]);
+  const slots = Array.isArray(matrix?.slots) ? matrix.slots : [];
+  const rows = Array.isArray(matrix?.rows) ? matrix.rows : [];
+  const slotGrids = matrix?.slotGrids ?? {};
+  const slotGridMeta = matrix?.slotGridMeta ?? {};
 
   useEffect(() => {
-    if (slots?.length && !slots.includes(activeSlot)) {
+    if (slots.length && !slots.includes(activeSlot)) {
       setActiveSlot(slots[0]);
     }
   }, [slots, activeSlot]);
@@ -303,7 +313,7 @@ export default function CraftProfitClient() {
   }, [rows, slots, unitCostMap]);
 
   const slotTotalsWithTool = useMemo(() => {
-    const amount = { ...slotTotals.amount };
+    const amount = { ...(slotTotals?.amount ?? {}) };
 
     if (toolEnabled) {
       for (const slot of slots) {
@@ -314,15 +324,13 @@ export default function CraftProfitClient() {
     const total = slots.reduce((sum, slot) => sum + (amount[slot] || 0), 0);
 
     return {
-      qty: slotTotals.qty,
+      qty: slotTotals?.qty ?? {},
       amount,
       total,
     };
   }, [slotTotals, toolEnabled, toolCostPerCraft, slots]);
 
-  const partCount = useMemo(() => {
-    return Math.max(1, slots?.length || 0);
-  }, [slots]);
+  const partCount = useMemo(() => Math.max(1, slots.length || 0), [slots]);
 
   const avgMaterialCostPerPart = useMemo(() => {
     return materialCost / partCount;
@@ -345,7 +353,7 @@ export default function CraftProfitClient() {
     if (minRates?.impossible) {
       return {
         label: "★☆☆☆☆（非推奨）",
-        tone: "text-rose-700 dark:text-rose-300",
+        tone: "var(--danger-text)",
         sub: "100%★3でも黒字にならない",
       };
     }
@@ -366,79 +374,84 @@ export default function CraftProfitClient() {
     return getCrystalInfo(selectedSet, crystalRules);
   }, [selectedSet, crystalRules]);
 
-  if (loading) {
-    return (
-      <main className="mx-auto min-h-screen max-w-7xl bg-slate-50 px-4 py-4 text-slate-900 dark:bg-slate-950 dark:text-slate-100 sm:px-6 sm:py-6">
-        <CraftProfitSkeleton />
-      </main>
-    );
-  }
-
-  if (loadError) {
-    return (
-      <main className="mx-auto max-w-7xl px-4 py-6 min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-        {loadError}
-      </main>
-    );
-  }
+  const pageStyle = {
+    backgroundColor: "var(--page-bg)",
+    color: "var(--page-text)",
+  };
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-4 sm:px-6 sm:py-6 space-y-5 sm:space-y-6 min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight">職人利益計算</h1>
-      </header>
-
-      <div className="grid grid-cols-1 lg:grid-cols-[420px_minmax(0,1fr)] gap-5 items-start">
-        <CraftProfitHeaderCard
-          setQuery={setQuery}
-          setSetQuery={setSetQuery}
-          openSetList={openSetList}
-          setOpenSetList={setOpenSetList}
-          filteredSets={filteredSets}
-          onChangeSet={onChangeSet}
-          craftType={craftType}
-          selectedSet={selectedSet}
-          toolId={toolId}
-          setToolId={setToolId}
-          toolOptions={toolOptions}
-          toolPrice={toolPrice}
-          setToolPriceOverride={setToolPriceOverride}
-        />
-
-        <CraftProfitSummaryCard
-          selectedSet={selectedSet}
-          displayJobs={displayJobs}
-          crystalByEquipLevel={crystalByEquipLevel}
-          feeRatePct={feeRatePct}
-          setFeeRatePct={setFeeRatePct}
-          starPrice={starPrice}
-          setStarPrice={setStarPrice}
-          minRates={minRates}
-          recommend={recommend}
-          recommendRate={recommendRate}
-        />
-      </div>
-
-      <CraftProfitMaterialsCard
-        slots={slots}
-        rows={rows}
-        slotGrids={slotGrids}
-        slotGridMeta={slotGridMeta}
-        selectedSet={selectedSet}
-        activeSlot={activeSlot}
-        setActiveSlot={setActiveSlot}
-        unitCostMap={unitCostMap}
-        updateUnitCost={updateUnitCost}
-        mobileToolRow={mobileToolRow}
-        toolEnabled={toolEnabled}
-        selectedTool={selectedTool}
-        toolPrice={toolPrice}
-        setToolPriceOverride={setToolPriceOverride}
-        toolCostPerCraft={toolCostPerCraft}
-        slotTotalsWithTool={slotTotalsWithTool}
-        avgMaterialCostPerPart={avgMaterialCostPerPart}
-        costPerItem={costPerItem}
+    <main className="space-y-5 sm:space-y-6 min-h-screen" style={pageStyle}>
+      <PageHeroTitle
+        kicker="DQX CRAFT TOOL"
+        title="職人ツール"
       />
+
+      {loading ? (
+        <div className="space-y-5">
+          <CraftProfitSkeleton />
+        </div>
+      ) : loadError ? (
+        <div>{loadError}</div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 lg:grid-cols-[420px_minmax(0,1fr)] gap-5 items-start">
+            <CraftProfitHeaderCard
+              setQuery={setQuery}
+              setSetQuery={setSetQuery}
+              openSetList={openSetList}
+              setOpenSetList={setOpenSetList}
+              filteredSets={filteredSets}
+              onChangeSet={onChangeSet}
+              craftType={craftType}
+              selectedSet={selectedSet}
+              toolId={toolId}
+              setToolId={setToolId}
+              toolOptions={toolOptions}
+              toolPrice={toolPrice}
+              setToolPriceOverride={setToolPriceOverride}
+            />
+
+            <div className="space-y-5">
+              <EquipmentInfoCard
+                selectedSet={selectedSet}
+                displayJobs={displayJobs}
+                crystalByEquipLevel={crystalByEquipLevel}
+              />
+            </div>
+          </div>
+
+          <CraftProfitMaterialsCard
+            slots={slots}
+            rows={rows}
+            slotGrids={slotGrids}
+            slotGridMeta={slotGridMeta}
+            selectedSet={selectedSet}
+            activeSlot={activeSlot}
+            setActiveSlot={setActiveSlot}
+            unitCostMap={unitCostMap}
+            updateUnitCost={updateUnitCost}
+            mobileToolRow={mobileToolRow}
+            toolEnabled={toolEnabled}
+            selectedTool={selectedTool}
+            toolPrice={toolPrice}
+            setToolPriceOverride={setToolPriceOverride}
+            toolCostPerCraft={toolCostPerCraft}
+            slotTotalsWithTool={slotTotalsWithTool}
+            avgMaterialCostPerPart={avgMaterialCostPerPart}
+            costPerItem={costPerItem}
+          />
+
+          <SalePriceCard
+            feeRatePct={feeRatePct}
+            setFeeRatePct={setFeeRatePct}
+            starPrice={starPrice}
+            setStarPrice={setStarPrice}
+            minRates={minRates}
+            recommend={recommend}
+            recommendRate={recommendRate}
+          />
+        </>
+      )}
     </main>
   );
 }

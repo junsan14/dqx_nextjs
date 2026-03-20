@@ -1,17 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
-import { applyMonsterThemeToStyleTree } from "../theme";
-
 export default function MapListPane({
   maps = [],
   loading = false,
   selectedId = null,
   onSelect,
-  theme,
 }) {
-  const styles = useMemo(() => getComponentStyles(theme), [theme]);
-
   if (loading) {
     return <div style={styles.empty}>読み込み中...</div>;
   }
@@ -50,7 +44,7 @@ export default function MapListPane({
   );
 }
 
-const baseStyles = {
+const styles = {
   list: {
     display: "grid",
     gap: "10px",
@@ -60,48 +54,45 @@ const baseStyles = {
   },
   item: {
     textAlign: "left",
-    border: "1px solid #e2e8f0",
-    background: "#fff",
+    border: "1px solid var(--card-border, #e2e8f0)",
+    background: "var(--card-bg, #ffffff)",
     borderRadius: "14px",
     padding: "12px",
     cursor: "pointer",
     width: "100%",
     minWidth: 0,
+    color: "var(--text-main, #0f172a)",
   },
   itemActive: {
-    borderColor: "#2563eb",
-    background: "#eff6ff",
+    borderColor: "var(--primary-border, #2563eb)",
+    background: "var(--soft-bg, #eff6ff)",
   },
   idText: {
     fontSize: "12px",
-    color: "#64748b",
+    color: "var(--text-muted, #64748b)",
     marginBottom: "4px",
   },
   itemTitle: {
     fontWeight: 700,
-    color: "#0f172a",
+    color: "var(--text-main, #0f172a)",
     marginBottom: "4px",
     wordBreak: "break-word",
   },
   meta: {
     fontSize: "13px",
-    color: "#475569",
+    color: "var(--text-sub, #475569)",
     marginBottom: "2px",
     wordBreak: "break-word",
   },
   subMeta: {
     fontSize: "12px",
-    color: "#64748b",
+    color: "var(--text-muted, #64748b)",
   },
   empty: {
-    border: "1px dashed #cbd5e1",
+    border: "1px dashed var(--card-border, #cbd5e1)",
     borderRadius: "14px",
     padding: "18px",
-    color: "#64748b",
-    background: "#fff",
+    color: "var(--text-muted, #64748b)",
+    background: "var(--card-bg, #ffffff)",
   },
 };
-
-function getComponentStyles(theme) {
-  return applyMonsterThemeToStyleTree(baseStyles, theme);
-}

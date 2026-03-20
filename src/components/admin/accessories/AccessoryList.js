@@ -1,23 +1,18 @@
 "use client";
 
-import { useMemo } from "react";
-
 export default function AccessoryList({
   accessories = [],
   loading = false,
   selectedId = null,
   onSelect,
   isMobile = false,
-  theme,
 }) {
-  const mergedTheme = useMemo(() => normalizeAccessoryListTheme(theme), [theme]);
-
   if (loading) {
-    return <div style={{ color: mergedTheme.metaText }}>読み込み中...</div>;
+    return <div style={loadingStyle}>読み込み中...</div>;
   }
 
   if (!accessories.length) {
-    return <div style={emptyStyle(mergedTheme)}>データがない</div>;
+    return <div style={emptyStyle}>データがない</div>;
   }
 
   return (
@@ -31,35 +26,22 @@ export default function AccessoryList({
             type="button"
             onClick={() => onSelect(accessory.id)}
             style={{
-              ...itemStyle(mergedTheme),
-              ...(active ? activeItemStyle(mergedTheme) : null),
+              ...itemStyle,
+              ...(active ? activeItemStyle : null),
             }}
           >
-            <div style={titleStyle(mergedTheme)}>
+            <div style={titleStyle}>
               {accessory.name || "名称未設定"}
             </div>
-            <div style={metaStyle(mergedTheme)}>
+            <div style={metaStyle}>
               {accessory.slot || "-"} / {accessory.accessory_type || "-"}
             </div>
-            <div style={subStyle(mergedTheme)}>{accessory.item_id || "-"}</div>
+            <div style={subStyle}>{accessory.item_id || "-"}</div>
           </button>
         );
       })}
     </div>
   );
-}
-
-function normalizeAccessoryListTheme(theme) {
-  return {
-    empty: theme?.mutedText ?? theme?.subText ?? "#64748b",
-    itemBg: theme?.cardBg ?? "#ffffff",
-    itemBorder: theme?.cardBorder ?? "#dddddd",
-    itemText: theme?.text ?? theme?.pageText ?? "#111827",
-    metaText: theme?.subText ?? "#475569",
-    subText: theme?.mutedText ?? "#64748b",
-    activeBorder: theme?.selectedBorder ?? theme?.secondaryBorder ?? "#1976d2",
-    activeBg: theme?.selectedBg ?? "#eff6ff",
-  };
 }
 
 const listStyle = (isMobile) => ({
@@ -69,42 +51,46 @@ const listStyle = (isMobile) => ({
   overflow: isMobile ? "visible" : "auto",
 });
 
-const itemStyle = (theme) => ({
+const itemStyle = {
   textAlign: "left",
-  border: `1px solid ${theme.itemBorder}`,
+  border: "1px solid var(--card-border)",
   borderRadius: 10,
   padding: 12,
-  background: theme.itemBg,
+  background: "var(--card-bg)",
   cursor: "pointer",
   minWidth: 0,
-});
+};
 
-const activeItemStyle = (theme) => ({
-  border: `2px solid ${theme.activeBorder}`,
-  background: theme.activeBg,
-});
+const activeItemStyle = {
+  border: "2px solid var(--selected-border)",
+  background: "var(--selected-bg)",
+};
 
-const titleStyle = (theme) => ({
+const titleStyle = {
   fontWeight: 700,
   marginBottom: 4,
   wordBreak: "break-word",
-  color: theme.itemText,
-});
+  color: "var(--text-main)",
+};
 
-const metaStyle = (theme) => ({
+const metaStyle = {
   fontSize: 12,
-  color: theme.metaText,
+  color: "var(--text-sub)",
   marginBottom: 4,
   wordBreak: "break-word",
-});
+};
 
-const subStyle = (theme) => ({
+const subStyle = {
   fontSize: 12,
-  color: theme.subText,
+  color: "var(--text-muted)",
   wordBreak: "break-all",
-});
+};
 
-const emptyStyle = (theme) => ({
+const emptyStyle = {
   padding: "16px 8px",
-  color: theme.empty,
-});
+  color: "var(--text-muted)",
+};
+
+const loadingStyle = {
+  color: "var(--text-sub)",
+};

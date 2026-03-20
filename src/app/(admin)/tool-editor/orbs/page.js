@@ -1,26 +1,7 @@
-import OrbManager from "@/components/admin/orbs/OrbManager";
-import { fetchOrbs } from "@/lib/orbs";
+import OrbsClient from "@/components/admin/orbs/OrbsClient";
 
 export const dynamic = "force-dynamic";
 
-export default async function OrbsPage() {
-  let initialOrbs = [];
-
-  try {
-    initialOrbs = await fetchOrbs();
-  } catch (error) {
-    console.error("orbs fetch error:", error);
-  }
-
-  return (
-    <>
-      <h1 style={titleStyle}>オーブ管理</h1>
-      <OrbManager initialOrbs={initialOrbs} />
-    </>
-  );
+export default function OrbsPage() {
+  return <OrbsClient />;
 }
-
-const titleStyle = {
-  margin: 0,
-  fontSize: 28,
-};

@@ -1,6 +1,5 @@
 "use client";
 
-
 export default function CraftProfitHeaderCard({
   setQuery,
   setSetQuery,
@@ -19,12 +18,20 @@ export default function CraftProfitHeaderCard({
   const hasToolOptions = Array.isArray(toolOptions) && toolOptions.length > 1;
 
   return (
-    <section className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 shadow-sm space-y-4 h-full">
+    <section
+      className="rounded-2xl p-5 shadow-sm space-y-4 h-full"
+      style={{
+        backgroundColor: "var(--card-bg)",
+        border: "1px solid var(--card-border)",
+        color: "var(--text-main)",
+      }}
+    >
       <div className="space-y-3">
         <div className="min-w-0 relative">
-          <label className="text-xs text-slate-500 dark:text-slate-400">
+          <label className="text-xs" style={{ color: "var(--text-muted)" }}>
             装備セット
           </label>
+
           <input
             type="text"
             value={setQuery}
@@ -34,11 +41,22 @@ export default function CraftProfitHeaderCard({
               setSetQuery(e.target.value);
               setOpenSetList(true);
             }}
-            className="mt-1 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-700"
+            className="mt-1 w-full rounded-xl px-3 py-2 focus:outline-none"
+            style={{
+              border: "1px solid var(--input-border)",
+              backgroundColor: "var(--input-bg)",
+              color: "var(--input-text)",
+            }}
           />
 
           {openSetList && (
-            <div className="absolute z-20 mt-1 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow max-h-60 overflow-auto">
+            <div
+              className="absolute z-20 mt-1 w-full rounded-xl shadow max-h-60 overflow-auto"
+              style={{
+                border: "1px solid var(--card-border)",
+                backgroundColor: "var(--card-bg)",
+              }}
+            >
               {filteredSets.length > 0 ? (
                 filteredSets.map((s) => (
                   <button
@@ -48,25 +66,55 @@ export default function CraftProfitHeaderCard({
                       onChangeSet(s.id);
                       setOpenSetList(false);
                     }}
-                    className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 text-sm text-slate-900 dark:text-slate-100"
+                    className="w-full text-left px-3 py-2 text-sm"
+                    style={{
+                      color: "var(--text-main)",
+                      backgroundColor: "transparent",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = "var(--hover-bg)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                    }}
                   >
                     {s.name}
                   </button>
                 ))
               ) : (
-                <div className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">
+                <div
+                  className="px-3 py-2 text-sm"
+                  style={{ color: "var(--text-muted)" }}
+                >
                   該当なし
                 </div>
               )}
             </div>
-          )}
+              )}
         </div>
 
         <div className="min-w-0">
-          <div className="text-xs text-slate-500 dark:text-slate-400">職種</div>
-          <div className="mt-1 inline-flex w-full items-center justify-between rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 px-3 py-2">
-            <span className="text-sm font-semibold">{craftType || "—"}</span>
-            <span className="text-[11px] text-slate-500 dark:text-slate-400">
+          <div className="text-xs" style={{ color: "var(--text-muted)" }}>
+            職種
+          </div>
+
+          <div
+            className="mt-1 inline-flex w-full items-center justify-between rounded-xl px-3 py-2"
+            style={{
+              border: "1px solid var(--soft-border)",
+              backgroundColor: "var(--soft-bg)",
+            }}
+          >
+            <span
+              className="text-sm font-semibold"
+              style={{ color: "var(--text-main)" }}
+            >
+              {craftType || "—"}
+            </span>
+            <span
+              className="text-[11px]"
+              style={{ color: "var(--text-muted)" }}
+            >
               必要Lv {selectedSet?.craftLevel ?? "—"}
             </span>
           </div>
@@ -74,13 +122,18 @@ export default function CraftProfitHeaderCard({
 
         {hasToolOptions && (
           <div className="min-w-0">
-            <label className="text-xs text-slate-500 dark:text-slate-400">
+            <label className="text-xs" style={{ color: "var(--text-muted)" }}>
               使用する道具（30回）
             </label>
 
             <div className="mt-1 grid grid-cols-1 gap-2">
               <select
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-700"
+                className="w-full rounded-xl px-3 py-2 focus:outline-none"
+                style={{
+                  border: "1px solid var(--input-border)",
+                  backgroundColor: "var(--input-bg)",
+                  color: "var(--input-text)",
+                }}
                 value={toolId}
                 onChange={(e) => {
                   setToolId(e.target.value);
@@ -97,7 +150,12 @@ export default function CraftProfitHeaderCard({
               <input
                 type="number"
                 inputMode="numeric"
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100 px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-700"
+                className="w-full rounded-xl px-3 py-2 text-right focus:outline-none"
+                style={{
+                  border: "1px solid var(--input-border)",
+                  backgroundColor: "var(--input-bg)",
+                  color: "var(--input-text)",
+                }}
                 value={toolPrice}
                 min={0}
                 onChange={(e) => setToolPriceOverride(Number(e.target.value))}

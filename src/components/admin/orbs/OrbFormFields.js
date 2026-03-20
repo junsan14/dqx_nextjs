@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import MonsterPicker from "@/components/admin/shared/MonsterPicker";
 import { ORB_COLORS } from "@/lib/orbs";
 
@@ -8,10 +7,7 @@ export default function OrbFormFields({
   form,
   setForm,
   errors = {},
-  theme,
 }) {
-  const mergedTheme = useMemo(() => normalizeOrbFieldTheme(theme), [theme]);
-
   function onChange(e) {
     const { name, value } = e.target;
     setForm((prev) => ({
@@ -21,87 +17,97 @@ export default function OrbFormFields({
   }
 
   return (
-    <div style={wrapStyle}>
-      <div style={fieldStyle}>
-        <label htmlFor="name" style={labelStyle(mergedTheme)}>名前</label>
-        <input
-          id="name"
-          name="name"
-          value={form.name}
-          onChange={onChange}
-          style={inputStyle(mergedTheme)}
-          placeholder="例: 炎の宝珠"
-        />
-        {errors.name ? <div style={errorStyle(mergedTheme)}>{errors.name}</div> : null}
-      </div>
+    <>
+      <style>{`
+        .orb-form-input::placeholder,
+        .orb-form-textarea::placeholder {
+          color: var(--input-placeholder);
+          opacity: 1;
+        }
 
-      <div style={fieldStyle}>
-        <label htmlFor="color" style={labelStyle(mergedTheme)}>色</label>
-        <select
-          id="color"
-          name="color"
-          value={form.color}
-          onChange={onChange}
-          style={inputStyle(mergedTheme)}
-        >
-          <option value="">選択してください</option>
-          {ORB_COLORS.map((color) => (
-            <option key={color} value={color}>
-              {color}
-            </option>
-          ))}
-        </select>
-        {errors.color ? <div style={errorStyle(mergedTheme)}>{errors.color}</div> : null}
-      </div>
+        .orb-form-input:focus,
+        .orb-form-select:focus,
+        .orb-form-textarea:focus {
+          outline: none;
+          border-color: var(--selected-border);
+          box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.18);
+        }
+      `}</style>
 
-      <div style={fieldStyle}>
-        <label htmlFor="effect" style={labelStyle(mergedTheme)}>効果</label>
-        <textarea
-          id="effect"
-          name="effect"
-          value={form.effect}
-          onChange={onChange}
-          rows={8}
-          style={textareaStyle(mergedTheme)}
-          placeholder="効果を入力"
-        />
-        {errors.effect ? <div style={errorStyle(mergedTheme)}>{errors.effect}</div> : null}
-      </div>
+      <div style={wrapStyle}>
+        <div style={fieldStyle}>
+          <label htmlFor="name" style={labelStyle()}>名前</label>
+          <input
+            id="name"
+            name="name"
+            value={form.name}
+            onChange={onChange}
+            style={inputStyle()}
+            placeholder="例: 炎の宝珠"
+            className="orb-form-input"
+          />
+          {errors.name ? <div style={errorStyle()}>{errors.name}</div> : null}
+        </div>
 
-      <div style={{ display: "grid", gap: 10 }}>
-        <label style={labelStyle(mergedTheme)}>落とすモンスター</label>
+        <div style={fieldStyle}>
+          <label htmlFor="color" style={labelStyle()}>色</label>
+          <select
+            id="color"
+            name="color"
+            value={form.color}
+            onChange={onChange}
+            style={inputStyle()}
+            className="orb-form-select"
+          >
+            <option value="">選択してください</option>
+            {ORB_COLORS.map((color) => (
+              <option key={color} value={color}>
+                {color}
+              </option>
+            ))}
+          </select>
+          {errors.color ? <div style={errorStyle()}>{errors.color}</div> : null}
+        </div>
 
-        <MonsterPicker
-          value={form.drop_monsters}
-          defaultDropType="orb"
-          enableDropTypeSelect={false}
-          dropTypeOptions={[]}
-          titleWhenEmpty="まだ登録されていない"
-          theme={theme}
-          onChange={(rows) =>
-            setForm((prev) => ({
-              ...prev,
-              drop_monsters: rows.map((row, index) => ({
-                ...row,
-                drop_type: "orb",
-                sort_order: index + 1,
-              })),
-            }))
-          }
-        />
+        <div style={fieldStyle}>
+          <label htmlFor="effect" style={labelStyle()}>効果</label>
+          <textarea
+            id="effect"
+            name="effect"
+            value={form.effect}
+            onChange={onChange}
+            rows={8}
+            style={textareaStyle()}
+            placeholder="効果を入力"
+            className="orb-form-textarea"
+          />
+          {errors.effect ? <div style={errorStyle()}>{errors.effect}</div> : null}
+        </div>
+
+        <div style={{ display: "grid", gap: 10 }}>
+          <label style={labelStyle()}>落とすモンスター</label>
+
+          <MonsterPicker
+            value={form.drop_monsters}
+            defaultDropType="orb"
+            enableDropTypeSelect={false}
+            dropTypeOptions={[]}
+            titleWhenEmpty="まだ登録されていない"
+            onChange={(rows) =>
+              setForm((prev) => ({
+                ...prev,
+                drop_monsters: rows.map((row, index) => ({
+                  ...row,
+                  drop_type: "orb",
+                  sort_order: index + 1,
+                })),
+              }))
+            }
+          />
+        </div>
       </div>
-    </div>
+    </>
   );
-}
-
-function normalizeOrbFieldTheme(theme) {
-  return {
-    label: theme?.subText ?? theme?.text ?? "#334155",
-    inputBg: theme?.inputBg ?? "#ffffff",
-    inputBorder: theme?.inputBorder ?? "#ccc",
-    inputText: theme?.inputText ?? theme?.text ?? "#111827",
-    error: theme?.dangerText ?? "#c62828",
-  };
 }
 
 const wrapStyle = {
@@ -114,29 +120,29 @@ const fieldStyle = {
   gap: 6,
 };
 
-const labelStyle = (theme) => ({
+const labelStyle = () => ({
   fontWeight: 700,
-  color: theme.label,
+  color: "var(--text-sub)",
   fontSize: 14,
 });
 
-const inputStyle = (theme) => ({
+const inputStyle = () => ({
   width: "100%",
-  border: `1px solid ${theme.inputBorder}`,
+  border: "1px solid var(--input-border)",
   borderRadius: 8,
   padding: "10px 12px",
   fontSize: 16,
   boxSizing: "border-box",
-  background: theme.inputBg,
-  color: theme.inputText,
+  background: "var(--input-bg)",
+  color: "var(--input-text)",
 });
 
-const textareaStyle = (theme) => ({
-  ...inputStyle(theme),
+const textareaStyle = () => ({
+  ...inputStyle(),
   resize: "vertical",
 });
 
-const errorStyle = (theme) => ({
-  color: theme.error,
+const errorStyle = () => ({
+  color: "var(--danger-text)",
   fontSize: 13,
 });

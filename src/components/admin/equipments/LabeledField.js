@@ -1,12 +1,30 @@
 "use client";
 
-import styles from "./EquipmentForm.module.css";
-
 export default function LabeledField({ label, children }) {
   return (
-    <label className={styles.field}>
-      <div className={styles.label}>{label}</div>
-      {children}
+    <label style={styles.wrap}>
+      <span style={styles.label}>{label}</span>
+      <div style={styles.control}>{children}</div>
     </label>
   );
 }
+
+const styles = {
+  wrap: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 6,
+    minWidth: 0,
+  },
+
+  label: {
+    fontSize: 12,
+    fontWeight: 700,
+    color: "var(--text-muted)",
+    lineHeight: 1.4,
+  },
+
+  control: {
+    minWidth: 0,
+  },
+};

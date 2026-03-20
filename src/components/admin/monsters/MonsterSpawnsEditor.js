@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { normalizeMapRow } from "@/lib/monsterMapSpawns";
-import { applyMonsterThemeToStyleTree } from "../theme";
 import Image from "next/image";
 
 const COLS_8 = ["A", "B", "C", "D", "E", "F", "G", "H"];
@@ -12,10 +11,9 @@ const COLS_4 = ["A", "B", "C", "D"];
 const ROWS_4 = [1, 2, 3, 4];
 
 const SPAWN_TIME_OPTIONS = [
-  { value: "normal", label: "通常" },
+  { value: "normal", label: "いつでも" },
   { value: "day", label: "昼のみ" },
   { value: "night", label: "夜のみ" },
-  { value: "always", label: "常時" },
 ];
 
 const DEFAULT_MAP_GRID_INSET = {
@@ -50,7 +48,9 @@ function makeSpawn() {
     spawn_time: "normal",
     spawn_count: "",
     symbol_count: "",
+    imported_note: "",
     note: "",
+    is_hunting_ground: false,
     grid_mode: "block",
   };
 }
@@ -728,15 +728,38 @@ function SpawnCard({
         </label>
       </div>
 
-      <label style={styles.field}>
-        <span style={styles.label}>メモ</span>
-        <textarea
-          value={spawn?.note ?? ""}
-          onChange={(e) => setField("note", e.target.value)}
-          style={styles.textarea}
-          rows={3}
-          className="monster-spawns-textarea"
+      <div className="monster-spawns-note-grid" style={styles.noteGrid}>
+        <label style={styles.field}>
+          <span style={styles.label}>既存メモ</span>
+          <textarea
+            value={spawn?.imported_note ?? ""}
+            readOnly
+            style={styles.textareaReadonlyLarge}
+            rows={4}
+          />
+        </label>
+
+        <label style={styles.field}>
+          <span style={styles.label}>表示メモ</span>
+          <textarea
+            value={spawn?.note ?? ""}
+            onChange={(e) => setField("note", e.target.value)}
+            style={styles.textarea}
+            rows={4}
+            className="monster-spawns-textarea"
+            placeholder="表示用メモを入力"
+          />
+        </label>
+      </div>
+
+      <label style={styles.checkboxRow}>
+        <input
+          type="checkbox"
+          checked={Boolean(spawn?.is_hunting_ground)}
+          onChange={(e) => setField("is_hunting_ground", e.target.checked)}
+          style={styles.checkbox}
         />
+        <span style={styles.checkboxLabel}>狩場</span>
       </label>
 
       <SpawnMapGrid
@@ -755,9 +778,8 @@ export default function MonsterSpawnsEditor({
   spawns = [],
   maps = [],
   onChange,
-  theme,
 }) {
-  const styles = useMemo(() => getComponentStyles(theme), [theme]);
+  const styles = useMemo(() => getComponentStyles(), []);
   const mapOptions = useMemo(
     () => (Array.isArray(maps) ? maps.map(normalizeMapRow) : []),
     [maps]
@@ -896,6 +918,13 @@ export default function MonsterSpawnsEditor({
             min-width: 0 !important;
           }
 
+          .monster-spawns-note-grid {
+            grid-template-columns: 1fr !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+          }
+
           .monster-spawns-map-board {
             width: 100% !important;
             max-width: 100% !important;
@@ -987,8 +1016,8 @@ export default function MonsterSpawnsEditor({
 
 const baseStyles = {
   wrapper: {
-    background: "#ffffff",
-    border: "1px solid #e5e7eb",
+    background: "var(--card-bg)",
+    border: "1px solid var(--card-border)",
     borderRadius: 14,
     padding: 16,
     display: "flex",
@@ -1019,19 +1048,19 @@ const baseStyles = {
     margin: 0,
     fontSize: 18,
     fontWeight: 800,
-    color: "#111827",
+    color: "var(--text-title)",
     wordBreak: "break-word",
   },
   desc: {
     margin: "4px 0 0",
-    color: "#64748b",
+    color: "var(--text-muted)",
     fontSize: 13,
     wordBreak: "break-word",
   },
   addButton: {
-    border: "1px solid #cbd5e1",
-    background: "#f8fafc",
-    color: "#111827",
+    border: "1px solid var(--soft-border)",
+    background: "var(--soft-bg)",
+    color: "var(--text-main)",
     borderRadius: 10,
     padding: "10px 14px",
     cursor: "pointer",
@@ -1056,9 +1085,9 @@ const baseStyles = {
   tab: {
     flex: "0 0 auto",
     maxWidth: "calc(100vw - 96px)",
-    border: "1px solid #cbd5e1",
-    background: "#f8fafc",
-    color: "#64748b",
+    border: "1px solid var(--soft-border)",
+    background: "var(--soft-bg)",
+    color: "var(--text-muted)",
     borderRadius: 999,
     padding: "8px 12px",
     cursor: "pointer",
@@ -1072,20 +1101,20 @@ const baseStyles = {
     boxSizing: "border-box",
   },
   tabHover: {
-    background: "#ffffff",
-    color: "#111827",
-    borderColor: "#cbd5e1",
+    background: "var(--card-bg)",
+    color: "var(--text-main)",
+    borderColor: "var(--soft-border)",
   },
   tabActive: {
-    borderColor: "#93c5fd",
-    background: "#eff6ff",
-    color: "#1d4ed8",
+    borderColor: "var(--selected-border)",
+    background: "var(--selected-bg)",
+    color: "var(--selected-text)",
   },
   empty: {
     padding: 16,
     borderRadius: 12,
-    background: "#f8fafc",
-    color: "#64748b",
+    background: "var(--soft-bg)",
+    color: "var(--text-muted)",
     width: "100%",
     maxWidth: "100%",
     minWidth: 0,
@@ -1100,13 +1129,13 @@ const baseStyles = {
     minWidth: 0,
   },
   spawnCard: {
-    border: "1px solid #e5e7eb",
+    border: "1px solid var(--card-border)",
     borderRadius: 14,
     padding: 16,
     display: "flex",
     flexDirection: "column",
     gap: 14,
-    background: "#ffffff",
+    background: "var(--card-bg)",
     width: "100%",
     maxWidth: "100%",
     minWidth: 0,
@@ -1134,7 +1163,7 @@ const baseStyles = {
     margin: 0,
     fontSize: 17,
     fontWeight: 800,
-    color: "#111827",
+    color: "var(--text-title)",
     wordBreak: "break-word",
   },
   layerListWrap: {
@@ -1150,18 +1179,18 @@ const baseStyles = {
     minHeight: 24,
     padding: "4px 8px",
     borderRadius: 999,
-    background: "#f8fafc",
-    color: "#334155",
+    background: "var(--soft-bg)",
+    color: "var(--text-sub)",
     fontSize: 12,
     fontWeight: 700,
     lineHeight: 1.2,
     maxWidth: "100%",
-    border: "1px solid #e2e8f0",
+    border: "1px solid var(--soft-border)",
   },
   removeButton: {
-    border: "1px solid #fecaca",
-    background: "#fee2e2",
-    color: "#b91c1c",
+    border: "1px solid var(--danger-border)",
+    background: "var(--danger-bg)",
+    color: "var(--danger-text)",
     borderRadius: 10,
     padding: "8px 12px",
     cursor: "pointer",
@@ -1183,7 +1212,7 @@ const baseStyles = {
   modeLabel: {
     fontSize: 13,
     fontWeight: 700,
-    color: "#64748b",
+    color: "var(--text-muted)",
   },
   modeButtons: {
     display: "flex",
@@ -1193,9 +1222,9 @@ const baseStyles = {
     maxWidth: "100%",
   },
   modeButton: {
-    border: "1px solid #cbd5e1",
-    background: "#ffffff",
-    color: "#64748b",
+    border: "1px solid var(--soft-border)",
+    background: "var(--card-bg)",
+    color: "var(--text-muted)",
     borderRadius: 999,
     padding: "8px 12px",
     cursor: "pointer",
@@ -1204,13 +1233,13 @@ const baseStyles = {
     maxWidth: "100%",
   },
   modeButtonHover: {
-    background: "#f8fafc",
-    color: "#111827",
+    background: "var(--soft-bg)",
+    color: "var(--text-main)",
   },
   modeButtonActive: {
-    borderColor: "#93c5fd",
-    background: "#eff6ff",
-    color: "#1d4ed8",
+    borderColor: "var(--selected-border)",
+    background: "var(--selected-bg)",
+    color: "var(--selected-text)",
   },
   formGrid: {
     display: "grid",
@@ -1230,6 +1259,14 @@ const baseStyles = {
     minWidth: 0,
     alignItems: "end",
   },
+  noteGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: 12,
+    width: "100%",
+    maxWidth: "100%",
+    minWidth: 0,
+  },
   field: {
     display: "flex",
     flexDirection: "column",
@@ -1241,7 +1278,7 @@ const baseStyles = {
   label: {
     fontSize: 13,
     fontWeight: 700,
-    color: "#64748b",
+    color: "var(--text-muted)",
     wordBreak: "break-word",
   },
   input: {
@@ -1250,16 +1287,16 @@ const baseStyles = {
     maxWidth: "100%",
     minHeight: 42,
     borderRadius: 10,
-    border: "1px solid #cbd5e1",
+    border: "1px solid var(--input-border)",
     padding: "0 12px",
-    background: "#ffffff",
-    color: "#111827",
+    background: "var(--input-bg)",
+    color: "var(--input-text)",
     outline: "none",
     boxSizing: "border-box",
   },
   inputDisabled: {
-    background: "#f8fafc",
-    color: "#94a3b8",
+    background: "var(--input-disabled-bg)",
+    color: "var(--text-muted)",
     cursor: "not-allowed",
   },
   textarea: {
@@ -1267,10 +1304,10 @@ const baseStyles = {
     minWidth: 0,
     maxWidth: "100%",
     borderRadius: 10,
-    border: "1px solid #cbd5e1",
+    border: "1px solid var(--input-border)",
     padding: 12,
-    background: "#ffffff",
-    color: "#111827",
+    background: "var(--input-bg)",
+    color: "var(--input-text)",
     outline: "none",
     resize: "vertical",
     minHeight: 84,
@@ -1281,10 +1318,10 @@ const baseStyles = {
     minWidth: 0,
     maxWidth: "100%",
     borderRadius: 10,
-    border: "1px solid #e2e8f0",
+    border: "1px solid var(--soft-border)",
     padding: "10px 12px",
-    background: "#f8fafc",
-    color: "#334155",
+    background: "var(--soft-bg)",
+    color: "var(--text-sub)",
     outline: "none",
     resize: "none",
     minHeight: 42,
@@ -1292,6 +1329,41 @@ const baseStyles = {
     lineHeight: "20px",
     overflow: "hidden",
     boxSizing: "border-box",
+  },
+  textareaReadonlyLarge: {
+    width: "100%",
+    minWidth: 0,
+    maxWidth: "100%",
+    borderRadius: 10,
+    border: "1px solid var(--soft-border)",
+    padding: 12,
+    background: "var(--soft-bg)",
+    color: "var(--text-sub)",
+    outline: "none",
+    resize: "vertical",
+    minHeight: 96,
+    boxSizing: "border-box",
+  },
+  checkboxRow: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
+    width: "fit-content",
+    maxWidth: "100%",
+    color: "var(--text-main)",
+  },
+  checkbox: {
+    width: 16,
+    height: 16,
+    margin: 0,
+    cursor: "pointer",
+    accentColor: "var(--selected-border)",
+  },
+  checkboxLabel: {
+    fontSize: 14,
+    fontWeight: 700,
+    color: "var(--text-main)",
+    wordBreak: "break-word",
   },
   mapBoardWrap: {
     display: "flex",
@@ -1310,8 +1382,8 @@ const baseStyles = {
     aspectRatio: "1 / 1",
     borderRadius: 16,
     overflow: "hidden",
-    border: "1px solid #cbd5e1",
-    background: "#f8fafc",
+    border: "1px solid var(--soft-border)",
+    background: "var(--soft-bg)",
     boxSizing: "border-box",
   },
   mapImage: {
@@ -1326,7 +1398,7 @@ const baseStyles = {
     height: "100%",
     display: "grid",
     placeItems: "center",
-    color: "#64748b",
+    color: "var(--text-muted)",
     fontSize: 14,
     padding: 12,
     textAlign: "center",
@@ -1433,8 +1505,8 @@ const baseStyles = {
     left: 0,
     right: 0,
     zIndex: 30,
-    background: "#ffffff",
-    border: "1px solid #cbd5e1",
+    background: "var(--card-bg)",
+    border: "1px solid var(--soft-border)",
     borderRadius: 10,
     boxShadow: "0 10px 30px rgba(15, 23, 42, 0.12)",
     maxHeight: 240,
@@ -1445,187 +1517,31 @@ const baseStyles = {
   mapSearchItem: {
     width: "100%",
     border: "none",
-    borderBottom: "1px solid #e2e8f0",
-    background: "#ffffff",
+    borderBottom: "1px solid var(--soft-border)",
+    background: "var(--card-bg)",
     padding: "10px 12px",
     textAlign: "left",
     cursor: "pointer",
     boxSizing: "border-box",
   },
   mapSearchItemHover: {
-    background: "#f8fafc",
+    background: "var(--soft-bg)",
   },
   mapSearchItemName: {
     fontSize: 14,
-    color: "#111827",
+    color: "var(--text-main)",
     wordBreak: "break-word",
   },
   mapSearchEmpty: {
     padding: 12,
-    color: "#64748b",
+    color: "var(--text-muted)",
     fontSize: 14,
   },
-  focusRingColor: "#93c5fd",
-  focusRingShadow: "rgba(147, 197, 253, 0.25)",
-  placeholderColor: "#94a3b8",
+  focusRingColor: "var(--selected-border)",
+  focusRingShadow: "rgba(148, 163, 184, 0.18)",
+  placeholderColor: "var(--input-placeholder)",
 };
 
-function withTheme(base, theme) {
-  const t = theme ?? {};
-
-  return {
-    ...base,
-    wrapper: {
-      ...base.wrapper,
-      background: t.cardBg ?? base.wrapper.background,
-      border: `1px solid ${t.cardBorder ?? "#e5e7eb"}`,
-    },
-    title: {
-      ...base.title,
-      color: t.title ?? base.title.color,
-    },
-    desc: {
-      ...base.desc,
-      color: t.mutedText ?? base.desc.color,
-    },
-    addButton: {
-      ...base.addButton,
-      background: t.softBg ?? base.addButton.background,
-      border: `1px solid ${t.softBorder ?? "#cbd5e1"}`,
-      color: t.text ?? base.addButton.color,
-    },
-    tab: {
-      ...base.tab,
-      border: `1px solid ${t.softBorder ?? "#cbd5e1"}`,
-      background: t.softBg ?? base.tab.background,
-      color: t.mutedText ?? base.tab.color,
-    },
-    tabHover: {
-      ...base.tabHover,
-      background: t.cardBg ?? base.tabHover.background,
-      color: t.text ?? base.tabHover.color,
-      borderColor: t.softBorder ?? base.tabHover.borderColor,
-    },
-    tabActive: {
-      ...base.tabActive,
-      borderColor: t.selectedBorder ?? base.tabActive.borderColor,
-      background: t.selectedBg ?? base.tabActive.background,
-      color: t.primaryText ?? base.tabActive.color,
-    },
-    empty: {
-      ...base.empty,
-      background: t.softBg ?? base.empty.background,
-      color: t.mutedText ?? base.empty.color,
-    },
-    spawnCard: {
-      ...base.spawnCard,
-      background: t.cardBg ?? base.spawnCard.background,
-      border: `1px solid ${t.cardBorder ?? "#e5e7eb"}`,
-    },
-    spawnTitle: {
-      ...base.spawnTitle,
-      color: t.title ?? base.spawnTitle.color,
-    },
-    layerBadge: {
-      ...base.layerBadge,
-      background: t.softBg ?? base.layerBadge.background,
-      color: t.text ?? base.layerBadge.color,
-      border: `1px solid ${t.softBorder ?? "#e2e8f0"}`,
-    },
-    removeButton: {
-      ...base.removeButton,
-      border: `1px solid ${t.dangerBorder ?? "#fecaca"}`,
-      background: t.dangerBg ?? base.removeButton.background,
-      color: t.dangerText ?? base.removeButton.color,
-    },
-    modeLabel: {
-      ...base.modeLabel,
-      color: t.mutedText ?? base.modeLabel.color,
-    },
-    modeButton: {
-      ...base.modeButton,
-      border: `1px solid ${t.softBorder ?? "#cbd5e1"}`,
-      background: t.cardBg ?? base.modeButton.background,
-      color: t.mutedText ?? base.modeButton.color,
-    },
-    modeButtonHover: {
-      ...base.modeButtonHover,
-      background: t.softBg ?? base.modeButtonHover.background,
-      color: t.text ?? base.modeButtonHover.color,
-    },
-    modeButtonActive: {
-      ...base.modeButtonActive,
-      borderColor: t.selectedBorder ?? base.modeButtonActive.borderColor,
-      background: t.selectedBg ?? base.modeButtonActive.background,
-      color: t.primaryText ?? base.modeButtonActive.color,
-    },
-    label: {
-      ...base.label,
-      color: t.mutedText ?? base.label.color,
-    },
-    input: {
-      ...base.input,
-      background: t.inputBg ?? base.input.background,
-      border: `1px solid ${t.inputBorder ?? "#cbd5e1"}`,
-      color: t.inputText ?? base.input.color,
-    },
-    inputDisabled: {
-      ...base.inputDisabled,
-      background: t.disabledBg ?? base.inputDisabled.background,
-      color: t.disabledText ?? base.inputDisabled.color,
-    },
-    textarea: {
-      ...base.textarea,
-      background: t.inputBg ?? base.textarea.background,
-      border: `1px solid ${t.inputBorder ?? "#cbd5e1"}`,
-      color: t.inputText ?? base.textarea.color,
-    },
-    textareaReadonly: {
-      ...base.textareaReadonly,
-      background: t.softBg ?? base.textareaReadonly.background,
-      border: `1px solid ${t.softBorder ?? "#e2e8f0"}`,
-      color: t.text ?? base.textareaReadonly.color,
-    },
-    mapBoard: {
-      ...base.mapBoard,
-      background: t.softBg ?? base.mapBoard.background,
-      border: `1px solid ${t.softBorder ?? "#cbd5e1"}`,
-    },
-    mapPlaceholder: {
-      ...base.mapPlaceholder,
-      color: t.mutedText ?? base.mapPlaceholder.color,
-    },
-    mapSearchDropdown: {
-      ...base.mapSearchDropdown,
-      background: t.cardBg ?? base.mapSearchDropdown.background,
-      border: `1px solid ${t.softBorder ?? "#cbd5e1"}`,
-    },
-    mapSearchItem: {
-      ...base.mapSearchItem,
-      background: t.cardBg ?? base.mapSearchItem.background,
-      borderBottom: `1px solid ${t.softBorder ?? "#e2e8f0"}`,
-    },
-    mapSearchItemHover: {
-      ...base.mapSearchItemHover,
-      background: t.softBg ?? base.mapSearchItemHover.background,
-    },
-    mapSearchItemName: {
-      ...base.mapSearchItemName,
-      color: t.text ?? base.mapSearchItemName.color,
-    },
-    mapSearchEmpty: {
-      ...base.mapSearchEmpty,
-      color: t.mutedText ?? base.mapSearchEmpty.color,
-    },
-    focusRingColor: t.primaryBorder ?? base.focusRingColor,
-    focusRingShadow:
-      t.selectedBg === "#eff6ff"
-        ? "rgba(147, 197, 253, 0.25)"
-        : "rgba(148, 163, 184, 0.18)",
-    placeholderColor: t.mutedText ?? base.placeholderColor,
-  };
-}
-
-function getComponentStyles(theme) {
-  return applyMonsterThemeToStyleTree(withTheme(baseStyles, theme), theme);
+function getComponentStyles() {
+  return baseStyles;
 }

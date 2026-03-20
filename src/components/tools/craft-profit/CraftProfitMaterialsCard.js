@@ -4,6 +4,36 @@ import { useEffect, useMemo, useRef } from "react";
 import { clamp0, yen } from "@/lib/money";
 import { getSlotItemName } from "./craftProfitHelpers";
 
+const SLOT_ORDER = ["頭", "上", "下", "腕", "足"];
+
+function normalizeSlotName(slot) {
+  const text = String(slot ?? "");
+  if (text.includes("頭")) return "頭";
+  if (text.includes("体上")) return "上";
+  if (text.includes("体下")) return "下";
+  if (text.includes("腕")) return "腕";
+  if (text.includes("足")) return "足";
+  return text;
+}
+
+function sortSlots(slots = []) {
+  const safeSlots = Array.isArray(slots) ? slots : [];
+
+  return [...safeSlots].sort((a, b) => {
+    const na = normalizeSlotName(a);
+    const nb = normalizeSlotName(b);
+
+    const ia = SLOT_ORDER.indexOf(na);
+    const ib = SLOT_ORDER.indexOf(nb);
+
+    if (ia === -1 && ib === -1) return String(a).localeCompare(String(b), "ja");
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+
+    return ia - ib;
+  });
+}
+
 function SlotGridView({ grid }) {
   if (!grid) return null;
 
@@ -30,11 +60,16 @@ function SlotGridView({ grid }) {
           return (
             <div
               key={i}
-              className={`min-h-[48px] rounded-xl border px-2 py-2 flex items-center justify-center text-center ${
-                disabled
-                  ? "border-slate-200 bg-slate-100 text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-500"
-                  : "border-slate-300 bg-slate-50 text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-              }`}
+              className="min-h-[48px] rounded-xl border px-2 py-2 flex items-center justify-center text-center"
+              style={{
+                border: `1px solid ${
+                  disabled ? "var(--soft-border)" : "var(--card-border)"
+                }`,
+                backgroundColor: disabled
+                  ? "var(--soft-bg)"
+                  : "var(--card-bg)",
+                color: disabled ? "var(--text-muted)" : "var(--text-main)",
+              }}
             >
               <div className="text-sm font-semibold leading-tight tabular-nums break-words">
                 {disabled ? "" : value}
@@ -56,30 +91,49 @@ function getAxisLabel(slot, slotGridMeta, slotItemMap) {
   );
 }
 
-function getAxisItemName(slot, slotGridMeta, selectedSet) {
+function getMobileAxisTitle(slot, slotGridMeta, slotItemMap) {
   return (
     slotGridMeta?.[slot]?.itemName ||
-    getSlotItemName(selectedSet, slot)
+    slotItemMap?.[slot] ||
+    slotGridMeta?.[slot]?.label ||
+    slot
   );
 }
 
-function MobileSlotTabs({ slots, activeSlot, onChange, slotGridMeta, slotItemMap }) {
+function getAxisItemName(slot, slotGridMeta, selectedSet) {
+  return slotGridMeta?.[slot]?.itemName || getSlotItemName(selectedSet, slot);
+}
+
+function MobileSlotTabs({
+  slots,
+  activeSlot,
+  onChange,
+  slotGridMeta,
+  slotItemMap,
+}) {
+  const safeSlots = Array.isArray(slots) ? slots : [];
+
   return (
     <div className="-mx-4 px-4 sm:mx-0 sm:px-0 overflow-x-auto">
       <div className="flex gap-2 py-1">
-        {slots.map((s) => {
+        {safeSlots.map((s) => {
           const isActive = s === activeSlot;
+
           return (
             <button
               key={s}
               type="button"
               onClick={() => onChange(s)}
-              className={
-                "shrink-0 rounded-full border px-3 py-1 text-sm font-semibold " +
-                (isActive
-                  ? "border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900"
-                  : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200")
-              }
+              className="shrink-0 rounded-full border px-3 py-1 text-sm font-semibold"
+              style={{
+                border: `1px solid ${
+                  isActive ? "var(--selected-border)" : "var(--card-border)"
+                }`,
+                backgroundColor: isActive
+                  ? "var(--primary-bg)"
+                  : "var(--card-bg)",
+                color: isActive ? "var(--primary-text)" : "var(--text-main)",
+              }}
             >
               {getAxisLabel(s, slotGridMeta, slotItemMap)}
             </button>
@@ -90,7 +144,15 @@ function MobileSlotTabs({ slots, activeSlot, onChange, slotGridMeta, slotItemMap
   );
 }
 
-function MobileMaterialsList({ slot, rows, unitCostMap, onChangeUnitCost, toolRow }) {
+function MobileMaterialsList({
+  slot,
+  rows,
+  unitCostMap,
+  onChangeUnitCost,
+  toolRow,
+}) {
+  const safeRows = Array.isArray(rows) ? rows : [];
+
   const items = useMemo(() => {
     const out = [];
 
@@ -106,11 +168,11 @@ function MobileMaterialsList({ slot, rows, unitCostMap, onChangeUnitCost, toolRo
       });
     }
 
-    for (const r of rows) {
-      const qty = Number(r.perSlotQty?.[slot] || 0);
+    for (const r of safeRows) {
+      const qty = Number(r?.perSlotQty?.[slot] || 0);
       if (!qty) continue;
 
-      const unit = clamp0(unitCostMap[r.materialKey] ?? 0);
+      const unit = clamp0(unitCostMap?.[r.materialKey] ?? 0);
 
       out.push({
         key: r.materialKey,
@@ -123,7 +185,7 @@ function MobileMaterialsList({ slot, rows, unitCostMap, onChangeUnitCost, toolRo
     }
 
     return out;
-  }, [slot, rows, unitCostMap, toolRow]);
+  }, [slot, safeRows, unitCostMap, toolRow]);
 
   const totalAmount = useMemo(
     () => items.reduce((sum, x) => sum + clamp0(x.amount), 0),
@@ -131,29 +193,52 @@ function MobileMaterialsList({ slot, rows, unitCostMap, onChangeUnitCost, toolRo
   );
 
   return (
-    <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden text-[11px] bg-white dark:bg-slate-900">
-      <div className="grid grid-cols-[minmax(120px,1fr)_32px_56px_56px] items-center gap-1 py-2 text-[11px] font-semibold text-center bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
-        <div className="text-left px-2 text-slate-900 dark:text-slate-100">素材名</div>
-        <div className="text-slate-900 dark:text-slate-100">必要</div>
-        <div className="text-slate-900 dark:text-slate-100">金額</div>
-        <div className="text-slate-900 dark:text-slate-100">単価</div>
+    <div
+      className="rounded-lg overflow-hidden text-[11px]"
+      style={{
+        border: "1px solid var(--card-border)",
+        backgroundColor: "var(--card-bg)",
+      }}
+    >
+      <div
+        className="grid grid-cols-[minmax(120px,1fr)_32px_56px_56px] items-center gap-1 py-2 text-[11px] font-semibold text-center border-b"
+        style={{
+          backgroundColor: "var(--soft-bg)",
+          borderColor: "var(--card-border)",
+          color: "var(--text-main)",
+        }}
+      >
+        <div className="text-left px-2">素材名</div>
+        <div>必要</div>
+        <div>金額</div>
+        <div>単価</div>
       </div>
 
       {items.length ? (
         items.map((x) => (
           <div
             key={x.key}
-            className="grid grid-cols-[minmax(120px,1fr)_32px_56px_56px] items-center gap-1 py-1 border-t border-slate-100 dark:border-slate-800"
+            className="grid grid-cols-[minmax(120px,1fr)_32px_56px_56px] items-center gap-1 py-1 border-t"
+            style={{ borderColor: "var(--card-border)" }}
           >
-            <div className="truncate font-medium px-2 text-slate-900 dark:text-slate-100">
+            <div
+              className="truncate font-medium px-2"
+              style={{ color: "var(--text-main)" }}
+            >
               {x.name}
             </div>
 
-            <div className="text-center text-slate-500 dark:text-slate-400">
+            <div
+              className="text-center"
+              style={{ color: "var(--text-muted)" }}
+            >
               {x.isTool ? "-" : x.qty}
             </div>
 
-            <div className="text-center tabular-nums text-slate-900 dark:text-slate-100">
+            <div
+              className="text-center tabular-nums"
+              style={{ color: "var(--text-main)" }}
+            >
               {yen(x.amount)}
             </div>
 
@@ -161,7 +246,12 @@ function MobileMaterialsList({ slot, rows, unitCostMap, onChangeUnitCost, toolRo
               <input
                 type="number"
                 inputMode="numeric"
-                className="h-7 w-full text-right border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 rounded px-1 text-[16px] scale-[0.8] origin-right"
+                className="h-7 w-full text-right rounded px-1 text-[16px] scale-[0.8] origin-right"
+                style={{
+                  border: "1px solid var(--input-border)",
+                  backgroundColor: "var(--input-bg)",
+                  color: "var(--input-text)",
+                }}
                 value={x.unit}
                 min={0}
                 onChange={(e) => {
@@ -174,12 +264,21 @@ function MobileMaterialsList({ slot, rows, unitCostMap, onChangeUnitCost, toolRo
           </div>
         ))
       ) : (
-        <div className="px-3 py-4 text-xs text-slate-500 dark:text-slate-400">
+        <div
+          className="px-3 py-4 text-xs"
+          style={{ color: "var(--text-muted)" }}
+        >
           この項目で使う素材はない。
         </div>
       )}
 
-      <div className="flex justify-end items-center px-2 py-1 bg-slate-100 dark:bg-slate-800 font-semibold text-slate-900 dark:text-slate-100">
+      <div
+        className="flex justify-end items-center px-2 py-1 font-semibold"
+        style={{
+          backgroundColor: "var(--soft-bg)",
+          color: "var(--text-main)",
+        }}
+      >
         <span>合計: {yen(totalAmount)}G</span>
       </div>
     </div>
@@ -195,6 +294,7 @@ function MobileSlotCarousel({
   slotGridMeta,
   children,
 }) {
+  const safeSlots = Array.isArray(slots) ? slots : [];
   const scrollerRef = useRef(null);
   const lastActiveRef = useRef(activeSlot);
   const setByScrollRef = useRef(false);
@@ -221,7 +321,8 @@ function MobileSlotCarousel({
     const card = el.querySelector(`[data-slot="${escapedSlot}"]`);
     if (!card) return;
 
-    const targetLeft = card.offsetLeft - (el.clientWidth / 2 - card.offsetWidth / 2);
+    const targetLeft =
+      card.offsetLeft - (el.clientWidth / 2 - card.offsetWidth / 2);
 
     el.scrollTo({
       left: Math.max(0, targetLeft),
@@ -271,7 +372,7 @@ function MobileSlotCarousel({
       >
         <div className="shrink-0 w-4" />
 
-        {slots.map((slot) => {
+        {safeSlots.map((slot) => {
           const grid = slotGrids?.[slot] ?? null;
 
           return (
@@ -282,9 +383,18 @@ function MobileSlotCarousel({
             >
               <div className="space-y-3">
                 {grid ? (
-                  <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 p-3 space-y-2">
-                    <div className="text-xs font-semibold text-center text-slate-700 dark:text-slate-200 truncate px-2">
-                      {getAxisLabel(slot, slotGridMeta, slotItemMap)}
+                  <div
+                    className="rounded-2xl p-3 space-y-2"
+                    style={{
+                      border: "1px solid var(--card-border)",
+                      backgroundColor: "var(--soft-bg)",
+                    }}
+                  >
+                    <div
+                      className="text-xs font-semibold text-center truncate px-2"
+                      style={{ color: "var(--text-sub)" }}
+                    >
+                      {getMobileAxisTitle(slot, slotGridMeta, slotItemMap)}
                     </div>
 
                     <div className="min-h-[184px] flex items-center">
@@ -302,10 +412,6 @@ function MobileSlotCarousel({
         })}
 
         <div className="shrink-0 w-4" />
-      </div>
-
-      <div className="text-center text-[11px] text-slate-500 dark:text-slate-400">
-        ← 横スワイプで切替 →
       </div>
     </div>
   );
@@ -342,15 +448,34 @@ export default function CraftProfitMaterialsCard({
     return map;
   }, [selectedSet]);
 
+  const safeSlots = Array.isArray(slots) ? slots : [];
+  const safeRows = Array.isArray(rows) ? rows : [];
+  const sortedSlots = useMemo(() => sortSlots(safeSlots), [safeSlots]);
+
+  useEffect(() => {
+    if (!sortedSlots.length) return;
+    if (!sortedSlots.includes(activeSlot)) {
+      setActiveSlot(sortedSlots[0]);
+    }
+  }, [sortedSlots, activeSlot, setActiveSlot]);
+
   return (
-    <section className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 shadow-sm space-y-3">
+    <section
+      className="rounded-2xl p-5 shadow-sm space-y-3"
+      style={{
+        border: "1px solid var(--card-border)",
+        backgroundColor: "var(--card-bg)",
+      }}
+    >
       <div className="flex items-baseline justify-between gap-3 flex-wrap">
-        <h2 className="text-lg font-semibold">職人情報</h2>
+        <h2 className="text-lg font-semibold" style={{ color: "var(--text-title)" }}>
+          職人情報
+        </h2>
       </div>
 
       <div className="sm:hidden space-y-3">
         <MobileSlotTabs
-          slots={slots}
+          slots={sortedSlots}
           activeSlot={activeSlot}
           onChange={setActiveSlot}
           slotGridMeta={slotGridMeta}
@@ -358,7 +483,7 @@ export default function CraftProfitMaterialsCard({
         />
 
         <MobileSlotCarousel
-          slots={slots}
+          slots={sortedSlots}
           activeSlot={activeSlot}
           onChange={setActiveSlot}
           slotGrids={slotGrids}
@@ -368,7 +493,7 @@ export default function CraftProfitMaterialsCard({
           {(slot) => (
             <MobileMaterialsList
               slot={slot}
-              rows={rows}
+              rows={safeRows}
               unitCostMap={unitCostMap}
               onChangeUnitCost={updateUnitCost}
               toolRow={mobileToolRow}
@@ -378,11 +503,13 @@ export default function CraftProfitMaterialsCard({
       </div>
 
       <div className="hidden sm:block space-y-3">
-        <div className="text-xs text-slate-500 dark:text-slate-400">基準値</div>
+        <div className="text-xs" style={{ color: "var(--text-muted)" }}>
+          基準値
+        </div>
 
         <div className="overflow-x-auto">
           <div className="flex gap-3 min-w-max pb-2">
-            {slots.map((slot) => {
+            {sortedSlots.map((slot) => {
               const grid = slotGrids?.[slot] ?? null;
               const label = getAxisLabel(slot, slotGridMeta, slotItemMap);
               const itemName = getAxisItemName(slot, slotGridMeta, selectedSet);
@@ -392,9 +519,16 @@ export default function CraftProfitMaterialsCard({
               return (
                 <div
                   key={slot}
-                  className="w-[220px] shrink-0 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 p-4 space-y-2"
+                  className="w-[220px] shrink-0 rounded-2xl p-4 space-y-2"
+                  style={{
+                    border: "1px solid var(--card-border)",
+                    backgroundColor: "var(--soft-bg)",
+                  }}
                 >
-                  <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  <div
+                    className="text-sm font-semibold"
+                    style={{ color: "var(--text-main)" }}
+                  >
                     {label}
                     {itemName && itemName !== label ? (
                       <>
@@ -411,29 +545,56 @@ export default function CraftProfitMaterialsCard({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden">
+        <div
+          className="rounded-2xl overflow-hidden"
+          style={{
+            border: "1px solid var(--card-border)",
+            backgroundColor: "var(--card-bg)",
+          }}
+        >
           <div className="overflow-x-auto">
             <table className="min-w-[900px] w-full text-sm">
-              <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+              <thead
+                className="border-b"
+                style={{
+                  backgroundColor: "var(--soft-bg)",
+                  borderColor: "var(--card-border)",
+                }}
+              >
                 <tr>
-                  <th className="px-3 py-2 text-left font-semibold text-slate-700 dark:text-slate-200">
+                  <th
+                    className="px-3 py-2 text-left font-semibold"
+                    style={{ color: "var(--text-sub)" }}
+                  >
                     素材
                   </th>
-                  {slots.map((slot) => (
+
+                  {sortedSlots.map((slot) => (
                     <th
                       key={slot}
-                      className="px-3 py-2 text-right font-semibold text-slate-700 dark:text-slate-200"
+                      className="px-3 py-2 text-right font-semibold"
+                      style={{ color: "var(--text-sub)" }}
                     >
                       {getAxisLabel(slot, slotGridMeta, slotItemMap)}
                     </th>
                   ))}
-                  <th className="px-3 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">
+
+                  <th
+                    className="px-3 py-2 text-right font-semibold"
+                    style={{ color: "var(--text-sub)" }}
+                  >
                     合計
                   </th>
-                  <th className="px-3 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">
+                  <th
+                    className="px-3 py-2 text-right font-semibold"
+                    style={{ color: "var(--text-sub)" }}
+                  >
                     単価
                   </th>
-                  <th className="px-3 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">
+                  <th
+                    className="px-3 py-2 text-right font-semibold"
+                    style={{ color: "var(--text-sub)" }}
+                  >
                     金額
                   </th>
                 </tr>
@@ -441,77 +602,119 @@ export default function CraftProfitMaterialsCard({
 
               <tbody>
                 {toolEnabled && selectedTool?.id !== "none" && (
-                  <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40">
-                    <td className="px-3 py-2 font-semibold text-slate-900 dark:text-slate-100">
+                  <tr
+                    className="border-b"
+                    style={{
+                      borderColor: "var(--card-border)",
+                      backgroundColor: "var(--soft-bg)",
+                    }}
+                  >
+                    <td
+                      className="px-3 py-2 font-semibold"
+                      style={{ color: "var(--text-main)" }}
+                    >
                       【道具】{selectedTool.name}
                     </td>
-                    {slots.map((slot) => (
+
+                    {sortedSlots.map((slot) => (
                       <td
                         key={slot}
-                        className="px-3 py-2 text-right tabular-nums text-slate-700 dark:text-slate-200"
+                        className="px-3 py-2 text-right tabular-nums"
+                        style={{ color: "var(--text-sub)" }}
                       >
                         —
                       </td>
                     ))}
-                    <td className="px-3 py-2 text-right font-semibold tabular-nums text-slate-900 dark:text-slate-100">
+
+                    <td
+                      className="px-3 py-2 text-right font-semibold tabular-nums"
+                      style={{ color: "var(--text-main)" }}
+                    >
                       —
                     </td>
+
                     <td className="px-3 py-2 text-right">
                       <input
                         type="number"
                         inputMode="numeric"
-                        className="w-24 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-2 py-1 text-right focus:outline-none focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-700"
+                        className="w-24 rounded-lg px-2 py-1 text-right focus:outline-none"
+                        style={{
+                          border: "1px solid var(--input-border)",
+                          backgroundColor: "var(--input-bg)",
+                          color: "var(--input-text)",
+                        }}
                         value={toolPrice}
                         min={0}
                         onChange={(e) => setToolPriceOverride(Number(e.target.value))}
                       />
                     </td>
-                    <td className="px-3 py-2 text-right font-semibold tabular-nums text-slate-900 dark:text-slate-100">
+
+                    <td
+                      className="px-3 py-2 text-right font-semibold tabular-nums"
+                      style={{ color: "var(--text-main)" }}
+                    >
                       {yen(toolCostPerCraft)}
                     </td>
                   </tr>
                 )}
 
-                {rows.map((r) => {
-                  const unit = clamp0(unitCostMap[r.materialKey] ?? 0);
-                  const amount = clamp0(r.totalQty) * unit;
+                {safeRows.map((row) => {
+                  const totalQty = Number(row.totalQty || 0);
+                  const unit = clamp0(unitCostMap?.[row.materialKey] ?? 0);
+                  const amount = totalQty * unit;
 
                   return (
                     <tr
-                      key={r.materialKey}
-                      className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40"
+                      key={row.materialKey}
+                      className="border-b"
+                      style={{ borderColor: "var(--card-border)" }}
                     >
-                      <td className="px-3 py-2 whitespace-nowrap">
-                        <span className="font-medium text-slate-900 dark:text-slate-100">
-                          {r.materialName}
-                        </span>
+                      <td
+                        className="px-3 py-2 font-medium"
+                        style={{ color: "var(--text-main)" }}
+                      >
+                        {row.materialName}
                       </td>
 
-                      {slots.map((slot) => (
+                      {sortedSlots.map((slot) => (
                         <td
                           key={slot}
-                          className="px-3 py-2 text-right tabular-nums text-slate-700 dark:text-slate-200"
+                          className="px-3 py-2 text-right tabular-nums"
+                          style={{ color: "var(--text-sub)" }}
                         >
-                          {r.perSlotQty[slot] ? r.perSlotQty[slot] : ""}
+                          {row.perSlotQty?.[slot] || ""}
                         </td>
                       ))}
 
-                      <td className="px-3 py-2 text-right font-semibold tabular-nums text-slate-900 dark:text-slate-100">
-                        {r.totalQty}
+                      <td
+                        className="px-3 py-2 text-right tabular-nums font-semibold"
+                        style={{ color: "var(--text-main)" }}
+                      >
+                        {totalQty}
                       </td>
 
                       <td className="px-3 py-2 text-right">
                         <input
                           type="number"
                           inputMode="numeric"
-                          className="w-24 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-2 py-1 text-right focus:outline-none focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-700"
-                          value={unitCostMap[r.materialKey] ?? 0}
+                          className="w-24 rounded-lg px-2 py-1 text-right focus:outline-none"
+                          style={{
+                            border: "1px solid var(--input-border)",
+                            backgroundColor: "var(--input-bg)",
+                            color: "var(--input-text)",
+                          }}
+                          value={unit}
                           min={0}
-                          onChange={(e) => updateUnitCost(r.materialKey, e.target.value)}
+                          onChange={(e) =>
+                            updateUnitCost(row.materialKey, Number(e.target.value))
+                          }
                         />
                       </td>
 
-                      <td className="px-3 py-2 text-right font-semibold tabular-nums text-slate-900 dark:text-slate-100">
+                      <td
+                        className="px-3 py-2 text-right tabular-nums font-semibold"
+                        style={{ color: "var(--text-main)" }}
+                      >
                         {yen(amount)}
                       </td>
                     </tr>
@@ -519,46 +722,42 @@ export default function CraftProfitMaterialsCard({
                 })}
               </tbody>
 
-              <tfoot className="bg-slate-50 dark:bg-slate-800/40">
+              <tfoot
+                style={{
+                  backgroundColor: "var(--soft-bg)",
+                  borderTop: "1px solid var(--card-border)",
+                }}
+              >
                 <tr>
-                  <td className="px-3 py-2 font-semibold border-t border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100">
-                    合計（道具込）
+                  <td
+                    className="px-3 py-2 font-semibold"
+                    style={{ color: "var(--text-main)" }}
+                  >
+                    合計
                   </td>
 
-                  {slots.map((slot) => (
+                  {sortedSlots.map((slot) => (
                     <td
                       key={slot}
-                      className="px-3 py-2 text-right font-semibold tabular-nums border-t border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                      className="px-3 py-2 text-right tabular-nums font-semibold"
+                      style={{ color: "var(--text-main)" }}
                     >
-                      {slotTotalsWithTool.amount[slot]
-                        ? yen(slotTotalsWithTool.amount[slot])
-                        : ""}
+                      {yen(slotTotalsWithTool?.amount?.[slot] || 0)}
                     </td>
                   ))}
 
-                  <td className="px-3 py-2 text-right font-semibold tabular-nums border-t border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100">
-                    {yen(slotTotalsWithTool.total)}
-                  </td>
-                  <td className="px-3 py-2 text-right border-t border-slate-200 dark:border-slate-700">
-                    —
-                  </td>
-                  <td className="px-3 py-2 text-right font-semibold border-t border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100">
-                    {yen(slotTotalsWithTool.total)}
-                  </td>
-                </tr>
-
-                <tr>
-                  <td className="px-3 py-2 font-semibold border-t border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100">
-                    参考（1件あたり）
+                  <td />
+                  <td
+                    className="px-3 py-2 text-right text-xs font-semibold"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    1部位平均
                   </td>
                   <td
-                    className="px-3 py-2 text-right font-semibold tabular-nums border-t border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100"
-                    colSpan={slots.length + 2}
+                    className="px-3 py-2 text-right tabular-nums font-semibold"
+                    style={{ color: "var(--text-main)" }}
                   >
-                    平均材料 {yen(avgMaterialCostPerPart)} + 道具 {yen(toolEnabled ? toolCostPerCraft : 0)} = 原価 {yen(costPerItem)}
-                  </td>
-                  <td className="px-3 py-2 text-right border-t border-slate-200 dark:border-slate-700">
-                    —
+                    {yen(avgMaterialCostPerPart)} / {yen(costPerItem)}
                   </td>
                 </tr>
               </tfoot>

@@ -2,11 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { fetchMonsterDetail, searchMonsters } from "@/lib/monsters";
-import MonsterSearchHero from "./MonsterSearchHero";
+
 import MonsterSearchCard from "./MonsterSearchCard";
 import MonsterDetailHero from "@/components/tools/monsters/detail/MonsterDetailHero";
 import MonsterDropSection from "@/components/tools/monsters/detail/MonsterDropSection";
 import MonsterMapSection from "@/components/tools/monsters/detail/MonsterMapSection";
+import PageHeroTitle from "@/components/PageHeroTitle";
 
 const SEARCH_OPTIONS = [
   { value: "monster", label: "モンスター" },
@@ -15,8 +16,8 @@ const SEARCH_OPTIONS = [
   { value: "equipment", label: "装備" },
 ];
 
-function MonstersSearchPageLoading({ isDark }) {
-  const loadingStyles = getLoadingStyles(isDark);
+function MonstersSearchPageLoading() {
+  const loadingStyles = getLoadingStyles();
 
   return (
     <div style={loadingStyles.pageWrap}>
@@ -79,8 +80,8 @@ function MonstersSearchPageLoading({ isDark }) {
   );
 }
 
-function MonsterDetailLoading({ isDark }) {
-  const loadingStyles = getLoadingStyles(isDark);
+function MonsterDetailLoading() {
+  const loadingStyles = getLoadingStyles();
 
   return (
     <div style={loadingStyles.detailCard}>
@@ -128,7 +129,6 @@ function MonsterDetailLoading({ isDark }) {
 }
 
 export default function MonstersSearchClient() {
-  const [isDark, setIsDark] = useState(false);
   const [searchType, setSearchType] = useState("monster");
   const [keyword, setKeyword] = useState("");
   const [monsters, setMonsters] = useState([]);
@@ -147,24 +147,7 @@ export default function MonstersSearchClient() {
   const wrapperRef = useRef(null);
   const itemRefs = useRef({});
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const applyTheme = () => setIsDark(media.matches);
-
-    applyTheme();
-
-    if (typeof media.addEventListener === "function") {
-      media.addEventListener("change", applyTheme);
-      return () => media.removeEventListener("change", applyTheme);
-    }
-
-    media.addListener(applyTheme);
-    return () => media.removeListener(applyTheme);
-  }, []);
-
-  const styles = useMemo(() => getStyles(isDark), [isDark]);
+  const styles = useMemo(() => getStyles(), []);
 
   const currentLabel = useMemo(() => {
     return SEARCH_OPTIONS.find((x) => x.value === searchType)?.label ?? "検索";
@@ -392,9 +375,12 @@ export default function MonstersSearchClient() {
 
   if (initialLoading) {
     return (
-      <main style={styles.page}>
-        <MonsterSearchHero />
-        <MonstersSearchPageLoading isDark={isDark} />
+      <main>
+        <PageHeroTitle
+          kicker="DQX MONSTER DATABASE"
+          title="モンスター検索"
+        />
+        <MonstersSearchPageLoading />
 
         <style>{`
           @keyframes monsterSearchShimmer {
@@ -411,8 +397,11 @@ export default function MonstersSearchClient() {
   }
 
   return (
-    <main style={styles.page}>
-      <MonsterSearchHero />
+    <main>
+      <PageHeroTitle
+        kicker="DQX MONSTER DATABASE"
+        title="モンスター検索"
+      />
 
       <section style={styles.searchSection}>
         <div style={styles.searchCard}>
@@ -521,7 +510,7 @@ export default function MonstersSearchClient() {
                 {isOpen && (
                   <div style={styles.detailWrap}>
                     {isDetailLoading && !detail ? (
-                      <MonsterDetailLoading isDark={isDark} />
+                      <MonsterDetailLoading />
                     ) : errorText ? (
                       <div style={styles.errorCard}>{errorText}</div>
                     ) : detail ? (
@@ -558,40 +547,31 @@ export default function MonstersSearchClient() {
   );
 }
 
-function getShimmer(isDark) {
+function getShimmer() {
   return {
-    background: isDark
-      ? "linear-gradient(90deg, rgba(30,41,59,0.95) 0%, rgba(51,65,85,1) 50%, rgba(30,41,59,0.95) 100%)"
-      : "linear-gradient(90deg, rgba(226,232,240,0.9) 0%, rgba(241,245,249,1) 50%, rgba(226,232,240,0.9) 100%)",
+    background:
+      "linear-gradient(90deg, color-mix(in srgb, var(--soft-border) 88%, transparent) 0%, color-mix(in srgb, var(--soft-bg) 100%, white 0%) 50%, color-mix(in srgb, var(--soft-border) 88%, transparent) 100%)",
     backgroundSize: "200% 100%",
     animation: "monsterSearchShimmer 1.4s ease-in-out infinite",
   };
 }
 
-function getLoadingStyles(isDark) {
-  const shimmer = getShimmer(isDark);
+function getLoadingStyles() {
+  const shimmer = getShimmer();
 
   return {
     pageWrap: {
       width: "100%",
-      maxWidth: "1100px",
-      margin: "0 auto",
-      minWidth: 0,
-      boxSizing: "border-box",
     },
     searchCard: {
       position: "relative",
-      border: isDark
-        ? "1px solid rgba(51,65,85,0.9)"
-        : "1px solid rgba(255,255,255,0.75)",
-      background: isDark ? "rgba(15,23,42,0.84)" : "rgba(255,255,255,0.82)",
+      border: "1px solid var(--panel-border)",
+      background: "color-mix(in srgb, var(--panel-bg) 82%, transparent)",
       backdropFilter: "blur(14px)",
       WebkitBackdropFilter: "blur(14px)",
       borderRadius: "24px",
       padding: "18px",
-      boxShadow: isDark
-        ? "0 18px 50px rgba(2,6,23,0.5)"
-        : "0 18px 50px rgba(15,23,42,0.08)",
+      boxShadow: "0 18px 50px color-mix(in srgb, var(--page-text) 8%, transparent)",
       width: "100%",
       boxSizing: "border-box",
       marginBottom: "28px",
@@ -615,7 +595,7 @@ function getLoadingStyles(isDark) {
       left: "16px",
       top: "50%",
       transform: "translateY(-50%)",
-      color: isDark ? "#64748b" : "#94a3b8",
+      color: "var(--text-muted)",
       fontSize: "18px",
       zIndex: 2,
     },
@@ -637,13 +617,9 @@ function getLoadingStyles(isDark) {
     },
     card: {
       borderRadius: "24px",
-      background: isDark ? "rgba(15,23,42,0.9)" : "rgba(255,255,255,0.88)",
-      border: isDark
-        ? "1px solid rgba(51,65,85,0.9)"
-        : "1px solid rgba(255,255,255,0.75)",
-      boxShadow: isDark
-        ? "0 18px 40px rgba(2,6,23,0.42)"
-        : "0 18px 40px rgba(15,23,42,0.06)",
+      background: "var(--card-bg)",
+      border: "1px solid var(--card-border)",
+      boxShadow: "0 18px 40px color-mix(in srgb, var(--page-text) 6%, transparent)",
       overflow: "hidden",
     },
     cardInner: {
@@ -687,14 +663,10 @@ function getLoadingStyles(isDark) {
     detailCard: {
       borderRadius: "0 0 24px 24px",
       padding: "18px",
-      background: isDark ? "rgba(15,23,42,0.98)" : "rgba(255,255,255,0.96)",
-      border: isDark ? "1px solid #4f46e5" : "1px solid #c7d2fe",
-      borderTop: isDark
-        ? "1px solid rgba(99,102,241,0.35)"
-        : "1px solid rgba(199,210,254,0.55)",
-      boxShadow: isDark
-        ? "0 14px 34px rgba(79,70,229,0.16)"
-        : "0 14px 34px rgba(79,70,229,0.08)",
+      background: "var(--panel-bg)",
+      border: "1px solid var(--selected-border)",
+      borderTop: "1px solid var(--selected-border)",
+      boxShadow: "0 14px 34px color-mix(in srgb, var(--selected-border) 16%, transparent)",
       width: "100%",
       boxSizing: "border-box",
     },
@@ -732,21 +704,8 @@ function getLoadingStyles(isDark) {
   };
 }
 
-function getStyles(isDark) {
+function getStyles() {
   return {
-    page: {
-      minHeight: "100vh",
-      background: isDark
-        ? "linear-gradient(180deg, #020617 0%, #0f172a 42%, #020617 100%)"
-        : "linear-gradient(180deg, #f8fafc 0%, #eef2ff 42%, #f8fafc 100%)",
-      padding: "28px 16px 64px",
-      color: isDark ? "#f8fafc" : "#0f172a",
-      width: "100%",
-      maxWidth: "100%",
-      minWidth: 0,
-      overflowX: "hidden",
-      boxSizing: "border-box",
-    },
     searchSection: {
       maxWidth: "1100px",
       margin: "0 auto 28px",
@@ -758,17 +717,13 @@ function getStyles(isDark) {
     },
     searchCard: {
       position: "relative",
-      border: isDark
-        ? "1px solid rgba(51,65,85,0.95)"
-        : "1px solid rgba(255,255,255,0.75)",
-      background: isDark ? "rgba(15,23,42,0.84)" : "rgba(255,255,255,0.82)",
+      border: "1px solid var(--panel-border)",
+      background: "color-mix(in srgb, var(--panel-bg) 82%, transparent)",
       backdropFilter: "blur(14px)",
       WebkitBackdropFilter: "blur(14px)",
       borderRadius: "24px",
       padding: "18px",
-      boxShadow: isDark
-        ? "0 18px 50px rgba(2,6,23,0.5)"
-        : "0 18px 50px rgba(15,23,42,0.08)",
+      boxShadow: "0 18px 50px color-mix(in srgb, var(--page-text) 8%, transparent)",
       width: "100%",
       maxWidth: "100%",
       minWidth: 0,
@@ -784,9 +739,9 @@ function getStyles(isDark) {
       minWidth: 0,
     },
     segmentButton: {
-      border: isDark ? "1px solid #334155" : "1px solid #e2e8f0",
-      background: isDark ? "#0f172a" : "#fff",
-      color: isDark ? "#cbd5e1" : "#334155",
+      border: "1px solid var(--soft-border)",
+      background: "var(--panel-bg)",
+      color: "var(--text-sub)",
       borderRadius: "999px",
       padding: "10px 14px",
       fontSize: "14px",
@@ -797,12 +752,10 @@ function getStyles(isDark) {
       transition: "all 0.18s ease",
     },
     segmentButtonActive: {
-      background: isDark ? "#6366f1" : "#111827",
-      color: "#fff",
-      border: isDark ? "1px solid #6366f1" : "1px solid #111827",
-      boxShadow: isDark
-        ? "0 10px 24px rgba(99,102,241,0.35)"
-        : "0 10px 24px rgba(17,24,39,0.18)",
+      background: "var(--primary-bg)",
+      color: "var(--primary-text)",
+      border: "1px solid var(--primary-border)",
+      boxShadow: "0 10px 24px color-mix(in srgb, var(--primary-border) 18%, transparent)",
     },
     searchArea: {
       position: "relative",
@@ -813,7 +766,7 @@ function getStyles(isDark) {
       left: "16px",
       top: "50%",
       transform: "translateY(-50%)",
-      color: isDark ? "#64748b" : "#94a3b8",
+      color: "var(--text-muted)",
       fontSize: "18px",
       zIndex: 2,
     },
@@ -821,12 +774,12 @@ function getStyles(isDark) {
       width: "100%",
       height: "58px",
       borderRadius: "18px",
-      border: isDark ? "1px solid #334155" : "1px solid #e2e8f0",
-      background: isDark ? "#0f172a" : "#fff",
+      border: "1px solid var(--input-border)",
+      background: "var(--input-bg)",
       fontSize: "16px",
       padding: "0 18px 0 46px",
       outline: "none",
-      color: isDark ? "#f8fafc" : "#0f172a",
+      color: "var(--input-text)",
       boxSizing: "border-box",
       minWidth: 0,
       maxWidth: "100%",
@@ -836,12 +789,10 @@ function getStyles(isDark) {
       top: "64px",
       left: 0,
       right: 0,
-      background: isDark ? "rgba(15,23,42,0.98)" : "rgba(255,255,255,0.97)",
-      border: isDark ? "1px solid #334155" : "1px solid #e2e8f0",
+      background: "var(--panel-bg)",
+      border: "1px solid var(--input-border)",
       borderRadius: "18px",
-      boxShadow: isDark
-        ? "0 18px 40px rgba(2,6,23,0.5)"
-        : "0 18px 40px rgba(15,23,42,0.12)",
+      boxShadow: "0 18px 40px color-mix(in srgb, var(--page-text) 12%, transparent)",
       overflow: "hidden",
       zIndex: 999,
       minWidth: 0,
@@ -852,7 +803,7 @@ function getStyles(isDark) {
       padding: "12px 14px 8px",
       fontSize: "12px",
       fontWeight: 800,
-      color: isDark ? "#94a3b8" : "#64748b",
+      color: "var(--text-muted)",
       letterSpacing: "0.08em",
     },
     suggestionList: {
@@ -870,13 +821,13 @@ function getStyles(isDark) {
       border: "none",
       cursor: "pointer",
       color: "inherit",
-      borderTop: isDark ? "1px solid #1e293b" : "1px solid #f1f5f9",
+      borderTop: "1px solid var(--soft-border)",
       boxSizing: "border-box",
     },
     suggestionMain: {
       fontSize: "15px",
       fontWeight: 800,
-      color: isDark ? "#f8fafc" : "#0f172a",
+      color: "var(--text-title)",
       overflowWrap: "anywhere",
       wordBreak: "break-word",
     },
@@ -888,7 +839,7 @@ function getStyles(isDark) {
     },
     statusText: {
       fontSize: "13px",
-      color: isDark ? "#94a3b8" : "#64748b",
+      color: "var(--text-muted)",
       fontWeight: 700,
     },
     empty: {
@@ -897,26 +848,26 @@ function getStyles(isDark) {
       borderRadius: "24px",
       padding: "38px 18px",
       textAlign: "center",
-      background: isDark ? "rgba(15,23,42,0.74)" : "rgba(255,255,255,0.72)",
-      border: isDark ? "1px solid #334155" : "1px solid #e2e8f0",
+      background: "var(--panel-bg)",
+      border: "1px solid var(--soft-border)",
       width: "100%",
       minWidth: 0,
       boxSizing: "border-box",
     },
     emptyIcon: {
       fontSize: "28px",
-      color: isDark ? "#64748b" : "#94a3b8",
+      color: "var(--text-muted)",
       marginBottom: "8px",
     },
     emptyTitle: {
       margin: "0 0 8px",
       fontSize: "22px",
       fontWeight: 900,
-      color: isDark ? "#f8fafc" : "#0f172a",
+      color: "var(--text-title)",
     },
     emptyText: {
       margin: 0,
-      color: isDark ? "#94a3b8" : "#64748b",
+      color: "var(--text-muted)",
     },
     list: {
       margin: "0 auto",
@@ -956,14 +907,10 @@ function getStyles(isDark) {
     detailCard: {
       borderRadius: "0 0 24px 24px",
       padding: "18px",
-      background: isDark ? "rgba(15,23,42,0.98)" : "rgba(255,255,255,0.96)",
-      border: isDark ? "1px solid #4f46e5" : "1px solid #c7d2fe",
-      borderTop: isDark
-        ? "1px solid rgba(99,102,241,0.35)"
-        : "1px solid rgba(199,210,254,0.55)",
-      boxShadow: isDark
-        ? "0 14px 34px rgba(79,70,229,0.16)"
-        : "0 14px 34px rgba(79,70,229,0.08)",
+      background: "var(--panel-bg)",
+      border: "1px solid var(--selected-border)",
+      borderTop: "1px solid var(--selected-border)",
+      boxShadow: "0 14px 34px color-mix(in srgb, var(--selected-border) 16%, transparent)",
       width: "100%",
       maxWidth: "100%",
       minWidth: 0,
@@ -973,12 +920,10 @@ function getStyles(isDark) {
     errorCard: {
       borderRadius: "0 0 20px 20px",
       padding: "20px",
-      background: isDark ? "#0f172a" : "#fff",
-      border: isDark ? "1px solid rgba(239,68,68,0.45)" : "1px solid #fecaca",
-      borderTop: isDark
-        ? "1px solid rgba(239,68,68,0.28)"
-        : "1px solid rgba(254,202,202,0.7)",
-      color: isDark ? "#fca5a5" : "#b91c1c",
+      background: "var(--danger-bg)",
+      border: "1px solid var(--danger-border)",
+      borderTop: "1px solid var(--danger-border)",
+      color: "var(--danger-text)",
       fontSize: "14px",
       fontWeight: 700,
       width: "100%",

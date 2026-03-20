@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { applyMonsterThemeToStyleTree } from "../theme";
 
 export default function EditableSelectField({
   label,
@@ -10,10 +9,7 @@ export default function EditableSelectField({
   onChange,
   placeholder = "選択してください",
   allowCustom = true,
-  theme,
 }) {
-  const styles = useMemo(() => getComponentStyles(theme), [theme]);
-
   const normalizedOptions = useMemo(() => {
     const base = Array.isArray(options) ? options : [];
     const mapped = base
@@ -142,7 +138,7 @@ export default function EditableSelectField({
   );
 }
 
-const baseStyles = {
+const styles = {
   field: {
     display: "grid",
     gap: "8px",
@@ -158,12 +154,12 @@ const baseStyles = {
   label: {
     fontSize: "13px",
     fontWeight: 700,
-    color: "#334155",
+    color: "var(--text-sub, #334155)",
   },
   switchButton: {
-    border: "1px solid #cbd5e1",
-    background: "#fff",
-    color: "#334155",
+    border: "1px solid var(--card-border, #cbd5e1)",
+    background: "var(--card-bg, #ffffff)",
+    color: "var(--text-sub, #334155)",
     borderRadius: "999px",
     padding: "6px 10px",
     fontSize: "12px",
@@ -173,21 +169,17 @@ const baseStyles = {
   input: {
     width: "100%",
     minWidth: 0,
-    border: "1px solid #cbd5e1",
+    border: "1px solid var(--input-border, #cbd5e1)",
     borderRadius: "12px",
     padding: "10px 12px",
     fontSize: "14px",
-    background: "#fff",
+    background: "var(--input-bg, #ffffff)",
     outline: "none",
     boxSizing: "border-box",
-    color: "#111827",
+    color: "var(--input-text, #111827)",
   },
   meta: {
     fontSize: "12px",
-    color: "#64748b",
+    color: "var(--text-muted, #64748b)",
   },
 };
-
-function getComponentStyles(theme) {
-  return applyMonsterThemeToStyleTree(baseStyles, theme);
-}

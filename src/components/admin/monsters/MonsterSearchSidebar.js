@@ -10,7 +10,6 @@ export default function MonsterSearchSidebar({
   onCreateNew,
   isOpen = true,
   onToggle,
-  theme,
   createDisabled = false,
   createLabel = "新規",
 }) {
@@ -65,9 +64,9 @@ export default function MonsterSearchSidebar({
         }
       `}</style>
 
-      <aside className="monster-search-sidebar" style={sidebarStyle(theme)}>
+      <aside className="monster-search-sidebar" style={sidebarStyle()}>
         <div style={headerStyle}>
-          <h2 className="monster-search-sidebar-title" style={titleStyle(theme)}>
+          <h2 className="monster-search-sidebar-title" style={titleStyle()}>
             モンスター
           </h2>
 
@@ -81,7 +80,7 @@ export default function MonsterSearchSidebar({
               disabled={createDisabled}
               title={createDisabled ? "管理者のみ" : ""}
               className="monster-search-sidebar-new"
-              style={newButtonStyle(theme, createDisabled)}
+              style={newButtonStyle(createDisabled)}
             >
               {createLabel}
             </button>
@@ -90,7 +89,7 @@ export default function MonsterSearchSidebar({
               type="button"
               onClick={onToggle}
               className="monster-search-sidebar-toggle"
-              style={toggleButtonStyle(theme)}
+              style={toggleButtonStyle()}
             >
               {isOpen ? "閉じる" : "開く"}
             </button>
@@ -105,14 +104,14 @@ export default function MonsterSearchSidebar({
               onChange={(e) => onKeywordChange(e.target.value)}
               placeholder="モンスター名で検索"
               className="monster-search-sidebar-input"
-              style={inputStyle(theme)}
+              style={inputStyle()}
             />
 
             <div className="monster-search-sidebar-list" style={listStyle}>
               {loading ? (
-                <div style={emptyStyle(theme)}>読み込み中...</div>
+                <div style={emptyStyle()}>読み込み中...</div>
               ) : monsters.length === 0 ? (
-                <div style={emptyStyle(theme)}>モンスターなし</div>
+                <div style={emptyStyle()}>モンスターなし</div>
               ) : (
                 monsters.map((monster) => {
                   const active = Number(selectedId) === Number(monster.id);
@@ -124,18 +123,18 @@ export default function MonsterSearchSidebar({
                       onClick={() => onSelect(monster)}
                       className="monster-search-sidebar-item"
                       style={{
-                        ...itemStyle(theme),
-                        ...(active ? itemActiveStyle(theme) : {}),
+                        ...itemStyle(),
+                        ...(active ? itemActiveStyle() : {}),
                       }}
                     >
                       <div style={itemTopStyle}>
                         <strong style={itemNameStyle}>{monster.name}</strong>
-                        <span style={orderStyle(theme)}>
+                        <span style={orderStyle()}>
                           #{monster.display_order ?? 0}
                         </span>
                       </div>
 
-                      <div style={metaStyle(theme)}>
+                      <div style={metaStyle()}>
                         {monster.system_type || "系統なし"}
                       </div>
                     </button>
@@ -150,13 +149,13 @@ export default function MonsterSearchSidebar({
   );
 }
 
-const sidebarStyle = (theme) => ({
+const sidebarStyle = () => ({
   width: 320,
   minWidth: 320,
-  borderRight: `1px solid ${theme.cardBorder}`,
-  borderBottom: `1px solid ${theme.cardBorder}`,
+  borderRight: "1px solid var(--card-border)",
+  borderBottom: "1px solid var(--card-border)",
   padding: 16,
-  background: theme.cardBg,
+  background: "var(--card-bg)",
   display: "flex",
   flexDirection: "column",
   gap: 12,
@@ -174,10 +173,10 @@ const headerStyle = {
   flexWrap: "wrap",
 };
 
-const titleStyle = (theme) => ({
+const titleStyle = () => ({
   margin: 0,
   fontSize: 20,
-  color: theme.title,
+  color: "var(--text-title)",
 });
 
 const headerActionsStyle = {
@@ -187,12 +186,12 @@ const headerActionsStyle = {
   flexWrap: "wrap",
 };
 
-const newButtonStyle = (theme, disabled = false) => ({
+const newButtonStyle = (disabled = false) => ({
   border: `1px solid ${
-    disabled ? theme.disabledBorder : theme.primaryBorder
+    disabled ? "var(--soft-border)" : "var(--primary-border)"
   }`,
-  background: disabled ? theme.disabledBg : theme.primaryBg,
-  color: disabled ? theme.disabledText : theme.primaryText,
+  background: disabled ? "var(--input-disabled-bg)" : "var(--primary-bg)",
+  color: disabled ? "var(--text-muted)" : "var(--primary-text)",
   borderRadius: 8,
   padding: "8px 12px",
   cursor: disabled ? "not-allowed" : "pointer",
@@ -201,10 +200,10 @@ const newButtonStyle = (theme, disabled = false) => ({
   opacity: disabled ? 0.7 : 1,
 });
 
-const toggleButtonStyle = (theme) => ({
-  border: `1px solid ${theme.inputBorder}`,
-  background: theme.secondaryBg,
-  color: theme.text,
+const toggleButtonStyle = () => ({
+  border: "1px solid var(--input-border)",
+  background: "var(--secondary-bg)",
+  color: "var(--text-main)",
   borderRadius: 8,
   padding: "8px 12px",
   cursor: "pointer",
@@ -212,13 +211,13 @@ const toggleButtonStyle = (theme) => ({
   flexShrink: 0,
 });
 
-const inputStyle = (theme) => ({
+const inputStyle = () => ({
   width: "100%",
   padding: "10px 12px",
   borderRadius: 8,
-  border: `1px solid ${theme.inputBorder}`,
-  background: theme.inputBg,
-  color: theme.inputText,
+  border: "1px solid var(--input-border)",
+  background: "var(--input-bg)",
+  color: "var(--input-text)",
   boxSizing: "border-box",
 });
 
@@ -230,19 +229,19 @@ const listStyle = {
   minHeight: 0,
 };
 
-const itemStyle = (theme) => ({
+const itemStyle = () => ({
   textAlign: "left",
-  border: `1px solid ${theme.cardBorder}`,
-  background: theme.cardBg,
+  border: "1px solid var(--card-border)",
+  background: "var(--card-bg)",
   borderRadius: 10,
   padding: 12,
   cursor: "pointer",
   minWidth: 0,
 });
 
-const itemActiveStyle = (theme) => ({
-  background: theme.selectedBg,
-  border: `1px solid ${theme.selectedBorder}`,
+const itemActiveStyle = () => ({
+  background: "var(--selected-bg)",
+  border: "1px solid var(--selected-border)",
 });
 
 const itemTopStyle = {
@@ -257,20 +256,20 @@ const itemNameStyle = {
   wordBreak: "break-word",
 };
 
-const orderStyle = (theme) => ({
-  color: theme.mutedText,
+const orderStyle = () => ({
+  color: "var(--text-muted)",
   fontSize: 12,
   flexShrink: 0,
 });
 
-const metaStyle = (theme) => ({
+const metaStyle = () => ({
   marginTop: 6,
   fontSize: 13,
-  color: theme.mutedText,
+  color: "var(--text-muted)",
   wordBreak: "break-word",
 });
 
-const emptyStyle = (theme) => ({
+const emptyStyle = () => ({
   padding: 12,
-  color: theme.mutedText,
+  color: "var(--text-muted)",
 });

@@ -122,7 +122,9 @@ export function normalizeMonster(row = {}) {
         spawn_time: spawn?.spawn_time ?? "normal",
         spawn_count: spawn?.spawn_count ?? "",
         symbol_count: spawn?.symbol_count ?? "",
+        imported_note: spawn?.imported_note ?? "",
         note: spawn?.note ?? "",
+        is_hunting_ground: Boolean(spawn?.is_hunting_ground ?? false),
         grid_mode: spawn?.grid_mode ?? "block",
       };
     }),

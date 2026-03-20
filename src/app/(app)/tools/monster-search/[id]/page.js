@@ -3,9 +3,16 @@ import { fetchMonsterDetail } from "@/lib/monsters";
 import MonsterDetailHero from "@/components/tools/monsters/detail/MonsterDetailHero";
 import MonsterDropSection from "@/components/tools/monsters/detail/MonsterDropSection";
 import MonsterMapSection from "@/components/tools/monsters/detail/MonsterMapSection";
+import MonsterDetailPageClientShell from "@/components/tools/monsters/detail/MonsterDetailPageClientShell";
 
-export default async function MonsterDetailPage({ params }) {
+export default async function MonsterDetailPage({ params, searchParams }) {
   const monsterId = params?.id;
+  const showName = searchParams?.from === "zukan";
+  const page = Math.max(1, Number(searchParams?.page) || 1);
+
+  const backHref = showName
+    ? `/tools/monster-zukan?page=${page}`
+    : "/tools/monster-search";
 
   let monster = null;
   let errorText = "";
@@ -19,27 +26,27 @@ export default async function MonsterDetailPage({ params }) {
 
   if (errorText || !monster) {
     return (
-      <main style={styles.page}>
+      <MonsterDetailPageClientShell>
         <div style={styles.centerBox}>
           <p style={styles.errorText}>{errorText || "データが見つからなかった"}</p>
-          <Link href="/tools/monsters" style={styles.backLink}>
+          <Link href={backHref} style={styles.backLink}>
             ← 検索へ戻る
           </Link>
         </div>
-      </main>
+      </MonsterDetailPageClientShell>
     );
   }
 
   return (
-    <main style={styles.page}>
+    <MonsterDetailPageClientShell>
       <div style={styles.container}>
         <div style={styles.topNav}>
-          <Link href="/tools/monster-search" style={styles.backLink}>
+          <Link href={backHref} style={styles.backLink}>
             ← 検索へ戻る
           </Link>
         </div>
 
-        <MonsterDetailHero monster={monster} />
+        <MonsterDetailHero monster={monster} showName={showName} />
 
         <MonsterDropSection
           normalDrops={monster.normal_drops ?? []}
@@ -50,26 +57,23 @@ export default async function MonsterDetailPage({ params }) {
 
         <MonsterMapSection maps={monster.maps ?? []} />
       </div>
-    </main>
+    </MonsterDetailPageClientShell>
   );
 }
 
 const styles = {
-  page: {
-    minHeight: "100vh",
-    background: "#f6f7fb",
-    color: "#111827",
-    padding: "24px 16px 56px",
-  },
   container: {
     maxWidth: "1120px",
     margin: "0 auto",
+    width: "100%",
+    minWidth: 0,
+    boxSizing: "border-box",
   },
   topNav: {
     marginBottom: "14px",
   },
   backLink: {
-    color: "#475569",
+    color: "inherit",
     textDecoration: "none",
     fontSize: "13px",
     fontWeight: 700,
@@ -77,15 +81,15 @@ const styles = {
   centerBox: {
     maxWidth: "720px",
     margin: "80px auto",
-    background: "#fff",
-    border: "1px solid #e5e7eb",
     borderRadius: "18px",
     padding: "32px 20px",
     textAlign: "center",
+    width: "100%",
+    minWidth: 0,
+    boxSizing: "border-box",
   },
   errorText: {
     margin: "0 0 12px",
     fontSize: "14px",
-    color: "#b91c1c",
   },
 };

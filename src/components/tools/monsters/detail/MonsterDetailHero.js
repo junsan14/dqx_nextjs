@@ -1,7 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
 function joinDisplayValue(value) {
   if (value == null) return "";
 
@@ -31,29 +29,6 @@ function joinDisplayValue(value) {
   return String(value);
 }
 
-function usePrefersDark() {
-  const [isDark, setIsDark] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const apply = () => setIsDark(media.matches);
-
-    apply();
-
-    if (typeof media.addEventListener === "function") {
-      media.addEventListener("change", apply);
-      return () => media.removeEventListener("change", apply);
-    }
-
-    media.addListener(apply);
-    return () => media.removeListener(apply);
-  }, []);
-
-  return isDark;
-}
-
 function getReincarnationParentName(monster) {
   if (!monster) return "";
 
@@ -65,10 +40,124 @@ function getReincarnationParentName(monster) {
   );
 }
 
-export default function MonsterDetailHero({ monster }) {
-  const isDark = usePrefersDark();
-  const styles = getStyles(isDark);
+const styles = {
+  card: {
+    marginBottom: "16px",
+    width: "100%",
+    minWidth: 0,
+  },
+  pageTitle: {
+    margin: "0 0 12px",
+    fontSize: "clamp(26px, 5vw, 40px)",
+    lineHeight: 1.15,
+    fontWeight: 900,
+    color: "var(--text-title)",
+    letterSpacing: "-0.02em",
+    wordBreak: "break-word",
+  },
+  contentCol: {
+    minWidth: 0,
+    display: "grid",
+    gap: "12px",
+    alignContent: "start",
+    width: "100%",
+  },
+  titleBlock: {
+    display: "grid",
+    gap: "6px",
+    width: "100%",
+    minWidth: 0,
+  },
+  titleRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "12px",
+    flexWrap: "wrap",
+    width: "100%",
+    minWidth: 0,
+  },
+  systemTypeTag: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "6px 10px",
+    borderRadius: "999px",
+    fontSize: "12px",
+    fontWeight: 800,
+    lineHeight: 1,
+    background: "var(--soft-bg)",
+    color: "var(--text-main)",
+    border: "1px solid var(--soft-border)",
+    whiteSpace: "nowrap",
+  },
+  reincarnationRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    flexWrap: "wrap",
+    justifyContent: "flex-start",
+    minWidth: 0,
+  },
+  reincarnationBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "6px 10px",
+    borderRadius: "999px",
+    fontSize: "12px",
+    fontWeight: 800,
+    lineHeight: 1,
+    background: "var(--warning-bg, var(--soft-bg))",
+    color: "var(--warning-text, var(--text-main))",
+    border: "1px solid var(--warning-border, var(--soft-border))",
+    whiteSpace: "nowrap",
+  },
+  parentText: {
+    fontSize: "14px",
+    fontWeight: 700,
+    color: "var(--text-sub)",
+    whiteSpace: "normal",
+    wordBreak: "break-word",
+  },
+  description: {
+    margin: 0,
+    color: "var(--text-sub)",
+    fontSize: "14px",
+    lineHeight: 1.8,
+    wordBreak: "break-word",
+  },
+  metaGrid: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "10px",
+    width: "100%",
+    minWidth: 0,
+  },
+  metaItem: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "8px",
+    background: "var(--soft-bg)",
+    border: "1px solid var(--soft-border)",
+    borderRadius: "14px",
+    padding: "8px 12px",
+    minWidth: 0,
+  },
+  metaLabel: {
+    fontSize: "12px",
+    fontWeight: 800,
+    color: "var(--text-muted)",
+    letterSpacing: "0.04em",
+  },
+  metaValue: {
+    fontSize: "14px",
+    fontWeight: 900,
+    color: "var(--text-main)",
+  },
+};
 
+export default function MonsterDetailHero({ monster, showName = false }) {
   const description =
     joinDisplayValue(monster?.description) ||
     joinDisplayValue(monster?.note) ||
@@ -80,9 +169,14 @@ export default function MonsterDetailHero({ monster }) {
 
   return (
     <section style={styles.card}>
+      {showName ? <h1 style={styles.pageTitle}>{monster?.name || ""}</h1> : null}
+
       <div style={styles.contentCol}>
         <div style={styles.titleBlock}>
           <div style={styles.titleRow}>
+            {showName && monster?.system_type ? (
+              <span style={styles.systemTypeTag}>{monster.system_type}</span>
+            ) : null}
 
             {isReincarnated ? (
               <div style={styles.reincarnationRow}>
@@ -93,8 +187,6 @@ export default function MonsterDetailHero({ monster }) {
               </div>
             ) : null}
           </div>
-
- 
         </div>
 
         {description ? <p style={styles.description}>{description}</p> : null}
@@ -119,112 +211,4 @@ export default function MonsterDetailHero({ monster }) {
       </div>
     </section>
   );
-}
-
-function getStyles(isDark) {
-  return {
-    card: {
-      marginBottom: "16px",
-      width: "100%",
-    },
-    contentCol: {
-      minWidth: 0,
-      display: "grid",
-      gap: "12px",
-      alignContent: "start",
-      width: "100%",
-    },
-    titleBlock: {
-      display: "grid",
-      gap: "6px",
-      width: "100%",
-    },
-    titleRow: {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "flex-end",
-      gap: "12px",
-      flexWrap: "wrap",
-      width: "100%",
-    },
-    title: {
-      margin: 0,
-      fontSize: "clamp(26px, 5vw, 40px)",
-      lineHeight: 1.15,
-      fontWeight: 900,
-      color: isDark ? "#f8fafc" : "#0f172a",
-      letterSpacing: "-0.02em",
-      minWidth: 0,
-      wordBreak: "break-word",
-    },
-    reincarnationRow: {
-      display: "flex",
-      alignItems: "center",
-      gap: "8px",
-      flexWrap: "wrap",
-      justifyContent: "flex-start",
-    },
-    reincarnationBadge: {
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "6px 10px",
-      borderRadius: "999px",
-      fontSize: "12px",
-      fontWeight: 800,
-      lineHeight: 1,
-      background: isDark
-        ? "rgba(250, 204, 21, 0.18)"
-        : "rgba(245, 158, 11, 0.14)",
-      color: isDark ? "#fde68a" : "#b45309",
-      border: isDark
-        ? "1px solid rgba(250, 204, 21, 0.35)"
-        : "1px solid rgba(245, 158, 11, 0.26)",
-      whiteSpace: "nowrap",
-    },
-    parentText: {
-      fontSize: "14px",
-      fontWeight: 700,
-      color: isDark ? "#cbd5e1" : "#475569",
-      whiteSpace: "normal",
-      wordBreak: "break-word",
-    },
-    systemType: {
-      fontSize: "14px",
-      fontWeight: 700,
-      color: isDark ? "#94a3b8" : "#64748b",
-      wordBreak: "break-word",
-    },
-    description: {
-      margin: 0,
-      color: isDark ? "#cbd5e1" : "#475569",
-      fontSize: "14px",
-      lineHeight: 1.8,
-      wordBreak: "break-word",
-    },
-    metaGrid: {
-      display: "flex",
-      flexWrap: "wrap",
-      gap: "10px",
-    },
-    metaItem: {
-      display: "inline-flex",
-      alignItems: "center",
-      gap: "8px",
-      background: isDark ? "#0f172a" : "#f8fafc",
-      border: isDark ? "1px solid #334155" : "1px solid #e2e8f0",
-      borderRadius: "14px",
-      padding: "8px 10px",
-    },
-    metaLabel: {
-      fontSize: "11px",
-      fontWeight: 800,
-      color: isDark ? "#94a3b8" : "#64748b",
-    },
-    metaValue: {
-      fontSize: "13px",
-      fontWeight: 800,
-      color: isDark ? "#f8fafc" : "#0f172a",
-    },
-  };
 }

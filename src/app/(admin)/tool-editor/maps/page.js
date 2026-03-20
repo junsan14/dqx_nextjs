@@ -1,7 +1,6 @@
-import MapsEditorClient from "@/components/admin/maps/MapsEditorClient";
+import MapsClient from "@/components/admin/maps/MapsClient";
 
-export const dynamic = "force-dynamic";
 
 export default function MapsEditorPage() {
-  return <MapsEditorClient />;
+  return <MapsClient />;
 }

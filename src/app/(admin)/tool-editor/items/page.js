@@ -1,5 +1,5 @@
-import ItemsEditorClient from "@/components/admin/items/ItemsEditorClient";
+import ItemsClient from "@/components/admin/items/ItemsClient";
 
 export default function ItemsPage() {
-  return <ItemsEditorClient />;
+  return <ItemsClient />;
 }

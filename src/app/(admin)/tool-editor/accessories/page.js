@@ -1,7 +1,5 @@
-import AccessoriesEditorClient from "@/components/admin/accessories/AccessoriesEditorClient";
-
-export const dynamic = "force-dynamic";
+import AccessoriesClient from "@/components/admin/accessories/AccessoriesClient";
 
 export default function AccessoriesPage() {
-  return <AccessoriesEditorClient />;
+  return <AccessoriesClient />;
 }

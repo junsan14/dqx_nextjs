@@ -5,29 +5,6 @@ import MonsterMapOverlay from "./MonsterMapOverlay";
 
 const AREA_PREVIEW_COUNT = 2;
 
-function usePrefersDark() {
-  const [isDark, setIsDark] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const applyTheme = () => setIsDark(media.matches);
-
-    applyTheme();
-
-    if (typeof media.addEventListener === "function") {
-      media.addEventListener("change", applyTheme);
-      return () => media.removeEventListener("change", applyTheme);
-    }
-
-    media.addListener(applyTheme);
-    return () => media.removeListener(applyTheme);
-  }, []);
-
-  return isDark;
-}
-
 function joinDisplayValue(value) {
   if (value == null) return "";
 
@@ -235,10 +212,210 @@ function getContinentName(mapItem = {}) {
   ).trim();
 }
 
+function getStyles() {
+  return {
+    card: {
+      width: "100%",
+      maxWidth: "100%",
+      minWidth: 0,
+      boxSizing: "border-box",
+      overflow: "hidden",
+      background: "var(--soft-bg)",
+      borderRadius: "18px",
+      padding: "16px",
+      boxShadow:
+        "0 10px 28px color-mix(in srgb, var(--page-text) 8%, transparent)",
+      height: "100%",
+      minHeight: "100%",
+      border: `1px solid var(--card-border)`,
+      display: "flex",
+      flexDirection: "column",
+      gap: "14px",
+    },
+    topRow: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      gap: "14px",
+    },
+    topRowMobile: {
+      flexDirection: "column",
+      alignItems: "stretch",
+    },
+    titleWrap: {
+      minWidth: 0,
+      flex: 1,
+    },
+    titleLine: {
+      display: "flex",
+      flexWrap: "wrap",
+      alignItems: "center",
+      gap: "8px 10px",
+    },
+    mapTitle: {
+      margin: 0,
+      fontSize: "18px",
+      lineHeight: 1.35,
+      fontWeight: 900,
+      color: "var(--text-title)",
+      wordBreak: "break-word",
+    },
+    continentText: {
+      display: "inline-flex",
+      alignItems: "center",
+      minHeight: "28px",
+      padding: "4px 10px",
+      borderRadius: "999px",
+      fontSize: "12px",
+      fontWeight: 800,
+      background: "var(--badge-bg)",
+      color: "var(--badge-text)",
+      border: `1px solid var(--tag-border)`,
+    },
+    layerSwitchRow: {
+      display: "flex",
+      flexWrap: "wrap",
+      justifyContent: "flex-end",
+      gap: "8px",
+      flexShrink: 0,
+    },
+    layerSwitchRowMobile: {
+      justifyContent: "flex-start",
+    },
+    layerSwitchButton: {
+      appearance: "none",
+      border: `1px solid var(--panel-border)`,
+      background: "var(--secondary-bg)",
+      color: "var(--secondary-text)",
+      borderRadius: "999px",
+      padding: "8px 12px",
+      fontSize: "12px",
+      fontWeight: 800,
+      cursor: "pointer",
+    },
+    layerSwitchButtonActive: {
+      background: "var(--primary-bg)",
+      color: "var(--primary-text)",
+      border: `1px solid var(--primary-border)`,
+      boxShadow:
+        "0 10px 22px color-mix(in srgb, var(--primary-border) 16%, transparent)",
+    },
+    spawnInfoSection: {
+      display: "grid",
+      gap: "12px",
+      padding: "14px",
+      borderRadius: "16px",
+      background: "var(--panel-bg)",
+      border: `1px solid var(--panel-border)`,
+      boxShadow:
+        "0 14px 30px color-mix(in srgb, var(--page-text) 8%, transparent)",
+    },
+    spawnInfoRow: {
+      display: "flex",
+      justifyContent: "space-between",
+      gap: "12px",
+    },
+    spawnInfoLabel: {
+      minWidth: "42px",
+      paddingTop: "6px",
+      fontSize: "12px",
+      fontWeight: 900,
+      letterSpacing: "0.04em",
+      color: "var(--text-muted)",
+    },
+    spawnInfoLabelSub: {
+      minWidth: "42px",
+      paddingTop: "4px",
+      fontSize: "12px",
+      fontWeight: 900,
+      letterSpacing: "0.04em",
+      color: "var(--text-muted)",
+    },
+    spawnMetaWrap: {
+      minWidth: 0,
+      flex: 1,
+      display: "grid",
+      gap: "8px",
+    },
+    spawnMetaWrapTag: {
+      display: "flex",
+      flexWrap: "wrap",
+      gap: "8px",
+    },
+    timeTagWrap: {
+      display: "flex",
+      flexWrap: "wrap",
+      gap: "8px",
+    },
+    tag: {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      minHeight: "28px",
+      padding: "4px 10px",
+      borderRadius: "999px",
+      fontSize: "12px",
+      fontWeight: 800,
+      lineHeight: 1.2,
+      border: `1px solid var(--tag-border)`,
+    },
+    tagArea: {
+      background: "var(--tag-bg)",
+      color: "var(--tag-text)",
+    },
+    tagNight: {
+      background: "var(--badge-bg)",
+      color: "var(--badge-text)",
+    },
+    tagDay: {
+      background: "var(--selected-bg)",
+      color: "var(--secondary-text)",
+      border: `1px solid var(--selected-border)`,
+    },
+    tagAnytime: {
+      background: "var(--warning-bg)",
+      color: "var(--warning-text)",
+      border: `1px solid var(--warning-border)`,
+    },
+    coordsToggleButton: {
+      appearance: "none",
+      border: `1px solid var(--input-border)`,
+      background: "var(--input-bg)",
+      color: "var(--input-text)",
+      borderRadius: "999px",
+      minHeight: "28px",
+      padding: "4px 10px",
+      fontSize: "12px",
+      fontWeight: 900,
+      cursor: "pointer",
+    },
+    coordsAccordion: {
+      display: "grid",
+      gap: "10px",
+      paddingTop: "4px",
+      borderTop: `1px dashed var(--soft-border)`,
+    },
+    coordsCloseButton: {
+      appearance: "none",
+      alignSelf: "flex-start",
+      border: `1px solid var(--panel-border)`,
+      background: "var(--panel-bg)",
+      color: "var(--text-sub)",
+      borderRadius: "999px",
+      padding: "7px 12px",
+      fontSize: "12px",
+      fontWeight: 800,
+      cursor: "pointer",
+    },
+    mapWrap: {
+      minWidth: 0,
+    },
+  };
+}
+
 export default function MonsterMapCard({ mapItem }) {
   const isMobile = useIsMobile();
-  const isDark = usePrefersDark();
-  const styles = getStyles(isDark);
+  const styles = useMemo(() => getStyles(), []);
 
   const summary = useMemo(() => buildSummary(mapItem), [mapItem]);
   const layerGroups = useMemo(() => buildLayerGroups(mapItem), [mapItem]);
@@ -413,246 +590,9 @@ export default function MonsterMapCard({ mapItem }) {
         <MonsterMapOverlay
           spawns={displaySpawns}
           imagePath={displayImagePath}
+          href={mapItem?.url}
         />
       </div>
     </article>
   );
-}
-
-function getStyles(isDark) {
-  return {
-    card: {
-      width: "100%",
-      maxWidth: "100%",
-      minWidth: 0,
-      boxSizing: "border-box",
-      overflow: "hidden",
-      background: isDark ? "#0f172a" : "#fff",
-      borderRadius: "18px",
-      padding: "16px",
-      boxShadow: isDark
-        ? "0 10px 28px rgba(2,6,23,0.30)"
-        : "0 8px 24px rgba(15,23,42,0.04)",
-      height: "100%",
-      minHeight: "100%",
-      border: isDark ? "1px solid #334155" : "1px solid #e5e7eb",
-      display: "flex",
-      flexDirection: "column",
-      gap: "14px",
-    },
-    topRow: {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "flex-start",
-      gap: "14px",
-    },
-    topRowMobile: {
-      flexDirection: "column",
-      alignItems: "stretch",
-    },
-    titleWrap: {
-      minWidth: 0,
-      flex: 1,
-    },
-    titleLine: {
-      display: "flex",
-      flexWrap: "wrap",
-      alignItems: "center",
-      gap: "8px 10px",
-    },
-    mapTitle: {
-      margin: 0,
-      fontSize: "18px",
-      lineHeight: 1.35,
-      fontWeight: 900,
-      color: isDark ? "#f8fafc" : "#111827",
-      wordBreak: "break-word",
-    },
-    continentText: {
-      display: "inline-flex",
-      alignItems: "center",
-      minHeight: "28px",
-      padding: "4px 10px",
-      borderRadius: "999px",
-      fontSize: "12px",
-      fontWeight: 800,
-    },
-    layerSwitchRow: {
-      display: "flex",
-      flexWrap: "wrap",
-      justifyContent: "flex-end",
-      gap: "8px",
-      flexShrink: 0,
-    },
-    layerSwitchRowMobile: {
-      justifyContent: "flex-start",
-    },
-    layerSwitchButton: {
-      appearance: "none",
-      border: isDark ? "1px solid #334155" : "1px solid #d1d5db",
-      background: isDark ? "#0b1220" : "#f8fafc",
-      color: isDark ? "#cbd5e1" : "#334155",
-      borderRadius: "999px",
-      padding: "8px 12px",
-      fontSize: "12px",
-      fontWeight: 800,
-      cursor: "pointer",
-    },
-    layerSwitchButtonActive: {
-      background: isDark ? "#4f46e5" : "#111827",
-      color: "#fff",
-      border: isDark ? "1px solid #6366f1" : "1px solid #111827",
-      boxShadow: isDark
-        ? "0 10px 22px rgba(99,102,241,0.24)"
-        : "0 8px 18px rgba(17,24,39,0.12)",
-    },
-    spawnInfoSection: {
-      display: "grid",
-      gap: "12px",
-      padding: isDark ? "14px" : "13px",
-      borderRadius: "16px",
-      background: isDark
-        ? "linear-gradient(180deg, rgba(15,23,42,0.98) 0%, rgba(2,6,23,0.96) 100%)"
-        : "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
-      border: isDark ? "1px solid rgba(71,85,105,0.85)" : "1px solid #dbe4f0",
-      boxShadow: isDark
-        ? "0 14px 30px rgba(2,6,23,0.34), inset 0 1px 0 rgba(255,255,255,0.04)"
-        : "0 10px 24px rgba(15,23,42,0.08), inset 0 1px 0 rgba(255,255,255,0.9)",
-    },
-    spawnInfoRow: {
-      display: "flex",
-      justifyContent:"sapce-between"
-    },
-    spawnInfoLabel: {
-      minWidth: "42px",
-      paddingTop: "6px",
-      fontSize: "12px",
-      fontWeight: 900,
-      letterSpacing: "0.04em",
-      color: isDark ? "#94a3b8" : "#64748b",
-      flexShrink: 0,
-    },
-    spawnInfoLabelSub: {
-      minWidth: "42px",
-      paddingTop: "4px",
-      fontSize: "12px",
-      fontWeight: 900,
-      letterSpacing: "0.04em",
-      color: isDark ? "#94a3b8" : "#64748b",
-      flexShrink: 0,
-    },
-    spawnMetaWrap: {
-      display: "flex",
-      flexWrap: "wrap",
-      gap: "8px",
-      flex: 1,
-      minWidth: 0,
-      alignItems: "center",
-      justifyContent:"space-between"
-      
-
-    },
-    spawnMetaWrapTag: {
-      display: "flex",
-      flexWrap: "wrap",
-      gap: "1px",
-      minWidth: 0,
-    },
-    timeTagWrap: {
-      display: "flex",
-      flexWrap: "wrap",
-      gap: "1px",
-      minWidth: 0,
-    },
-    tag: {
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      minHeight: "32px",
-      padding: "2px 11px",
-      borderRadius: "999px",
-      fontSize: "12px",
-      fontWeight: 900,
-      lineHeight: 1.2,
-      whiteSpace: "nowrap",
-      boxSizing: "border-box",
-    },
-    tagArea: {
-      background: isDark ? "rgba(30,41,59,0.95)" : "#ffffff",
-      color: isDark ? "#e2e8f0" : "#0f172a",
-      border: isDark ? "1px solid rgba(100,116,139,0.7)" : "1px solid #cbd5e1",
-      boxShadow: isDark
-        ? "0 6px 16px rgba(2,6,23,0.28)"
-        : "0 4px 12px rgba(15,23,42,0.08)",
-    },
-    tagNight: {
-      background: isDark ? "rgba(91,33,182,0.22)" : "#f5f3ff",
-      color: isDark ? "#c4b5fd" : "#6d28d9",
-      border: isDark ? "1px solid rgba(167,139,250,0.35)" : "1px solid #ddd6fe",
-      boxShadow: isDark
-        ? "0 6px 16px rgba(46,16,101,0.26)"
-        : "0 4px 12px rgba(109,40,217,0.10)",
-    },
-    tagDay: {
-      background: isDark ? "rgba(180,83,9,0.18)" : "#fff7ed",
-      color: isDark ? "#fdba74" : "#c2410c",
-      border: isDark ? "1px solid rgba(251,191,36,0.28)" : "1px solid #fed7aa",
-      boxShadow: isDark
-        ? "0 6px 16px rgba(120,53,15,0.20)"
-        : "0 4px 12px rgba(194,65,12,0.08)",
-    },
-    tagAnytime: {
-      background: isDark ? "rgba(4,120,87,0.18)" : "#ecfdf5",
-      color: isDark ? "#86efac" : "#047857",
-      border: isDark ? "1px solid rgba(52,211,153,0.26)" : "1px solid #a7f3d0",
-      boxShadow: isDark
-        ? "0 6px 16px rgba(6,78,59,0.18)"
-        : "0 4px 12px rgba(4,120,87,0.08)",
-    },
-    coordsToggleButton: {
-      appearance: "none",
-      border: isDark ? "1px solid rgba(129,140,248,0.45)" : "1px solid #c7d2fe",
-      background: isDark ? "rgba(79,70,229,0.16)" : "#eef2ff",
-      color: isDark ? "#c7d2fe" : "#4338ca",
-      borderRadius: "999px",
-      minHeight: "32px",
-      padding: "7px 11px",
-      fontSize: "12px",
-      fontWeight: 900,
-      cursor: "pointer",
-      boxShadow: isDark
-        ? "0 6px 16px rgba(79,70,229,0.18)"
-        : "0 4px 12px rgba(79,70,229,0.10)",
-    },
-    coordsAccordion: {
-      display: "grid",
-      gap: "10px",
-      padding: "12px",
-      borderRadius: "14px",
-      background: isDark ? "rgba(2,6,23,0.58)" : "rgba(248,250,252,0.96)",
-      border: isDark ? "1px solid rgba(51,65,85,0.85)" : "1px solid #dbe4f0",
-      boxShadow: isDark
-        ? "inset 0 1px 0 rgba(255,255,255,0.03), 0 8px 22px rgba(2,6,23,0.18)"
-        : "inset 0 1px 0 rgba(255,255,255,0.9), 0 8px 20px rgba(15,23,42,0.06)",
-    },
-    coordsCloseButton: {
-      appearance: "none",
-      alignSelf: "flex-start",
-      border: isDark ? "1px solid #334155" : "1px solid #cbd5e1",
-      background: isDark ? "#0f172a" : "#ffffff",
-      color: isDark ? "#cbd5e1" : "#334155",
-      borderRadius: "999px",
-      padding: "8px 12px",
-      fontSize: "12px",
-      fontWeight: 800,
-      cursor: "pointer",
-      boxShadow: isDark
-        ? "0 6px 16px rgba(2,6,23,0.18)"
-        : "0 4px 12px rgba(15,23,42,0.06)",
-    },
-    mapWrap: {
-      minWidth: 0,
-      width: "100%",
-    },
-  };
 }

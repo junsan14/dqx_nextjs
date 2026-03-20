@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import MonsterPicker from "@/components/admin/shared/MonsterPicker";
 
 export default function ItemFormFields({
@@ -8,9 +8,7 @@ export default function ItemFormFields({
   setForm,
   errors = {},
   categories = [],
-  theme,
 }) {
-  const mergedTheme = useMemo(() => normalizeItemFieldTheme(theme), [theme]);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -32,27 +30,27 @@ export default function ItemFormFields({
 
   return (
     <div style={wrapStyle}>
-      <section style={sectionStyle(mergedTheme)}>
-        <h3 style={sectionTitleStyle(mergedTheme)}>基本情報</h3>
+      <section style={sectionStyle}>
+        <h3 style={sectionTitleStyle}>基本情報</h3>
 
         <div style={gridStyle(isMobile)}>
           <label style={labelStyle}>
-            <span style={labelTextStyle(mergedTheme)}>名前</span>
+            <span style={labelTextStyle}>名前</span>
             <input
               value={form.name}
               onChange={(e) => updateField("name", e.target.value)}
-              style={inputStyle(mergedTheme)}
+              style={inputStyle}
               placeholder="アイテム名"
             />
-            {errors.name ? <span style={errorStyle(mergedTheme)}>{errors.name}</span> : null}
+            {errors.name ? <span style={errorStyle}>{errors.name}</span> : null}
           </label>
 
           <label style={labelStyle}>
-            <span style={labelTextStyle(mergedTheme)}>カテゴリ</span>
+            <span style={labelTextStyle}>カテゴリ</span>
             <input
               value={form.category}
               onChange={(e) => updateField("category", e.target.value)}
-              style={inputStyle(mergedTheme)}
+              style={inputStyle}
               placeholder="素材 / 消費アイテム など"
               list="item-category-list"
             />
@@ -64,31 +62,31 @@ export default function ItemFormFields({
           </label>
 
           <label style={labelStyle}>
-            <span style={labelTextStyle(mergedTheme)}>買値</span>
+            <span style={labelTextStyle}>買値</span>
             <input
               type="number"
               value={form.buy_price}
               onChange={(e) => updateField("buy_price", e.target.value)}
-              style={inputStyle(mergedTheme)}
+              style={inputStyle}
               placeholder="0"
             />
           </label>
 
           <label style={labelStyle}>
-            <span style={labelTextStyle(mergedTheme)}>売値</span>
+            <span style={labelTextStyle}>売値</span>
             <input
               type="number"
               value={form.sell_price}
               onChange={(e) => updateField("sell_price", e.target.value)}
-              style={inputStyle(mergedTheme)}
+              style={inputStyle}
               placeholder="0"
             />
           </label>
         </div>
       </section>
 
-      <section style={sectionStyle(mergedTheme)}>
-        <h3 style={sectionTitleStyle(mergedTheme)}>このアイテムを落とすモンスター</h3>
+      <section style={sectionStyle}>
+        <h3 style={sectionTitleStyle}>このアイテムを落とすモンスター</h3>
 
         <MonsterPicker
           value={form.drop_monsters}
@@ -111,40 +109,27 @@ export default function ItemFormFields({
   );
 }
 
-function normalizeItemFieldTheme(theme) {
-  return {
-    sectionBg: theme?.cardBg ?? theme?.panelBg ?? "#ffffff",
-    sectionBorder: theme?.cardBorder ?? theme?.panelBorder ?? "#e5e7eb",
-    title: theme?.title ?? theme?.pageText ?? "#111827",
-    label: theme?.subText ?? theme?.text ?? "#334155",
-    inputBg: theme?.inputBg ?? "#ffffff",
-    inputBorder: theme?.inputBorder ?? "#cbd5e1",
-    inputText: theme?.inputText ?? "#111827",
-    error: theme?.dangerText ?? "#c62828",
-  };
-}
-
 const wrapStyle = {
   display: "grid",
   gap: 24,
   minWidth: 0,
 };
 
-const sectionStyle = (theme) => ({
+const sectionStyle = {
   display: "grid",
   gap: 12,
-  background: theme.sectionBg,
-  border: `1px solid ${theme.sectionBorder}`,
+  background: "var(--card-bg, var(--panel-bg, #ffffff))",
+  border: "1px solid var(--card-border, var(--panel-border, #e5e7eb))",
   borderRadius: 14,
   padding: 16,
   minWidth: 0,
-});
+};
 
-const sectionTitleStyle = (theme) => ({
+const sectionTitleStyle = {
   margin: 0,
   fontSize: 18,
-  color: theme.title,
-});
+  color: "var(--text-title, var(--page-text, #111827))",
+};
 
 function gridStyle(isMobile) {
   return {
@@ -163,24 +148,24 @@ const labelStyle = {
   minWidth: 0,
 };
 
-const labelTextStyle = (theme) => ({
-  color: theme.label,
+const labelTextStyle = {
+  color: "var(--text-sub, #334155)",
   fontWeight: 700,
-});
+};
 
-const inputStyle = (theme) => ({
+const inputStyle = {
   width: "100%",
   minWidth: 0,
   padding: "10px 12px",
-  border: `1px solid ${theme.inputBorder}`,
+  border: "1px solid var(--input-border, #cbd5e1)",
   borderRadius: 8,
   fontSize: 14,
   boxSizing: "border-box",
-  background: theme.inputBg,
-  color: theme.inputText,
-});
+  background: "var(--input-bg, #ffffff)",
+  color: "var(--input-text, #111827)",
+};
 
-const errorStyle = (theme) => ({
-  color: theme.error,
+const errorStyle = {
+  color: "var(--danger-text, #c62828)",
   fontSize: 13,
-});
+};

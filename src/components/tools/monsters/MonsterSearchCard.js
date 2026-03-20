@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 
 export default function MonsterSearchCard({
   monster,
@@ -9,26 +9,8 @@ export default function MonsterSearchCard({
   isOpen = false,
   onClick,
 }) {
-  const [isDark, setIsDark] = useState(false);
+  const styles = useMemo(() => getStyles(), []);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const applyTheme = () => setIsDark(media.matches);
-
-    applyTheme();
-
-    if (typeof media.addEventListener === "function") {
-      media.addEventListener("change", applyTheme);
-      return () => media.removeEventListener("change", applyTheme);
-    }
-
-    media.addListener(applyTheme);
-    return () => media.removeListener(applyTheme);
-  }, []);
-
-  const styles = getStyles(isDark);
   const subText = formatSubText ? formatSubText(monster) : null;
   const typeText =
     searchType === "monster" ? monster?.system_type || "" : "";
@@ -65,7 +47,7 @@ export default function MonsterSearchCard({
   );
 }
 
-function getStyles(isDark) {
+function getStyles() {
   return {
     card: {
       width: "100%",
@@ -73,26 +55,21 @@ function getStyles(isDark) {
       textAlign: "left",
       borderRadius: "24px",
       padding: "18px",
-      background: isDark ? "rgba(15,23,42,0.92)" : "rgba(255,255,255,0.88)",
-      border: isDark
-        ? "1px solid rgba(51,65,85,0.95)"
-        : "1px solid rgba(255,255,255,0.88)",
-      boxShadow: isDark
-        ? "0 14px 34px rgba(2,6,23,0.5)"
-        : "0 14px 34px rgba(15,23,42,0.07)",
-      transition: "transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease, color .16s ease",
+      background: "var(--card-bg)",
+      border: "1px solid var(--card-border)",
+   
+      transition:
+        "transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease, color .16s ease",
       cursor: "pointer",
       appearance: "none",
     },
     cardOpen: {
-      border: isDark ? "1px solid #6366f1" : "1px solid #c7d2fe",
+      border: "1px solid var(--selected-border)",
       borderBottom: "1px solid transparent",
       borderBottomLeftRadius: 0,
       borderBottomRightRadius: 0,
-      boxShadow: isDark
-        ? "0 14px 34px rgba(99,102,241,0.18)"
-        : "0 14px 34px rgba(79,70,229,0.10)",
-      background: isDark ? "#0f172a" : "#ffffff",
+      boxShadow: "0 14px 34px color-mix(in srgb, var(--selected-border) 18%, transparent)",
+      background: "var(--panel-bg)",
     },
     topRow: {
       display: "flex",
@@ -106,7 +83,7 @@ function getStyles(isDark) {
       lineHeight: 1.2,
       fontWeight: 900,
       letterSpacing: "-0.03em",
-      color: isDark ? "#f8fafc" : "#0f172a",
+      color: "var(--text-title)",
       minWidth: 0,
     },
     rightSide: {
@@ -121,11 +98,11 @@ function getStyles(isDark) {
       maxWidth: "220px",
       padding: "7px 10px",
       borderRadius: "999px",
-      background: isDark ? "rgba(59,130,246,0.14)" : "#eff6ff",
-      color: isDark ? "#93c5fd" : "#1d4ed8",
+      background: "var(--badge-bg)",
+      color: "var(--badge-text)",
       fontSize: "12px",
       fontWeight: 800,
-      border: isDark ? "1px solid rgba(96,165,250,0.28)" : "1px solid #bfdbfe",
+      border: "1px solid var(--selected-border)",
       whiteSpace: "nowrap",
       overflow: "hidden",
       textOverflow: "ellipsis",
@@ -138,19 +115,19 @@ function getStyles(isDark) {
       justifyContent: "center",
       borderRadius: "999px",
       fontSize: "18px",
-      color: isDark ? "#cbd5e1" : "#64748b",
+      color: "var(--text-muted)",
       fontWeight: 800,
-      background: isDark ? "#1e293b" : "#f8fafc",
-      border: isDark ? "1px solid #334155" : "1px solid #e2e8f0",
+      background: "var(--soft-bg)",
+      border: "1px solid var(--soft-border)",
     },
     arrowOpen: {
-      color: isDark ? "#c7d2fe" : "#4338ca",
-      background: isDark ? "rgba(99,102,241,0.18)" : "#eef2ff",
-      border: isDark ? "1px solid rgba(129,140,248,0.4)" : "1px solid #c7d2fe",
+      color: "var(--badge-text)",
+      background: "var(--badge-bg)",
+      border: "1px solid var(--selected-border)",
     },
     subText: {
       margin: "12px 0 0",
-      color: isDark ? "#cbd5e1" : "#475569",
+      color: "var(--text-sub)",
       fontSize: "14px",
       lineHeight: 1.7,
       minHeight: "24px",

@@ -22,29 +22,6 @@ function useIsMobile(breakpoint = 920) {
   return isMobile;
 }
 
-function usePrefersDark() {
-  const [isDark, setIsDark] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const apply = () => setIsDark(media.matches);
-
-    apply();
-
-    if (typeof media.addEventListener === "function") {
-      media.addEventListener("change", apply);
-      return () => media.removeEventListener("change", apply);
-    }
-
-    media.addListener(apply);
-    return () => media.removeListener(apply);
-  }, []);
-
-  return isDark;
-}
-
 function chunkArray(items, size) {
   const result = [];
   for (let i = 0; i < items.length; i += size) {
@@ -69,10 +46,114 @@ function buildTabLabel(group, index, isMobile) {
   return `${first} / ${second}`;
 }
 
+function getStyles() {
+  return {
+    section: {
+      marginTop: "8px",
+      width: "100%",
+      maxWidth: "100%",
+      minWidth: 0,
+      overflowX: "clip",
+      boxSizing: "border-box",
+    },
+    header: {
+      marginBottom: "12px",
+      minWidth: 0,
+    },
+    title: {
+      margin: 0,
+      fontSize: "18px",
+      fontWeight: 800,
+      color: "var(--text-title)",
+    },
+    tabScroller: {
+      display: "flex",
+      gap: "8px",
+      width: "100%",
+      maxWidth: "100%",
+      minWidth: 0,
+      overflowX: "auto",
+      overflowY: "hidden",
+      WebkitOverflowScrolling: "touch",
+      overscrollBehaviorX: "contain",
+      marginBottom: "14px",
+      paddingBottom: "4px",
+      boxSizing: "border-box",
+      scrollbarWidth: "thin",
+    },
+    tabButton: {
+      appearance: "none",
+      border: `1px solid var(--panel-border)`,
+      background: "var(--panel-bg)",
+      color: "var(--text-sub)",
+      padding: "8px 12px",
+      borderRadius: "999px",
+      fontSize: "12px",
+      fontWeight: 700,
+      lineHeight: 1.2,
+      cursor: "pointer",
+      transition: "all 0.2s ease",
+      whiteSpace: "nowrap",
+      flex: "0 0 auto",
+      flexShrink: 0,
+      boxSizing: "border-box",
+      maxWidth: "100%",
+    },
+    tabButtonActive: {
+      background: "var(--primary-bg)",
+      color: "var(--primary-text)",
+      border: `1px solid var(--primary-border)`,
+      boxShadow:
+        "0 10px 24px color-mix(in srgb, var(--primary-border) 16%, transparent)",
+    },
+    emptyCard: {
+      borderRadius: "18px",
+      padding: "18px",
+      background: "var(--soft-bg)",
+      border: `1px dashed var(--soft-border)`,
+      color: "var(--text-muted)",
+      fontWeight: 700,
+    },
+    mobileContentScroller: {
+      display: "flex",
+      overflowX: "auto",
+      scrollSnapType: "x mandatory",
+      WebkitOverflowScrolling: "touch",
+      scrollbarWidth: "none",
+      msOverflowStyle: "none",
+      width: "100%",
+    },
+    mobilePage: {
+      minWidth: "100%",
+      width: "100%",
+      flex: "0 0 100%",
+      scrollSnapAlign: "start",
+      boxSizing: "border-box",
+    },
+    mobilePageInner: {
+      width: "100%",
+      boxSizing: "border-box",
+    },
+    mobileCardWrap: {
+      width: "100%",
+      boxSizing: "border-box",
+    },
+    desktopGrid: {
+      display: "grid",
+      gridTemplateColumns: "repeat(2, minmax(0,1fr))",
+      gap: "14px",
+      width: "100%",
+      minWidth: 0,
+    },
+    desktopCardWrap: {
+      minWidth: 0,
+    },
+  };
+}
+
 export default function MonsterMapSection({ maps = [] }) {
   const isMobile = useIsMobile();
-  const isDark = usePrefersDark();
-  const styles = getStyles(isDark);
+  const styles = useMemo(() => getStyles(), []);
 
   const contentScrollerRef = useRef(null);
   const tabScrollerRef = useRef(null);
@@ -197,14 +278,11 @@ export default function MonsterMapSection({ maps = [] }) {
 
       {isMobile ? (
         <div ref={contentScrollerRef} style={styles.mobileContentScroller}>
-          {pagedMaps.map((group, groupIndex) => (
-            <div key={`page-${groupIndex}`} style={styles.mobilePage}>
+          {pagedMaps.map((group, index) => (
+            <div key={`page-${index}`} style={styles.mobilePage}>
               <div style={styles.mobilePageInner}>
-                {group.map((mapItem, index) => (
-                  <div
-                    key={mapItem.id ?? `${mapItem.name}-${groupIndex}-${index}`}
-                    style={styles.mobileCardWrap}
-                  >
+                {group.map((mapItem) => (
+                  <div key={mapItem.id ?? mapItem.name} style={styles.mobileCardWrap}>
                     <MonsterMapCard mapItem={mapItem} />
                   </div>
                 ))}
@@ -214,11 +292,8 @@ export default function MonsterMapSection({ maps = [] }) {
         </div>
       ) : (
         <div style={styles.desktopGrid}>
-          {(pagedMaps[activeTab] ?? []).map((mapItem, index) => (
-            <div
-              key={mapItem.id ?? `${mapItem.name}-${activeTab}-${index}`}
-              style={styles.desktopCardWrap}
-            >
+          {(pagedMaps[activeTab] ?? []).map((mapItem) => (
+            <div key={mapItem.id ?? mapItem.name} style={styles.desktopCardWrap}>
               <MonsterMapCard mapItem={mapItem} />
             </div>
           ))}
@@ -226,139 +301,4 @@ export default function MonsterMapSection({ maps = [] }) {
       )}
     </section>
   );
-}
-
-function getStyles(isDark) {
-  return {
-    section: {
-      marginTop: "8px",
-      width: "100%",
-      maxWidth: "100%",
-      minWidth: 0,
-      overflowX: "clip",
-      boxSizing: "border-box",
-    },
-    header: {
-      marginBottom: "12px",
-      minWidth: 0,
-    },
-    title: {
-      margin: 0,
-      fontSize: "18px",
-      fontWeight: 800,
-      color: isDark ? "#f8fafc" : "#111827",
-    },
-    tabScroller: {
-      display: "flex",
-      gap: "8px",
-      width: "100%",
-      maxWidth: "100%",
-      minWidth: 0,
-      overflowX: "auto",
-      overflowY: "hidden",
-      WebkitOverflowScrolling: "touch",
-      overscrollBehaviorX: "contain",
-      marginBottom: "14px",
-      paddingBottom: "4px",
-      boxSizing: "border-box",
-      scrollbarWidth: "thin",
-    },
-    tabButton: {
-      appearance: "none",
-      border: isDark ? "1px solid #334155" : "1px solid #d1d5db",
-      background: isDark ? "#0f172a" : "#fff",
-      color: isDark ? "#cbd5e1" : "#374151",
-      padding: "8px 12px",
-      borderRadius: "999px",
-      fontSize: "12px",
-      fontWeight: 700,
-      lineHeight: 1.2,
-      cursor: "pointer",
-      transition: "all 0.2s ease",
-      whiteSpace: "nowrap",
-      flex: "0 0 auto",
-      flexShrink: 0,
-      boxSizing: "border-box",
-      maxWidth: "100%",
-    },
-    tabButtonActive: {
-      background: isDark ? "#4f46e5" : "#2563eb",
-      color: "#fff",
-      border: isDark ? "1px solid #4f46e5" : "1px solid #2563eb",
-      boxShadow: isDark
-        ? "0 8px 20px rgba(79,70,229,0.28)"
-        : "0 8px 20px rgba(37,99,235,0.22)",
-    },
-    desktopGrid: {
-      display: "grid",
-      gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-      gap: "16px",
-      alignItems: "stretch",
-      width: "100%",
-      maxWidth: "100%",
-      minWidth: 0,
-    },
-    desktopCardWrap: {
-      width: "100%",
-      maxWidth: "100%",
-      minWidth: 0,
-      display: "flex",
-      alignItems: "stretch",
-    },
-    mobileContentScroller: {
-      display: "flex",
-      width: "100%",
-      maxWidth: "100%",
-      minWidth: 0,
-      overflowX: "auto",
-      overflowY: "hidden",
-      scrollSnapType: "x mandatory",
-      WebkitOverflowScrolling: "touch",
-      scrollbarWidth: "thin",
-      gap: 0,
-      overscrollBehaviorX: "contain",
-      overscrollBehaviorY: "auto",
-      boxSizing: "border-box",
-    },
-    mobilePage: {
-      flex: "0 0 100%",
-      width: "100%",
-      maxWidth: "100%",
-      minWidth: "100%",
-      scrollSnapAlign: "start",
-      scrollSnapStop: "always",
-      boxSizing: "border-box",
-      overflow: "hidden",
-    },
-    mobilePageInner: {
-      display: "grid",
-      gridTemplateColumns: "minmax(0, 1fr)",
-      gap: "16px",
-      paddingInline: 0,
-      width: "100%",
-      maxWidth: "100%",
-      minWidth: 0,
-      boxSizing: "border-box",
-    },
-    mobileCardWrap: {
-      width: "100%",
-      maxWidth: "100%",
-      minWidth: 0,
-      overflow: "hidden",
-      display: "flex",
-      alignItems: "stretch",
-    },
-    emptyCard: {
-      background: isDark ? "#0f172a" : "#fff",
-      border: isDark ? "1px solid #334155" : "1px solid #e5e7eb",
-      borderRadius: "18px",
-      padding: "20px",
-      fontSize: "13px",
-      color: isDark ? "#94a3b8" : "#94a3b8",
-      width: "100%",
-      maxWidth: "100%",
-      minWidth: 0,
-      boxSizing: "border-box",
-    },
-  };
 }

@@ -8,7 +8,6 @@ import {
   DEFAULT_MAP_TYPE_OPTIONS,
   DEFAULT_LAYER_NAME_OPTIONS,
 } from "./mapOptions";
-import { applyMonsterThemeToStyleTree } from "../theme";
 
 function normalizeOption(option) {
   if (typeof option === "string") {
@@ -28,10 +27,6 @@ function normalizeOption(option) {
   };
 }
 
-/**
- * default の順番を維持しつつ、
- * 同じ value のものは default の label を優先して補完する
- */
 function mergeOptionsByDefaultOrder(defaultOptions = [], apiOptions = []) {
   const defaultItems = Array.isArray(defaultOptions)
     ? defaultOptions.map(normalizeOption)
@@ -95,10 +90,7 @@ export default function MapEditorForm({
   onChangeLayer,
   onRemoveLayer,
   isMobile = false,
-  theme,
 }) {
-  const styles = useMemo(() => getComponentStyles(theme), [theme]);
-
   const mergedContinentOptions = useMemo(() => {
     return mergeOptionsByDefaultOrder(
       DEFAULT_CONTINENT_OPTIONS,
@@ -147,9 +139,7 @@ export default function MapEditorForm({
 
   function handleSelectImage(index, file) {
     if (!file) return;
-
     const previewUrl = URL.createObjectURL(file);
-
     onChangeLayer?.(index, "image_file", file);
     onChangeLayer?.(index, "image_url", previewUrl);
   }
@@ -240,22 +230,22 @@ export default function MapEditorForm({
                 <div style={styles.grid(isMobile)}>
                   <label style={styles.field}>
                     <div style={styles.label}>レイヤー名</div>
-                   <input
-                    list={`layer-name-options-${index}`}
-                    value={layer?.layer_name ?? ""}
-                    onChange={(e) =>
-                      onChangeLayer?.(index, "layer_name", e.target.value)
-                    }
-                    style={styles.input}
-                  />
+                    <input
+                      list={`layer-name-options-${index}`}
+                      value={layer?.layer_name ?? ""}
+                      onChange={(e) =>
+                        onChangeLayer?.(index, "layer_name", e.target.value)
+                      }
+                      style={styles.input}
+                    />
 
-                  <datalist id={`layer-name-options-${index}`}>
-                    {mergedLayerNameOptions.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </datalist>
+                    <datalist id={`layer-name-options-${index}`}>
+                      {mergedLayerNameOptions.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </datalist>
                   </label>
 
                   <label style={styles.field}>
@@ -352,24 +342,24 @@ export default function MapEditorForm({
   );
 }
 
-const baseStyles = {
+const styles = {
   wrap: {
     display: "grid",
     gap: "20px",
     minWidth: 0,
   },
   section: {
-    border: "1px solid #e2e8f0",
+    border: "1px solid var(--card-border, #e2e8f0)",
     padding: "16px",
     borderRadius: "16px",
     minWidth: 0,
-    background: "#ffffff",
+    background: "var(--card-bg, #ffffff)",
   },
   heading: {
     fontSize: "18px",
     fontWeight: "700",
     margin: 0,
-    color: "#111827",
+    color: "var(--text-main, #111827)",
   },
   grid: (isMobile) => ({
     display: "grid",
@@ -388,17 +378,17 @@ const baseStyles = {
   label: {
     fontSize: "13px",
     fontWeight: "600",
-    color: "#334155",
+    color: "var(--text-sub, #334155)",
   },
   input: {
-    border: "1px solid #cbd5e1",
+    border: "1px solid var(--input-border, #cbd5e1)",
     padding: "10px 12px",
     borderRadius: "8px",
     width: "100%",
     minWidth: 0,
     boxSizing: "border-box",
-    background: "#ffffff",
-    color: "#111827",
+    background: "var(--input-bg, #ffffff)",
+    color: "var(--input-text, #111827)",
   },
   layerHeader: {
     display: "flex",
@@ -410,9 +400,9 @@ const baseStyles = {
     flexWrap: "wrap",
   },
   addButton: {
-    background: "#0f172a",
-    color: "#fff",
-    border: "none",
+    background: "var(--primary-bg, #0f172a)",
+    color: "var(--primary-text, #ffffff)",
+    border: "1px solid var(--primary-border, #0f172a)",
     padding: "8px 12px",
     borderRadius: "8px",
     cursor: "pointer",
@@ -423,11 +413,11 @@ const baseStyles = {
     gap: "14px",
   },
   layerCard: {
-    border: "1px solid #cbd5e1",
+    border: "1px solid var(--card-border, #cbd5e1)",
     padding: "14px",
     borderRadius: "12px",
     minWidth: 0,
-    background: "#ffffff",
+    background: "var(--panel-bg, #ffffff)",
   },
   layerCardHeader: {
     display: "flex",
@@ -439,12 +429,12 @@ const baseStyles = {
   },
   layerCardIndex: {
     fontWeight: 700,
-    color: "#0f172a",
+    color: "var(--text-main, #0f172a)",
   },
   removeButton: {
-    background: "#ef4444",
-    color: "#fff",
-    border: "none",
+    background: "var(--danger-bg, #ef4444)",
+    color: "var(--danger-text-on, #ffffff)",
+    border: "1px solid var(--danger-border, #ef4444)",
     padding: "6px 10px",
     borderRadius: "6px",
     cursor: "pointer",
@@ -458,23 +448,19 @@ const baseStyles = {
     maxHeight: "480px",
     overflow: "hidden",
     borderRadius: "8px",
-    border: "1px solid #e2e8f0",
-    background: "#f8fafc",
+    border: "1px solid var(--card-border, #e2e8f0)",
+    background: "var(--soft-bg, #f8fafc)",
   },
   previewImage: {
     objectFit: "contain",
   },
   helpText: {
     fontSize: "12px",
-    color: "#64748b",
+    color: "var(--text-muted, #64748b)",
     lineHeight: 1.5,
   },
   loading: {
     padding: "20px",
-    color: "#64748b",
+    color: "var(--text-muted, #64748b)",
   },
 };
-
-function getComponentStyles(theme) {
-  return applyMonsterThemeToStyleTree(baseStyles, theme);
-}

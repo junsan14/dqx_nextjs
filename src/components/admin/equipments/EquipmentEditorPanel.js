@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import styles from "./EquipmentForm.module.css";
 import LabeledField from "./LabeledField";
 import {
   JOB_OVERRIDE_MODE_OPTIONS,
@@ -22,15 +21,11 @@ export default function EquipmentEditorPanel({
   syncGroup,
   setSyncGroup,
   isSelectedGrouped,
-  saving,
   onPatch,
   onGroupPatch,
-  onSave,
-  onDeleteItem,
-  onDeleteGroup,
 }) {
   if (!row) {
-    return <section className={styles.card}>装備を選択してくれ</section>;
+    return <section style={styles.card}>装備を選択してくれ</section>;
   }
 
   const isCraftToolSet = str(row.groupKind) === "craft_tool_set";
@@ -221,65 +216,32 @@ export default function EquipmentEditorPanel({
   };
 
   return (
-    <section className={styles.card}>
-      <div className={styles.stickySaveBar}>
-        <div className={styles.saveLeft}>
-          {isSelectedGrouped ? (
-            <label className={styles.checkRow}>
-              <input
-                type="checkbox"
-                checked={syncGroup}
-                onChange={(e) => setSyncGroup(e.target.checked)}
-              />
-              <span>グループ同期</span>
-            </label>
-          ) : null}
-
-          <button
-            type="button"
-            className={styles.buttonPrimary}
-            disabled={saving}
-            onClick={onSave}
-          >
-            保存
-          </button>
-        </div>
-
-        <div className={styles.saveRight}>
-          <button
-            type="button"
-            className={styles.buttonDanger}
-            disabled={saving}
-            onClick={onDeleteItem}
-          >
-            単体削除
-          </button>
-
-          {isSelectedGrouped ? (
-            <button
-              type="button"
-              className={styles.buttonDanger}
-              disabled={saving}
-              onClick={onDeleteGroup}
-            >
-              セット削除
-            </button>
-          ) : null}
-        </div>
+    <section style={styles.card}>
+      <div style={styles.topBar}>
+        {isSelectedGrouped ? (
+          <label style={styles.checkRow}>
+            <input
+              type="checkbox"
+              checked={syncGroup}
+              onChange={(e) => setSyncGroup(e.target.checked)}
+            />
+            <span>グループ同期</span>
+          </label>
+        ) : null}
       </div>
 
-      <div className={styles.sectionHead}>
-        <div className={styles.sectionTitle}>基本情報</div>
+      <div style={styles.sectionHead}>
+        <div style={styles.sectionTitle}>基本情報</div>
       </div>
 
-      <div className={styles.compactFieldGrid}>
+      <div style={styles.compactFieldGrid}>
         <LabeledField label="ID">
-          <input className={styles.inputCompact} value={row.id ?? ""} disabled />
+          <input style={styles.inputCompact} value={row.id ?? ""} disabled />
         </LabeledField>
 
         <LabeledField label="アイテムID">
           <input
-            className={styles.inputCompact}
+            style={styles.inputCompact}
             value={row.itemId}
             onChange={(e) => patch("itemId", e.target.value)}
           />
@@ -287,7 +249,7 @@ export default function EquipmentEditorPanel({
 
         <LabeledField label="装備名">
           <input
-            className={styles.inputCompactWide}
+            style={styles.inputCompactWide}
             value={row.itemName}
             onChange={(e) => patch("itemName", e.target.value)}
           />
@@ -296,7 +258,7 @@ export default function EquipmentEditorPanel({
         {!isCraftToolSet ? (
           <LabeledField label="装備タイプ">
             <select
-              className={styles.selectCompact}
+              style={styles.selectCompact}
               value={row.equipmentTypeId}
               onChange={(e) => handleEquipmentTypeChange(e.target.value)}
             >
@@ -312,7 +274,7 @@ export default function EquipmentEditorPanel({
 
         <LabeledField label="職業設定">
           <select
-            className={styles.selectCompact}
+            style={styles.selectCompact}
             value={row.jobOverrideMode}
             onChange={(e) => patchGroupAware("jobOverrideMode", e.target.value)}
           >
@@ -327,8 +289,8 @@ export default function EquipmentEditorPanel({
         <LabeledField label="作成レベル">
           <input
             type="number"
-            className={styles.inputCompactXs}
-            value={row.craftLevel}
+            style={styles.inputCompactXs}
+            value={row.craftLevel ?? ""}
             onChange={(e) => patchGroupAware("craftLevel", e.target.value)}
           />
         </LabeledField>
@@ -337,8 +299,8 @@ export default function EquipmentEditorPanel({
           <LabeledField label="装備レベル">
             <input
               type="number"
-              className={styles.inputCompactXs}
-              value={row.equipLevel}
+              style={styles.inputCompactXs}
+              value={row.equipLevel ?? ""}
               onChange={(e) => patchGroupAware("equipLevel", e.target.value)}
             />
           </LabeledField>
@@ -346,7 +308,7 @@ export default function EquipmentEditorPanel({
 
         <LabeledField label="職人作成コマタイプ">
           <select
-            className={styles.select}
+            style={styles.select}
             value={row.slotGridType || ""}
             onChange={(e) => patch("slotGridType", e.target.value)}
           >
@@ -363,24 +325,24 @@ export default function EquipmentEditorPanel({
           <>
             <LabeledField label="セット種類">
               <input
-                className={styles.inputCompact}
-                value={row.groupKind}
+                style={styles.inputCompact}
+                value={row.groupKind ?? ""}
                 onChange={(e) => patchGroupAware("groupKind", e.target.value)}
               />
             </LabeledField>
 
             <LabeledField label="セットID">
               <input
-                className={styles.inputCompact}
-                value={row.groupId}
+                style={styles.inputCompact}
+                value={row.groupId ?? ""}
                 onChange={(e) => patchGroupAware("groupId", e.target.value)}
               />
             </LabeledField>
 
             <LabeledField label="セット名">
               <input
-                className={styles.inputCompact}
-                value={row.groupName}
+                style={styles.inputCompact}
+                value={row.groupName ?? ""}
                 onChange={(e) => patchGroupAware("groupName", e.target.value)}
               />
             </LabeledField>
@@ -389,48 +351,46 @@ export default function EquipmentEditorPanel({
 
         <LabeledField label="レシピ本">
           <input
-            className={styles.inputCompact}
-            value={row.recipeBook}
+            style={styles.inputCompact}
+            value={row.recipeBook ?? ""}
             onChange={(e) => patch("recipeBook", e.target.value)}
           />
         </LabeledField>
 
         <LabeledField label="レシピ入手場所">
           <input
-            className={styles.inputCompact}
-            value={row.recipePlace}
+            style={styles.inputCompact}
+            value={row.recipePlace ?? ""}
             onChange={(e) => patch("recipePlace", e.target.value)}
           />
         </LabeledField>
 
         <LabeledField label="一覧URL">
           <input
-            className={styles.inputCompactWide}
-            value={row.sourceUrl}
+            style={styles.inputCompactWide}
+            value={row.sourceUrl ?? ""}
             onChange={(e) => patch("sourceUrl", e.target.value)}
           />
         </LabeledField>
 
         <LabeledField label="詳細URL">
           <input
-            className={styles.inputCompactWide}
-            value={row.detailUrl}
+            style={styles.inputCompactWide}
+            value={row.detailUrl ?? ""}
             onChange={(e) => patch("detailUrl", e.target.value)}
           />
         </LabeledField>
       </div>
 
-      <div className={styles.jobSection}>
-        <div className={styles.label}>現在の装備可能職業</div>
+      <div style={styles.jobSection}>
+        <div style={styles.label}>現在の装備可能職業</div>
 
-        <div className={styles.tagList}>
+        <div style={styles.tagList}>
           {displayJobs.length ? (
             displayJobs.map((job) => (
               <span
                 key={job.key}
-                className={`${styles.jobTag} ${
-                  job.source === "override" ? styles.jobTagOverride : ""
-                }`}
+                style={jobTagStyle(job.source === "override")}
                 title={
                   job.source === "override" ? "追加・置き換え職業" : "装備タイプ由来"
                 }
@@ -439,23 +399,15 @@ export default function EquipmentEditorPanel({
               </span>
             ))
           ) : (
-            <span className={styles.mutedText}>職業データなし</span>
+            <span style={styles.mutedText}>職業データなし</span>
           )}
         </div>
       </div>
 
       {row.jobOverrideMode !== "inherit" ? (
-        <div className={styles.jobSection}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 12,
-              flexWrap: "wrap",
-            }}
-          >
-            <div className={styles.label}>
+        <div style={styles.jobSection}>
+          <div style={styles.inlineBetween}>
+            <div style={styles.label}>
               {row.jobOverrideMode === "add"
                 ? "追加する職業"
                 : "置き換え後の職業"}
@@ -463,14 +415,14 @@ export default function EquipmentEditorPanel({
 
             <button
               type="button"
-              className={styles.buttonSecondary}
+              style={secondaryButtonStyle()}
               onClick={clearOverrideJobs}
             >
               クリア
             </button>
           </div>
 
-          <div className={styles.tagList} style={{ marginTop: 10 }}>
+          <div style={{ ...styles.tagList, marginTop: 10 }}>
             {selectableJobs.map((job) => {
               const selected = overrideJobKeySet.has(String(job.key));
 
@@ -478,9 +430,7 @@ export default function EquipmentEditorPanel({
                 <button
                   key={job.id ?? job.key}
                   type="button"
-                  className={`${styles.jobTag} ${
-                    selected ? styles.jobTagOverride : ""
-                  }`}
+                  style={jobToggleStyle(selected)}
                   onClick={() => toggleOverrideJob(job)}
                   title={selected ? "クリックで削除" : "クリックで追加"}
                 >
@@ -493,16 +443,14 @@ export default function EquipmentEditorPanel({
 
           {overrideJobs.length ? (
             <>
-              <div className={styles.label} style={{ marginTop: 12 }}>
-                選択中
-              </div>
+              <div style={{ ...styles.label, marginTop: 12 }}>選択中</div>
 
-              <div className={styles.tagList}>
+              <div style={styles.tagList}>
                 {overrideJobs.map((job) => (
                   <button
                     key={job.key}
                     type="button"
-                    className={`${styles.jobTag} ${styles.jobTagOverride}`}
+                    style={jobToggleStyle(true)}
                     onClick={() => removeOverrideJob(job.key)}
                     title="クリックで削除"
                   >
@@ -512,26 +460,177 @@ export default function EquipmentEditorPanel({
               </div>
             </>
           ) : (
-            <div className={styles.mutedText} style={{ marginTop: 10 }}>
+            <div style={{ ...styles.mutedText, marginTop: 10 }}>
               まだ選択されていない
             </div>
           )}
         </div>
       ) : null}
-
-      <LabeledField label="説明">
-        <textarea
-          className={styles.textarea}
-          value={row.description}
-          onChange={(e) => patch("description", e.target.value)}
-          rows={5}
-        />
-      </LabeledField>
-
-      <div className={styles.metaText}>
-        <span>作成日時: {str(row.createdAt)}</span>
-        <span>更新日時: {str(row.updatedAt)}</span>
-      </div>
     </section>
   );
 }
+
+const styles = {
+  card: {
+    background: "var(--card-bg)",
+    border: "1px solid var(--card-border)",
+    borderRadius: 14,
+    padding: 16,
+    display: "flex",
+    flexDirection: "column",
+    gap: 16,
+    minWidth: 0,
+  },
+
+  topBar: {
+    display: "flex",
+    justifyContent: "flex-start",
+    alignItems: "center",
+    gap: 12,
+    flexWrap: "wrap",
+  },
+
+  checkRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    color: "var(--text-main)",
+    fontWeight: 700,
+  },
+
+  sectionHead: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    flexWrap: "wrap",
+  },
+
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 700,
+    color: "var(--text-title)",
+  },
+
+  compactFieldGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+    gap: 12,
+  },
+
+  inputCompact: {
+    width: "100%",
+    boxSizing: "border-box",
+    border: "1px solid var(--input-border)",
+    background: "var(--input-bg)",
+    color: "var(--input-text)",
+    borderRadius: 10,
+    padding: "10px 12px",
+  },
+
+  inputCompactWide: {
+    width: "100%",
+    boxSizing: "border-box",
+    border: "1px solid var(--input-border)",
+    background: "var(--input-bg)",
+    color: "var(--input-text)",
+    borderRadius: 10,
+    padding: "10px 12px",
+  },
+
+  inputCompactXs: {
+    width: "100%",
+    boxSizing: "border-box",
+    border: "1px solid var(--input-border)",
+    background: "var(--input-bg)",
+    color: "var(--input-text)",
+    borderRadius: 10,
+    padding: "10px 12px",
+  },
+
+  selectCompact: {
+    width: "100%",
+    boxSizing: "border-box",
+    border: "1px solid var(--input-border)",
+    background: "var(--input-bg)",
+    color: "var(--input-text)",
+    borderRadius: 10,
+    padding: "10px 12px",
+  },
+
+  select: {
+    width: "100%",
+    boxSizing: "border-box",
+    border: "1px solid var(--input-border)",
+    background: "var(--input-bg)",
+    color: "var(--input-text)",
+    borderRadius: 10,
+    padding: "10px 12px",
+  },
+
+  jobSection: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 8,
+  },
+
+  label: {
+    color: "var(--text-main)",
+    fontWeight: 700,
+    fontSize: 13,
+  },
+
+  tagList: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+
+  mutedText: {
+    color: "var(--text-muted)",
+    fontSize: 13,
+  },
+
+  inlineBetween: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    flexWrap: "wrap",
+  },
+};
+
+const secondaryButtonStyle = () => ({
+  border: "1px solid var(--soft-border)",
+  background: "var(--soft-bg)",
+  color: "var(--text-main)",
+  borderRadius: 10,
+  padding: "8px 12px",
+  cursor: "pointer",
+  fontWeight: 700,
+});
+
+const jobTagStyle = (override) => ({
+  border: `1px solid ${
+    override ? "var(--selected-border)" : "var(--soft-border)"
+  }`,
+  background: override ? "var(--selected-bg)" : "var(--soft-bg)",
+  color: "var(--text-main)",
+  borderRadius: 999,
+  padding: "6px 10px",
+  fontSize: 12,
+  fontWeight: 700,
+});
+
+const jobToggleStyle = (selected) => ({
+  border: `1px solid ${
+    selected ? "var(--selected-border)" : "var(--soft-border)"
+  }`,
+  background: selected ? "var(--selected-bg)" : "var(--soft-bg)",
+  color: "var(--text-main)",
+  borderRadius: 999,
+  padding: "6px 10px",
+  cursor: "pointer",
+  fontSize: 12,
+  fontWeight: 700,
+});

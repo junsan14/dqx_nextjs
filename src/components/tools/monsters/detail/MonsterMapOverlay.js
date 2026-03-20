@@ -6,48 +6,14 @@ import Image from "next/image";
 import { getMonsterAssetUrl } from "@/lib/monsters";
 
 const GRID_SIZE = 8;
-
-/**
- * 元画像サイズ
- * 490 x 565
- *
- * まず上の余白 75px を落として 490 x 490 の範囲を見る
- * その中にさらに
- * - 上の 1,2,3... バー
- * - 左の A,B,C... バー
- * があるので、それも除いた範囲を実際の 8x8 グリッドとして扱う
- */
 const ORIGINAL_IMAGE_WIDTH = 490;
 const ORIGINAL_IMAGE_HEIGHT = 565;
-const CROP_TOP_PX = ORIGINAL_IMAGE_HEIGHT - ORIGINAL_IMAGE_WIDTH; // 75
-
-/**
- * ここを微調整してくれ
- * 上の数字バー、左のABCバーの厚み
- */
+const CROP_TOP_PX = ORIGINAL_IMAGE_HEIGHT - ORIGINAL_IMAGE_WIDTH;
 const TOP_AXIS_PX = 2;
 const LEFT_AXIS_PX = 2.5;
-
-/**
- * 必要なら右下も微調整できるようにしてある
- * 基本は 0 でOK
- */
 const RIGHT_TRIM_PX = 0;
 const BOTTOM_TRIM_PX = 0;
 
-/**
- * 生息エリアの表示数
- */
-//const MAX_VISIBLE_AREA_CHIPS = 3;
-
-/**
- * ツールチップ配置用のしきい値
- */
-const TOOLTIP_EDGE_THRESHOLD = 18;
-
-/**
- * 実際に表示する「グリッド本体」の切り抜き範囲
- */
 const GRID_SOURCE_X = LEFT_AXIS_PX;
 const GRID_SOURCE_Y = CROP_TOP_PX + TOP_AXIS_PX;
 
@@ -65,29 +31,6 @@ const MAP_CROP = {
   offsetXPercent: (GRID_SOURCE_X / ORIGINAL_IMAGE_WIDTH) * 100,
   offsetYPercent: (GRID_SOURCE_Y / ORIGINAL_IMAGE_HEIGHT) * 100,
 };
-
-function usePrefersDark() {
-  const [isDark, setIsDark] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const applyTheme = () => setIsDark(media.matches);
-
-    applyTheme();
-
-    if (typeof media.addEventListener === "function") {
-      media.addEventListener("change", applyTheme);
-      return () => media.removeEventListener("change", applyTheme);
-    }
-
-    media.addListener(applyTheme);
-    return () => media.removeListener(applyTheme);
-  }, []);
-
-  return isDark;
-}
 
 function useIsMobile(breakpoint = 920) {
   const [isMobile, setIsMobile] = useState(false);
@@ -225,14 +168,6 @@ function buildShortLabel(rectCells = []) {
   const first = sorted[0];
   const last = sorted[sorted.length - 1];
 
-  if (first.row === last.row) {
-    return `${first.label}〜${last.label}`;
-  }
-
-  if (first.col === last.col) {
-    return `${first.label}〜${last.label}`;
-  }
-
   return `${first.label}〜${last.label}`;
 }
 
@@ -358,6 +293,13 @@ function joinUniqueValues(values = []) {
   return uniq.join(" / ");
 }
 
+function getPreferredNote(spawn) {
+  const note = normalizeMetaValue(spawn?.note);
+  if (note) return note;
+
+  return normalizeMetaValue(spawn?.imported_note);
+}
+
 function getBubblePosition(group, spawns = []) {
   const cellPercent = 100 / GRID_SIZE;
 
@@ -388,6 +330,11 @@ function getBubblePosition(group, spawns = []) {
       .filter(Boolean)
   );
 
+  const notes = joinUniqueValues(relatedSpawns.map(getPreferredNote));
+  const isHuntingGround = relatedSpawns.some(
+    (spawn) => Boolean(spawn?.is_hunting_ground)
+  );
+
   return {
     key: group.label,
     label: group.label,
@@ -400,80 +347,21 @@ function getBubblePosition(group, spawns = []) {
     symbolCount,
     spawnCount,
     spawnTimes,
+    notes,
+    isHuntingGround,
     relatedSpawns,
   };
 }
-/*
-function buildAreaInfo(cells = []) {
-  const labels = [...new Set(cells.map((cell) => cell.label))].sort((a, b) =>
-    a.localeCompare(b, "ja")
+
+function StatBlock({ label, value, styles }) {
+  if (!value) return null;
+
+  return (
+    <div style={styles.summaryStat}>
+      <span style={styles.summaryStatLabel}>{label}</span>
+      <span style={styles.summaryStatValue}>{value}</span>
+    </div>
   );
-
-  return {
-    visible: labels.slice(0, MAX_VISIBLE_AREA_CHIPS),
-    hiddenCount: Math.max(labels.length - MAX_VISIBLE_AREA_CHIPS, 0),
-    all: labels,
-  };
-}
-*/
-function getTooltipPlacement(bubble) {
-  if (!bubble) {
-    return {
-      vertical: "top",
-      horizontal: "center",
-    };
-  }
-
-  const vertical = bubble.top <= TOOLTIP_EDGE_THRESHOLD ? "bottom" : "top";
-
-  let horizontal = "center";
-  if (bubble.left <= TOOLTIP_EDGE_THRESHOLD) {
-    horizontal = "right";
-  } else if (bubble.left >= 100 - TOOLTIP_EDGE_THRESHOLD) {
-    horizontal = "left";
-  }
-
-  return {
-    vertical,
-    horizontal,
-  };
-}
-
-function getDesktopTooltipStyle(bubble, styles) {
-  const placement = getTooltipPlacement(bubble);
-
-  let transform = "translate(-50%, -100%)";
-  let paddingTop = "0px";
-  let paddingBottom = "10px";
-
-  if (placement.vertical === "bottom") {
-    transform = "translate(-50%, 0)";
-    paddingTop = "10px";
-    paddingBottom = "0px";
-  }
-
-  if (placement.horizontal === "right") {
-    transform =
-      placement.vertical === "bottom"
-        ? "translate(0, 0)"
-        : "translate(0, -100%)";
-  }
-
-  if (placement.horizontal === "left") {
-    transform =
-      placement.vertical === "bottom"
-        ? "translate(-100%, 0)"
-        : "translate(-100%, -100%)";
-  }
-
-  return {
-    ...styles.hoverTooltip,
-    left: `${bubble.left}%`,
-    top: `${bubble.top}%`,
-    transform,
-    paddingTop,
-    paddingBottom,
-  };
 }
 
 function BubbleInfoContent({ bubble, styles }) {
@@ -481,27 +369,37 @@ function BubbleInfoContent({ bubble, styles }) {
 
   return (
     <div style={styles.infoCardContent}>
-
       <div style={styles.infoRows}>
-
-        {bubble.symbolCount ? (
-          <div style={styles.infoRow}>
-            <span style={styles.infoLabel}>シンボル数</span>
-            <span style={styles.infoValue}>{bubble.symbolCount}</span>
+        {bubble.isHuntingGround ? (
+          <div style={styles.huntingBadgeRow}>
+            <span style={styles.huntingBadge}>狩場</span>
           </div>
         ) : null}
 
-        {bubble.spawnCount ? (
-          <div style={styles.infoRow}>
-            <span style={styles.infoLabel}>出現数</span>
-            <span style={styles.infoValue}>{bubble.spawnCount}</span>
+        {(bubble.symbolCount || bubble.spawnCount || bubble.spawnTimes) ? (
+          <div style={styles.summaryRow}>
+            <StatBlock
+              label="シンボル数"
+              value={bubble.symbolCount}
+              styles={styles}
+            />
+            <StatBlock
+              label="出現数"
+              value={bubble.spawnCount}
+              styles={styles}
+            />
+            <StatBlock
+              label="時間帯"
+              value={bubble.spawnTimes}
+              styles={styles}
+            />
           </div>
         ) : null}
 
-        {bubble.spawnTimes ? (
-          <div style={styles.infoRow}>
-            <span style={styles.infoLabel}>出現時間</span>
-            <span style={styles.infoValue}>{bubble.spawnTimes}</span>
+        {bubble.notes ? (
+          <div style={styles.infoBlock}>
+            <span style={styles.infoLabel}>メモ</span>
+            <span style={styles.infoValue}>{bubble.notes}</span>
           </div>
         ) : null}
       </div>
@@ -509,14 +407,289 @@ function BubbleInfoContent({ bubble, styles }) {
   );
 }
 
+function getStyles() {
+  return {
+    mapCard: {
+      width: "100%",
+      display: "flex",
+      flexDirection: "column",
+      gap: "10px",
+      height: "100%",
+      overflow: "visible",
+    },
+    mapImageFrame: {
+      width: "100%",
+      display: "flex",
+      flexDirection: "column",
+      gap: "10px",
+      overflow: "visible",
+    },
+    linkWrap: {
+      display: "block",
+      textDecoration: "none",
+      height: "100%",
+      overflow: "visible",
+    },
+    mapImageBox: {
+      position: "relative",
+      width: "100%",
+      aspectRatio: "1 / 1",
+      borderRadius: "18px",
+      overflow: "hidden",
+      background: "var(--page-bg)",
+      border: `1px solid var(--panel-border)`,
+      flexShrink: 0,
+    },
+    loadingOverlay: {
+      position: "absolute",
+      inset: 0,
+      zIndex: 3,
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: "10px",
+      background: "color-mix(in srgb, var(--page-bg) 92%, transparent)",
+    },
+    loadingShimmer: {
+      width: "100%",
+      height: "100%",
+      position: "absolute",
+      inset: 0,
+      background:
+        "linear-gradient(90deg, color-mix(in srgb, var(--soft-border) 88%, transparent) 0%, color-mix(in srgb, var(--soft-bg) 100%, white 0%) 50%, color-mix(in srgb, var(--soft-border) 88%, transparent) 100%)",
+      backgroundSize: "200% 100%",
+      animation: "monsterMapShimmer 1.2s ease-in-out infinite",
+    },
+    loadingText: {
+      position: "relative",
+      zIndex: 1,
+      fontSize: "13px",
+      fontWeight: 700,
+      color: "var(--text-sub)",
+      background: "var(--panel-bg)",
+      borderRadius: "999px",
+      padding: "6px 10px",
+      border: `1px solid var(--input-border)`,
+    },
+    imageInner: {
+      position: "absolute",
+      inset: 0,
+      overflow: "hidden",
+      transition: "opacity 0.18s ease",
+      zIndex: 1,
+    },
+    imageCropInner: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+    },
+    mapImage: {
+      display: "block",
+      width: "100%",
+      height: "100%",
+      objectFit: "fill",
+    },
+    bubbleLayer: {
+      position: "absolute",
+      inset: 0,
+      zIndex: 2,
+    },
+    spawnBubble: {
+      position: "absolute",
+      transform: "translate(-50%, -50%)",
+      borderRadius: "999px",
+      border: "1px solid color-mix(in srgb, var(--page-text) 56%, transparent)",
+      background: "color-mix(in srgb, var(--panel-bg) 20%, transparent)",
+      backdropFilter: "blur(2px)",
+      WebkitBackdropFilter: "blur(2px)",
+      cursor: "pointer",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 0,
+      transition: "all 0.16s ease",
+    },
+    spawnBubbleMerged: {
+      borderRadius: "999px",
+    },
+    spawnBubbleSelected: {
+      background: "color-mix(in srgb, var(--selected-border) 26%, transparent)",
+      border: "2px solid var(--selected-border)",
+      boxShadow:
+        "0 0 0 3px color-mix(in srgb, var(--selected-border) 18%, transparent)",
+    },
+    bubbleInner: {
+      position: "relative",
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: "4px",
+      pointerEvents: "none",
+    },
+    bubbleText: {
+      fontSize: "11px",
+      fontWeight: 800,
+      color: "var(--text-main)",
+      background: "color-mix(in srgb, var(--panel-bg) 90%, transparent)",
+      borderRadius: "999px",
+      padding: "3px 7px",
+      lineHeight: 1.1,
+      boxShadow:
+        "0 2px 8px color-mix(in srgb, var(--page-text) 10%, transparent)",
+      whiteSpace: "nowrap",
+      border: "1px solid color-mix(in srgb, var(--soft-border) 80%, transparent)",
+    },
+    bubbleHintIcon: {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      width: "18px",
+      height: "18px",
+      borderRadius: "999px",
+      fontSize: "11px",
+      lineHeight: 1,
+      background: "var(--selected-border)",
+      color: "#ffffff",
+      boxShadow:
+        "0 3px 10px color-mix(in srgb, var(--selected-border) 28%, transparent)",
+      transform: "translateY(-1px)",
+    },
+    centerTooltip: {
+      position: "absolute",
+      top: "50%",
+      left: "50%",
+      transform: "translate(-50%, -50%)",
+      zIndex: 5,
+      pointerEvents: "none",
+      width: "min(420px, calc(100% - 24px), 78vw)",
+    },
+    infoCardContent: {
+      background: "color-mix(in srgb, var(--panel-bg) 96%, transparent)",
+      border: `1px solid var(--panel-border)`,
+      borderRadius: "16px",
+      boxShadow:
+        "0 18px 40px color-mix(in srgb, var(--page-text) 12%, transparent)",
+      padding: "12px",
+      backdropFilter: "blur(6px)",
+      WebkitBackdropFilter: "blur(6px)",
+    },
+    infoRows: {
+      display: "grid",
+      gap: "10px",
+    },
+    huntingBadgeRow: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "flex-start",
+      marginBottom: "2px",
+    },
+    huntingBadge: {
+      display: "inline-flex",
+      alignItems: "center",
+      minHeight: "24px",
+      padding: "4px 10px",
+      borderRadius: "999px",
+      background: "color-mix(in srgb, var(--selected-border) 16%, transparent)",
+      color: "var(--selected-text)",
+      border:
+        "1px solid color-mix(in srgb, var(--selected-border) 40%, transparent)",
+      fontSize: "12px",
+      fontWeight: 900,
+      lineHeight: 1.1,
+      whiteSpace: "nowrap",
+    },
+    summaryRow: {
+      display: "grid",
+      gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+      gap: "10px",
+      alignItems: "start",
+    },
+    summaryStat: {
+      minWidth: 0,
+      display: "grid",
+      gap: "4px",
+    },
+    summaryStatLabel: {
+      fontSize: "12px",
+      fontWeight: 900,
+      color: "var(--text-muted)",
+      lineHeight: 1.2,
+      whiteSpace: "nowrap",
+    },
+    summaryStatValue: {
+      fontSize: "13px",
+      fontWeight: 700,
+      color: "var(--text-main)",
+      lineHeight: 1.45,
+      paddingLeft: "6px",
+      wordBreak: "break-word",
+      whiteSpace: "pre-wrap",
+    },
+    infoBlock: {
+      display: "grid",
+      gap: "4px",
+    },
+    infoLabel: {
+      fontSize: "12px",
+      fontWeight: 900,
+      color: "var(--text-muted)",
+      lineHeight: 1.2,
+    },
+    infoValue: {
+      fontSize: "13px",
+      fontWeight: 700,
+      color: "var(--text-main)",
+      lineHeight: 1.5,
+      paddingLeft: "6px",
+      wordBreak: "break-word",
+      whiteSpace: "pre-wrap",
+    },
+    mobileInfoCard: {
+      position: "relative",
+    },
+    mobileInfoClose: {
+      position: "absolute",
+      top: "8px",
+      right: "8px",
+      width: "28px",
+      height: "28px",
+      borderRadius: "999px",
+      border: `1px solid var(--input-border)`,
+      background: "var(--input-bg)",
+      color: "var(--input-text)",
+      fontSize: "16px",
+      fontWeight: 900,
+      cursor: "pointer",
+    },
+    mobileInfoTop: {
+      display: "block",
+    },
+    mobileInfoBody: {
+      paddingTop: "6px",
+    },
+    noImageBox: {
+      width: "100%",
+      aspectRatio: "1 / 1",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: "18px",
+      background: "var(--soft-bg)",
+      border: `1px dashed var(--soft-border)`,
+      color: "var(--text-muted)",
+      fontWeight: 700,
+    },
+  };
+}
+
 export default function MonsterMapOverlay({
   spawns = [],
   imagePath,
   href,
 }) {
-  const isDark = usePrefersDark();
   const isMobile = useIsMobile();
-  const styles = getStyles(isDark);
+  const styles = useMemo(() => getStyles(), []);
 
   const resolvedImageUrl = useMemo(
     () => getMonsterAssetUrl(imagePath),
@@ -541,21 +714,29 @@ export default function MonsterMapOverlay({
       .filter(Boolean);
   }, [cells, spawns]);
 
-  //const areaInfo = useMemo(() => buildAreaInfo(cells), [cells]);
-
   const activeDesktopBubble = useMemo(() => {
+    if (selectedBubbleKey) {
+      return bubbles.find((bubble) => bubble.key === selectedBubbleKey) ?? null;
+    }
+
     if (!hoveredBubbleKey) return null;
     return bubbles.find((bubble) => bubble.key === hoveredBubbleKey) ?? null;
-  }, [bubbles, hoveredBubbleKey]);
+  }, [bubbles, hoveredBubbleKey, selectedBubbleKey]);
 
   const activeMobileBubble = useMemo(() => {
-    if (!selectedBubbleKey) return null;
-    return bubbles.find((bubble) => bubble.key === selectedBubbleKey) ?? null;
-  }, [bubbles, selectedBubbleKey]);
+  if (!bubbles.length) return null;
+
+  if (!selectedBubbleKey) {
+    return bubbles[0];
+  }
+
+  return (
+    bubbles.find((bubble) => bubble.key === selectedBubbleKey) ?? bubbles[0]
+  );
+}, [bubbles, selectedBubbleKey]);
 
   function handleBubbleClick(bubbleKey) {
     if (!isMobile) return;
-
     setSelectedBubbleKey((prev) => (prev === bubbleKey ? "" : bubbleKey));
   }
 
@@ -569,7 +750,6 @@ export default function MonsterMapOverlay({
 
   const content = (
     <div style={styles.mapCard}>
-
       <div style={styles.mapImageFrame}>
         <div
           style={styles.mapImageBox}
@@ -579,6 +759,13 @@ export default function MonsterMapOverlay({
             }
           }}
         >
+          {!imageLoaded ? (
+            <div style={styles.loadingOverlay}>
+              <div style={styles.loadingShimmer} />
+              <span style={styles.loadingText}>読み込み中...</span>
+            </div>
+          ) : null}
+
           <div
             style={{
               ...styles.imageInner,
@@ -590,96 +777,82 @@ export default function MonsterMapOverlay({
                 ...styles.imageCropInner,
                 width: `${MAP_CROP.widthPercent}%`,
                 height: `${MAP_CROP.heightPercent}%`,
-                transform: `translate(-${MAP_CROP.offsetXPercent}%, -${MAP_CROP.offsetYPercent}%)`,
+                left: `-${MAP_CROP.offsetXPercent}%`,
+                top: `-${MAP_CROP.offsetYPercent}%`,
               }}
             >
               <Image
-                key={resolvedImageUrl}
                 src={resolvedImageUrl}
                 alt="map"
                 fill
-                sizes="(max-width: 768px) 100vw, 420px"
+                sizes="(max-width: 920px) 100vw, 50vw"
                 style={styles.mapImage}
-                priority={false}
                 onLoad={() => setImageLoaded(true)}
+                unoptimized
               />
             </div>
           </div>
 
-          {!imageLoaded && (
-            <div style={styles.loadingOverlay}>
-              <div style={styles.loadingShimmer} />
-              <div style={styles.loadingText}>読み込み中...</div>
-            </div>
-          )}
+          <div style={styles.bubbleLayer}>
+            {bubbles.map((bubble) => {
+              const bubbleStyle = {
+                ...styles.spawnBubble,
+                ...(bubble.isMerged ? styles.spawnBubbleMerged : {}),
+                ...(selectedBubbleKey === bubble.key
+                  ? styles.spawnBubbleSelected
+                  : {}),
+                left: `${bubble.left}%`,
+                top: `${bubble.top}%`,
+                width: `${bubble.width}%`,
+                height: `${bubble.height}%`,
+              };
 
+              return (
+                <button
+                  key={bubble.key}
+                  type="button"
+                  style={bubbleStyle}
+                  onMouseEnter={() => {
+                    if (!isMobile) setHoveredBubbleKey(bubble.key);
+                  }}
+                  onMouseLeave={() => {
+                    if (!isMobile && !selectedBubbleKey) {
+                      setHoveredBubbleKey("");
+                    }
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleBubbleClick(bubble.key);
+                  }}
+                >
+                  <span style={styles.bubbleInner}>
+                    <span style={styles.bubbleText}>{bubble.shortLabel}</span>
+                    {isMobile ? (
+                      <span style={styles.bubbleHintIcon}>i</span>
+                    ) : null}
+                  </span>
+                </button>
+              );
+            })}
 
-          {imageLoaded && bubbles.length > 0 && (
-            <div style={styles.bubbleLayer}>
-              {bubbles.map((bubble) => {
-                const isSelected = selectedBubbleKey === bubble.key;
-
-                return (
-                  <button
-                    key={bubble.key}
-                    type="button"
-                    title={bubble.label}
-                    aria-label={`${bubble.label} の詳細`}
-                    onMouseEnter={() => {
-                      if (!isMobile) setHoveredBubbleKey(bubble.key);
-                    }}
-                    onMouseLeave={() => {
-                      if (!isMobile) setHoveredBubbleKey("");
-                    }}
-                    onFocus={() => {
-                      if (!isMobile) setHoveredBubbleKey(bubble.key);
-                    }}
-                    onBlur={() => {
-                      if (!isMobile) setHoveredBubbleKey("");
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleBubbleClick(bubble.key);
-                    }}
-                    style={{
-                      ...styles.spawnBubble,
-                      ...(bubble.isMerged ? styles.spawnBubbleMerged : {}),
-                      ...(isSelected ? styles.spawnBubbleSelected : {}),
-                      left: `${bubble.left}%`,
-                      top: `${bubble.top}%`,
-                      width: `${bubble.width}%`,
-                      height: `${bubble.height}%`,
-                    }}
-                  >
-                    <span style={styles.bubbleInner}>
-                      <span style={styles.bubbleText}>{bubble.shortLabel}</span>
-                      <span style={styles.bubbleHintIcon} aria-hidden="true">
-                        👆
-                      </span>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {!isMobile && imageLoaded && activeDesktopBubble ? (
-            <div style={getDesktopTooltipStyle(activeDesktopBubble, styles)}>
-              <BubbleInfoContent
-                bubble={activeDesktopBubble}
-                styles={styles}
-              />
-            </div>
-          ) : null}
+            {!isMobile && activeDesktopBubble ? (
+              <div style={styles.centerTooltip}>
+                <BubbleInfoContent
+                  bubble={activeDesktopBubble}
+                  styles={styles}
+                />
+              </div>
+            ) : null}
+          </div>
         </div>
 
-        {isMobile && imageLoaded && activeMobileBubble ? (
+        {isMobile && activeMobileBubble ? (
           <div style={styles.mobileInfoCard}>
             <button
               type="button"
-              onClick={() => setSelectedBubbleKey("")}
               style={styles.mobileInfoClose}
-              aria-label="閉じる"
+              onClick={() => setSelectedBubbleKey("")}
             >
               ×
             </button>
@@ -715,388 +888,4 @@ export default function MonsterMapOverlay({
   }
 
   return content;
-}
-
-function getStyles(isDark) {
-  return {
-    mapCard: {
-      width: "100%",
-      display: "flex",
-      flexDirection: "column",
-      gap: "10px",
-      height: "100%",
-    },
-    mapImageFrame: {
-      width: "100%",
-      display: "flex",
-      flexDirection: "column",
-      gap: "10px",
-    },
-    linkWrap: {
-      display: "block",
-      textDecoration: "none",
-      height: "100%",
-    },
-    mapImageBox: {
-      position: "relative",
-      width: "100%",
-      aspectRatio: "1 / 1",
-      borderRadius: "18px",
-      overflow: "hidden",
-      background: isDark ? "#020617" : "#e5e7eb",
-      border: isDark ? "1px solid #334155" : "1px solid #d1d5db",
-      flexShrink: 0,
-    },
-    loadingOverlay: {
-      position: "absolute",
-      inset: 0,
-      zIndex: 3,
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: "10px",
-      background: isDark
-        ? "rgba(2,6,23,0.92)"
-        : "rgba(226,232,240,0.92)",
-    },
-    loadingShimmer: {
-      width: "100%",
-      height: "100%",
-      position: "absolute",
-      inset: 0,
-      background: isDark
-        ? "linear-gradient(90deg, rgba(15,23,42,0.88) 0%, rgba(30,41,59,0.98) 50%, rgba(15,23,42,0.88) 100%)"
-        : "linear-gradient(90deg, rgba(203,213,225,0.85) 0%, rgba(226,232,240,0.98) 50%, rgba(203,213,225,0.85) 100%)",
-      backgroundSize: "200% 100%",
-      animation: "monsterMapShimmer 1.2s ease-in-out infinite",
-    },
-    loadingText: {
-      position: "relative",
-      zIndex: 1,
-      fontSize: "13px",
-      fontWeight: 700,
-      color: isDark ? "#cbd5e1" : "#475569",
-      background: isDark ? "rgba(15,23,42,0.9)" : "rgba(255,255,255,0.86)",
-      borderRadius: "999px",
-      padding: "6px 10px",
-      border: isDark ? "1px solid #334155" : "1px solid #cbd5e1",
-    },
-    imageInner: {
-      position: "absolute",
-      inset: 0,
-      overflow: "hidden",
-      transition: "opacity 0.18s ease",
-      zIndex: 1,
-    },
-    imageCropInner: {
-      position: "absolute",
-      top: 0,
-      left: 0,
-    },
-    mapImage: {
-      display: "block",
-      width: "100%",
-      height: "100%",
-      objectFit: "fill",
-      filter: isDark ? "brightness(0.92)" : "none",
-    },
-    mapGuideBadge: {
-      position: "absolute",
-      top: "10px",
-      right: "10px",
-      zIndex: 4,
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      minHeight: "30px",
-      padding: "6px 10px",
-      borderRadius: "999px",
-      fontSize: "12px",
-      fontWeight: 800,
-      lineHeight: 1.2,
-      color: isDark ? "#e2e8f0" : "#0f172a",
-      background: isDark
-        ? "rgba(15,23,42,0.86)"
-        : "rgba(255,255,255,0.9)",
-      border: isDark ? "1px solid #334155" : "1px solid #cbd5e1",
-      boxShadow: isDark
-        ? "0 8px 24px rgba(2,6,23,0.34)"
-        : "0 8px 24px rgba(15,23,42,0.12)",
-      backdropFilter: "blur(8px)",
-      pointerEvents: "none",
-    },
-    bubbleLayer: {
-      position: "absolute",
-      inset: 0,
-      pointerEvents: "none",
-      zIndex: 2,
-    },
-    spawnBubble: {
-      position: "absolute",
-      borderRadius: "999px",
-      transform: "translate(-50%, -50%)",
-      background: isDark
-        ? "radial-gradient(circle at 50% 50%, rgba(56,189,248,0.42) 0%, rgba(59,130,246,0.34) 48%, rgba(37,99,235,0.22) 74%, rgba(37,99,235,0.10) 100%)"
-        : "radial-gradient(circle at 50% 50%, rgba(14,165,233,0.52) 0%, rgba(59,130,246,0.42) 48%, rgba(37,99,235,0.28) 74%, rgba(37,99,235,0.12) 100%)",
-      border: isDark
-        ? "3px solid rgba(96,165,250,0.68)"
-        : "3px solid rgba(30,64,175,0.78)",
-      boxShadow: isDark
-        ? "0 0 0 3px rgba(15,23,42,0.88), 0 10px 24px rgba(2,6,23,0.42), inset 0 0 24px rgba(255,255,255,0.10)"
-        : "0 0 0 4px rgba(255,255,255,0.82), 0 12px 28px rgba(30,64,175,0.30), inset 0 0 28px rgba(255,255,255,0.30)",
-      backdropFilter: "blur(1px)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "2px",
-      textAlign: "center",
-      pointerEvents: "auto",
-      cursor: isDark ? "pointer" : "pointer",
-      appearance: "none",
-      transition: "transform 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease",
-    },
-    spawnBubbleMerged: {
-      borderRadius: "999px",
-    },
-    spawnBubbleSelected: {
-      transform: "translate(-50%, -50%) scale(1.05)",
-      boxShadow: isDark
-        ? "0 0 0 3px rgba(15,23,42,0.88), 0 0 0 6px rgba(96,165,250,0.25), 0 14px 28px rgba(2,6,23,0.46)"
-        : "0 0 0 4px rgba(255,255,255,0.82), 0 0 0 7px rgba(59,130,246,0.18), 0 14px 30px rgba(30,64,175,0.32)",
-    },
-    bubbleInner: {
-      position: "relative",
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: "4px",
-      pointerEvents: "none",
-    },
-    bubbleText: {
-      fontSize: "10px",
-      fontWeight: 800,
-      color: isDark ? "#e2e8f0" : "#0f172a",
-      background: isDark ? "rgba(15,23,42,0.92)" : "rgba(255,255,255,0.9)",
-      borderRadius: "999px",
-      padding: "3px 7px",
-      lineHeight: 1.1,
-      boxShadow: isDark
-        ? "0 2px 8px rgba(2,6,23,0.32)"
-        : "0 2px 8px rgba(15,23,42,0.12)",
-      whiteSpace: "nowrap",
-      border: isDark
-        ? "1px solid rgba(71,85,105,0.7)"
-        : "1px solid transparent",
-    },
-    bubbleHintIcon: {
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      width: "18px",
-      height: "18px",
-      borderRadius: "999px",
-      fontSize: "11px",
-      lineHeight: 1,
-      background: isDark ? "rgba(59,130,246,0.95)" : "rgba(37,99,235,0.92)",
-      color: "#ffffff",
-      boxShadow: isDark
-        ? "0 3px 10px rgba(2,6,23,0.45)"
-        : "0 3px 10px rgba(37,99,235,0.24)",
-      transform: "translateY(-1px)",
-    },
-    hoverTooltip: {
-      position: "absolute",
-      zIndex: 4,
-      minWidth: "180px",
-      maxWidth: "260px",
-      pointerEvents: "none",
-    },
-    mobileInfoCard: {
-    position: "relative",
-    width: "100%",
-    borderRadius: "16px",
-    background: isDark ? "#020617" : "#ffffff",
-    border: "none",
-    boxShadow: "none",
-    padding: "12px 14px",
-    boxSizing: "border-box",
-    overflow: "visible",
-  },
-    mobileInfoTop: {
-      display: "flex",
-      alignItems: "flex-start",
-      justifyContent: "space-between",
-      gap: "12px",
-      width: "100%",
-    },
-    mobileInfoBody: {
-      minWidth: 0,
-      flex: 1,
-    },
-    mobileInfoClose: {
-    appearance: "none",
-    position: "absolute",
-    top: "-10px",
-    right: "-10px",
-    border: "none",
-    background: isDark ? "#0f172a" : "#ffffff",
-    color: isDark ? "#e2e8f0" : "#334155",
-    width: "32px",
-    height: "32px",
-    borderRadius: "999px",
-    fontSize: "20px",
-    fontWeight: 700,
-    lineHeight: 1,
-    cursor: "pointer",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 0,
-    boxShadow: isDark
-      ? "0 8px 20px rgba(2,6,23,0.42)"
-      : "0 8px 20px rgba(15,23,42,0.16)",
-    zIndex: 2,
-  },
-    infoCardContent: {
-      minWidth: 0,
-      display: "flex",
-      flexDirection: "column",
-      gap: "8px",
-      padding: "10px 12px",
-      borderRadius: "14px",
-      background: isDark ? "rgba(2,6,23,0.96)" : "rgba(255,255,255,0.98)",
-      
-      boxShadow: isDark
-        ? "0 14px 28px rgba(2,6,23,0.42)"
-        : "0 12px 24px rgba(15,23,42,0.14)",
-      backdropFilter: "blur(8px)",
-      width: "100%",
-      boxSizing: "border-box",
-    },
-    infoTitle: {
-      fontSize: "13px",
-      fontWeight: 800,
-      lineHeight: 1.35,
-      color: isDark ? "#f8fafc" : "#0f172a",
-    },
-    infoRows: {
-      display: "flex",
-      flexDirection: "column",
-      gap: "6px",
-      minWidth: 0,
-    },
-    infoRow: {
-      display: "flex",
-      alignItems: "flex-start",
-      justifyContent: "space-between",
-      gap: "12px",
-      minWidth: 0,
-    },
-    infoLabel: {
-      flex: "0 0 auto",
-      fontSize: "11px",
-      fontWeight: 800,
-      color: isDark ? "#93c5fd" : "#1d4ed8",
-      lineHeight: 1.5,
-    },
-    infoValue: {
-      minWidth: 0,
-      textAlign: "right",
-      fontSize: "12px",
-      fontWeight: 700,
-      color: isDark ? "#cbd5e1" : "#334155",
-      lineHeight: 1.5,
-      wordBreak: "break-word",
-    },
-    areaBar: {
-      minHeight: "48px",
-      height: "48px",
-      display: "flex",
-      alignItems: "center",
-      gap: "8px",
-      padding: "10px 12px",
-      borderRadius: "14px",
-      background: isDark ? "rgba(15,23,42,0.92)" : "rgba(248,250,252,0.96)",
-      border: isDark ? "1px solid #334155" : "1px solid #e2e8f0",
-      color: isDark ? "#e2e8f0" : "#0f172a",
-      overflow: "hidden",
-      boxSizing: "border-box",
-      flexShrink: 0,
-    },
-    areaBarLabel: {
-      flexShrink: 0,
-      fontSize: "12px",
-      fontWeight: 800,
-      color: isDark ? "#93c5fd" : "#1d4ed8",
-      background: isDark ? "rgba(30,41,59,0.9)" : "rgba(219,234,254,0.9)",
-      borderRadius: "999px",
-      padding: "4px 8px",
-      lineHeight: 1,
-      border: isDark ? "1px solid #334155" : "1px solid #bfdbfe",
-    },
-    areaChipWrap: {
-      minWidth: 0,
-      display: "flex",
-      alignItems: "center",
-      gap: "6px",
-      overflow: "hidden",
-      flexWrap: "nowrap",
-      whiteSpace: "nowrap",
-      flex: 1,
-    },
-    areaChip: {
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      flexShrink: 0,
-      maxWidth: "82px",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap",
-      fontSize: "12px",
-      fontWeight: 700,
-      color: isDark ? "#cbd5e1" : "#334155",
-      background: isDark ? "rgba(30,41,59,0.95)" : "#ffffff",
-      border: isDark ? "1px solid #475569" : "1px solid #cbd5e1",
-      borderRadius: "999px",
-      padding: "5px 8px",
-      lineHeight: 1,
-      boxSizing: "border-box",
-    },
-    areaChipMore: {
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      flexShrink: 0,
-      fontSize: "12px",
-      fontWeight: 800,
-      color: isDark ? "#e2e8f0" : "#1e293b",
-      background: isDark ? "rgba(59,130,246,0.28)" : "rgba(191,219,254,0.95)",
-      border: isDark ? "1px solid rgba(96,165,250,0.45)" : "1px solid #93c5fd",
-      borderRadius: "999px",
-      padding: "5px 8px",
-      lineHeight: 1,
-      boxSizing: "border-box",
-    },
-    areaBarValue: {
-      fontSize: "13px",
-      fontWeight: 700,
-      lineHeight: 1.4,
-      color: isDark ? "#64748b" : "#94a3b8",
-      wordBreak: "break-word",
-    },
-    noImageBox: {
-      borderRadius: "18px",
-      background: isDark ? "#020617" : "#f8fafc",
-      aspectRatio: "1 / 1",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      color: isDark ? "#64748b" : "#94a3b8",
-      fontSize: "13px",
-      fontWeight: 700,
-      border: isDark ? "1px solid #334155" : "1px solid transparent",
-    },
-  };
 }

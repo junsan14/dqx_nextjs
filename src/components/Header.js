@@ -14,9 +14,10 @@ export default function Header() {
 
   const publicMenus = useMemo(
     () => [
-      { href: "/tools/craft-profit", label: "職人" },
+      { href: "/tools/craft-profit", label: "職人あれこれ" },
       { href: "/tools/monster-search", label: "モンスター検索" },
-     /* { href: "/tools/map-monster-browser", label: "MAP別モンスター検索" },*/
+      { href: "/tools/monster-zukan", label: "モンスター図鑑" },
+      { href: "/tools/map-monster-browser", label: "MAP別モンスター検索" },
     ],
     []
   );
@@ -29,6 +30,7 @@ export default function Header() {
       { href: "/tool-editor/accessories", label: "アクセ管理" },
       { href: "/tool-editor/equipments", label: "装備管理" },
       { href: "/tool-editor/orbs", label: "宝珠管理" },
+      { href: "/tool-editor/clystals", label: "結晶管理" },
     ],
     []
   );
@@ -44,7 +46,15 @@ export default function Header() {
 
   useEffect(() => {
     const updateHeaderHeight = () => {
-      setHeaderHeight(headerRef.current?.offsetHeight ?? 0);
+      const nextHeight = headerRef.current?.offsetHeight ?? 0;
+      setHeaderHeight(nextHeight);
+
+      if (typeof document !== "undefined") {
+        document.documentElement.style.setProperty(
+          "--site-header-height",
+          `${nextHeight}px`
+        );
+      }
     };
 
     updateHeaderHeight();
