@@ -6,7 +6,7 @@ import { GoogleTagManager } from "@next/third-parties/google";
 
 
 export const metadata = {
-  metadataBase: new URL("https://www.junsan.info"),
+  metadataBase: new URL("https://www.dqx-tool.com"),
   title: {
     default: "DQX Tools | ドラクエ10向け便利ツール集",
     template: "%s | DQX Tools",

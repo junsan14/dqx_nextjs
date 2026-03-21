@@ -496,7 +496,7 @@ function SearchableMapSelect({
         placeholder={placeholder}
         onFocus={() => setOpen(true)}
         onChange={(e) => handleInputChange(e.target.value)}
-        className="w-full rounded-xl px-3 py-2 text-sm outline-none ring-0 transition"
+        className="w-full rounded-xl px-3 py-2 text-base md:text-sm outline-none ring-0 transition"
         style={{
           ...styles.textInput,
           opacity: disabled ? 0.7 : 1,
@@ -1351,7 +1351,7 @@ export default function MapMonsterBrowserClient() {
           <select
             value={selectedContinent}
             onChange={(e) => handleContinentChange(e.target.value)}
-            className="rounded-xl px-3 py-2 text-sm outline-none"
+            className="rounded-xl px-3 py-2 text-base md:text-sm outline-none"
             style={styles.selectInput}
           >
             <option value="">大陸を選択</option>
