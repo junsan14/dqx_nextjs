@@ -11,7 +11,7 @@ export default function Header() {
   const [headerHeight, setHeaderHeight] = useState(0);
   const headerRef = useRef(null);
   const { user, logout } = useAuth();
-
+  const term = "v7.5前期対応";
   const publicMenus = useMemo(
     () => [
       { href: "/tools/craft-profit", label: "職人あれこれ" },
@@ -99,6 +99,10 @@ export default function Header() {
 
               <span className="text-lg font-semibold tracking-wide text-slate-800 transition group-hover:text-slate-950 dark:text-slate-100 dark:group-hover:text-white">
                 Tools
+              </span>
+
+              <span className="hidden rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold tracking-[0.08em] text-emerald-700 md:inline-flex dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-300">
+               {term}
               </span>
             </Link>
 
@@ -298,6 +302,12 @@ export default function Header() {
                   </button>
                 </section>
               )}
+
+              <div className="mt-auto flex justify-center pt-4">
+                <div className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold tracking-[0.08em] text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-300">
+                 {term}
+                </div>
+              </div>
             </div>
           </div>
         </div>

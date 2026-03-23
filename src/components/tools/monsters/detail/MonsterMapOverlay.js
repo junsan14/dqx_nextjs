@@ -9,10 +9,34 @@ const GRID_SIZE = 8;
 const ORIGINAL_IMAGE_WIDTH = 490;
 const ORIGINAL_IMAGE_HEIGHT = 565;
 const CROP_TOP_PX = ORIGINAL_IMAGE_HEIGHT - ORIGINAL_IMAGE_WIDTH;
-const TOP_AXIS_PX = 2;
-const LEFT_AXIS_PX = 2.5;
+const TOP_AXIS_PX = 13;
+const LEFT_AXIS_PX = 3.3;
 const RIGHT_TRIM_PX = 0;
 const BOTTOM_TRIM_PX = 0;
+
+/**
+ * 位置微調整
+ */
+const BUBBLE_OFFSET_X_PERCENT = 3;
+const BUBBLE_OFFSET_Y_PERCENT = 3;
+
+/**
+ * 長方形サイズ調整
+ * 1.0 だとほぼセルいっぱい
+ * 0.88〜0.94 くらいが見やすい
+ */
+const BUBBLE_WIDTH_SCALE = 1;
+const BUBBLE_HEIGHT_SCALE = 1;
+
+/**
+ * 長方形の角丸
+ */
+const BUBBLE_BORDER_RADIUS_PX = 5;
+
+/**
+ * 長方形の内側余白
+ */
+const BUBBLE_INNER_PADDING_CELLS = 0.08;
 
 const GRID_SOURCE_X = LEFT_AXIS_PX;
 const GRID_SOURCE_Y = CROP_TOP_PX + TOP_AXIS_PX;
@@ -121,26 +145,9 @@ function collectUniqueCells(spawns = []) {
   return result;
 }
 
-function makeCellMap(cells = []) {
-  const map = new Map();
-
-  for (const cell of cells) {
-    map.set(`${cell.col}:${cell.row}`, cell);
-  }
-
-  return map;
-}
-
-function hasAllCellsInRect(cellMap, minCol, maxCol, minRow, maxRow) {
-  for (let col = minCol; col <= maxCol; col += 1) {
-    for (let row = minRow; row <= maxRow; row += 1) {
-      if (!cellMap.has(`${col}:${row}`)) {
-        return false;
-      }
-    }
-  }
-
-  return true;
+function compareCells(a, b) {
+  if (a.row !== b.row) return a.row - b.row;
+  return a.col - b.col;
 }
 
 function buildRectLabel(cells = []) {
@@ -150,20 +157,13 @@ function buildRectLabel(cells = []) {
     .join(", ");
 }
 
-function compareCells(a, b) {
-  const colDiff = a.col - b.col;
-  if (colDiff !== 0) return colDiff;
-  return a.row - b.row;
-}
+function buildShortLabel(cells = []) {
+  if (!cells.length) return "";
 
-function buildShortLabel(rectCells = []) {
-  if (!rectCells.length) return "";
+  const sorted = [...cells].sort(compareCells);
 
-  const sorted = [...rectCells].sort(compareCells);
-
-  if (sorted.length === 1) {
-    return sorted[0].label;
-  }
+  if (sorted.length === 1) return sorted[0].label;
+  if (sorted.length === 2) return `${sorted[0].label}, ${sorted[1].label}`;
 
   const first = sorted[0];
   const last = sorted[sorted.length - 1];
@@ -171,78 +171,56 @@ function buildShortLabel(rectCells = []) {
   return `${first.label}〜${last.label}`;
 }
 
+function areCellsOrthogonallyAdjacent(a, b) {
+  const colDiff = Math.abs(a.col - b.col);
+  const rowDiff = Math.abs(a.row - b.row);
+
+  return colDiff + rowDiff === 1;
+}
+
 function buildMergedGroups(cells = []) {
-  const cellMap = makeCellMap(cells);
-  const used = new Set();
+  if (!cells.length) return [];
+
+  const sortedCells = [...cells].sort(compareCells);
+  const visited = new Set();
   const groups = [];
 
-  const sortedCells = [...cells].sort((a, b) => {
-    if (a.row !== b.row) return a.row - b.row;
-    return a.col - b.col;
-  });
+  for (let i = 0; i < sortedCells.length; i += 1) {
+    if (visited.has(i)) continue;
 
-  for (const startCell of sortedCells) {
-    const startKey = `${startCell.col}:${startCell.row}`;
-    if (used.has(startKey)) continue;
+    const stack = [i];
+    visited.add(i);
 
-    let bestRect = {
-      minCol: startCell.col,
-      maxCol: startCell.col,
-      minRow: startCell.row,
-      maxRow: startCell.row,
-      area: 1,
-    };
+    const groupCells = [];
 
-    for (let maxCol = startCell.col; maxCol < GRID_SIZE; maxCol += 1) {
-      for (let maxRow = startCell.row; maxRow < GRID_SIZE; maxRow += 1) {
-        const width = maxCol - startCell.col + 1;
-        const height = maxRow - startCell.row + 1;
-        const area = width * height;
+    while (stack.length) {
+      const currentIndex = stack.pop();
+      const current = sortedCells[currentIndex];
+      groupCells.push(current);
 
-        if (area <= bestRect.area) continue;
+      for (let j = 0; j < sortedCells.length; j += 1) {
+        if (visited.has(j)) continue;
 
-        if (
-          hasAllCellsInRect(
-            cellMap,
-            startCell.col,
-            maxCol,
-            startCell.row,
-            maxRow
-          )
-        ) {
-          bestRect = {
-            minCol: startCell.col,
-            maxCol,
-            minRow: startCell.row,
-            maxRow,
-            area,
-          };
+        const target = sortedCells[j];
+
+        if (areCellsOrthogonallyAdjacent(current, target)) {
+          visited.add(j);
+          stack.push(j);
         }
       }
     }
 
-    const rectCells = [];
-
-    for (let col = bestRect.minCol; col <= bestRect.maxCol; col += 1) {
-      for (let row = bestRect.minRow; row <= bestRect.maxRow; row += 1) {
-        const key = `${col}:${row}`;
-        const cell = cellMap.get(key);
-
-        if (cell && !used.has(key)) {
-          rectCells.push(cell);
-          used.add(key);
-        }
-      }
-    }
+    const normalizedCells = groupCells.sort(compareCells);
 
     groups.push({
-      cells: rectCells,
-      minCol: bestRect.minCol,
-      maxCol: bestRect.maxCol,
-      minRow: bestRect.minRow,
-      maxRow: bestRect.maxRow,
-      label: buildRectLabel(rectCells),
-      shortLabel: buildShortLabel(rectCells),
+      cells: normalizedCells,
+      minCol: Math.min(...normalizedCells.map((cell) => cell.col)),
+      maxCol: Math.max(...normalizedCells.map((cell) => cell.col)),
+      minRow: Math.min(...normalizedCells.map((cell) => cell.row)),
+      maxRow: Math.max(...normalizedCells.map((cell) => cell.row)),
+      label: buildRectLabel(normalizedCells),
+      shortLabel: buildShortLabel(normalizedCells),
+      isMerged: normalizedCells.length > 1,
     });
   }
 
@@ -269,15 +247,6 @@ function normalizeSpawnTime(value) {
   return String(value ?? "").trim();
 }
 
-function bubbleContainsSpawn(group, spawn) {
-  const bubbleCellSet = new Set(group.cells.map((cell) => cell.label));
-  const spawnCells = parseAreaList(spawn?.area ?? spawn?.coords)
-    .map(normalizeAreaCell)
-    .filter(Boolean);
-
-  return spawnCells.some((cell) => bubbleCellSet.has(cell));
-}
-
 function joinUniqueValues(values = []) {
   const uniq = [];
   const seen = new Set();
@@ -300,17 +269,41 @@ function getPreferredNote(spawn) {
   return normalizeMetaValue(spawn?.imported_note);
 }
 
+function bubbleContainsSpawn(group, spawn) {
+  const bubbleCellSet = new Set(group.cells.map((cell) => cell.label));
+  const spawnCells = parseAreaList(spawn?.area ?? spawn?.coords)
+    .map(normalizeAreaCell)
+    .filter(Boolean);
+
+  return spawnCells.some((cell) => bubbleCellSet.has(cell));
+}
+
 function getBubblePosition(group, spawns = []) {
   const cellPercent = 100 / GRID_SIZE;
+  const paddingPercent = cellPercent * BUBBLE_INNER_PADDING_CELLS;
 
   const widthCells = group.maxCol - group.minCol + 1;
   const heightCells = group.maxRow - group.minRow + 1;
 
-  const left = group.minCol * cellPercent + (widthCells * cellPercent) / 2;
-  const top = group.minRow * cellPercent + (heightCells * cellPercent) / 2;
+  const left =
+    group.minCol * cellPercent +
+    (widthCells * cellPercent) / 2 +
+    BUBBLE_OFFSET_X_PERCENT;
 
-  const width = widthCells * cellPercent * 0.9;
-  const height = heightCells * cellPercent * 0.9;
+  const top =
+    group.minRow * cellPercent +
+    (heightCells * cellPercent) / 2 +
+    BUBBLE_OFFSET_Y_PERCENT;
+
+  const width = Math.max(
+    cellPercent * BUBBLE_WIDTH_SCALE,
+    widthCells * cellPercent * BUBBLE_WIDTH_SCALE - paddingPercent
+  );
+
+  const height = Math.max(
+    cellPercent * BUBBLE_HEIGHT_SCALE,
+    heightCells * cellPercent * BUBBLE_HEIGHT_SCALE - paddingPercent
+  );
 
   const relatedSpawns = (spawns ?? []).filter((spawn) =>
     bubbleContainsSpawn(group, spawn)
@@ -335,22 +328,23 @@ function getBubblePosition(group, spawns = []) {
     (spawn) => Boolean(spawn?.is_hunting_ground)
   );
 
-  return {
-    key: group.label,
-    label: group.label,
-    shortLabel: group.shortLabel,
-    left,
-    top,
-    width,
-    height,
-    isMerged: group.cells.length > 1,
-    symbolCount,
-    spawnCount,
-    spawnTimes,
-    notes,
-    isHuntingGround,
-    relatedSpawns,
-  };
+return {
+  key: group.label,
+  label: group.label,
+  shortLabel: group.shortLabel,
+  left,
+  top,
+  width,
+  height,
+  isMerged: group.isMerged,
+  isWideArea: widthCells >= 4 || heightCells >= 4,
+  symbolCount,
+  spawnCount,
+  spawnTimes,
+  notes,
+  isHuntingGround,
+  relatedSpawns,
+};
 }
 
 function StatBlock({ label, value, styles }) {
@@ -498,9 +492,9 @@ function getStyles() {
     spawnBubble: {
       position: "absolute",
       transform: "translate(-50%, -50%)",
-      borderRadius: "999px",
+      borderRadius: `${BUBBLE_BORDER_RADIUS_PX}px`,
       border: "1px solid color-mix(in srgb, var(--page-text) 56%, transparent)",
-      background: "color-mix(in srgb, var(--panel-bg) 20%, transparent)",
+      background: "color-mix(in srgb, var(--panel-bg) 24%, transparent)",
       backdropFilter: "blur(2px)",
       WebkitBackdropFilter: "blur(2px)",
       cursor: "pointer",
@@ -509,9 +503,6 @@ function getStyles() {
       justifyContent: "center",
       padding: 0,
       transition: "all 0.16s ease",
-    },
-    spawnBubbleMerged: {
-      borderRadius: "999px",
     },
     spawnBubbleSelected: {
       background: "color-mix(in srgb, var(--selected-border) 26%, transparent)",
@@ -724,16 +715,16 @@ export default function MonsterMapOverlay({
   }, [bubbles, hoveredBubbleKey, selectedBubbleKey]);
 
   const activeMobileBubble = useMemo(() => {
-  if (!bubbles.length) return null;
+    if (!bubbles.length) return null;
 
-  if (!selectedBubbleKey) {
-    return bubbles[0];
-  }
+    if (!selectedBubbleKey) {
+      return bubbles[0];
+    }
 
-  return (
-    bubbles.find((bubble) => bubble.key === selectedBubbleKey) ?? bubbles[0]
-  );
-}, [bubbles, selectedBubbleKey]);
+    return (
+      bubbles.find((bubble) => bubble.key === selectedBubbleKey) ?? bubbles[0]
+    );
+  }, [bubbles, selectedBubbleKey]);
 
   function handleBubbleClick(bubbleKey) {
     if (!isMobile) return;
@@ -796,16 +787,21 @@ export default function MonsterMapOverlay({
           <div style={styles.bubbleLayer}>
             {bubbles.map((bubble) => {
               const bubbleStyle = {
-                ...styles.spawnBubble,
-                ...(bubble.isMerged ? styles.spawnBubbleMerged : {}),
-                ...(selectedBubbleKey === bubble.key
-                  ? styles.spawnBubbleSelected
-                  : {}),
-                left: `${bubble.left}%`,
-                top: `${bubble.top}%`,
-                width: `${bubble.width}%`,
-                height: `${bubble.height}%`,
-              };
+              ...styles.spawnBubble,
+              ...(selectedBubbleKey === bubble.key
+                ? styles.spawnBubbleSelected
+                : {}),
+              ...(bubble.isWideArea
+                ? {
+                    backdropFilter: "none",
+                    WebkitBackdropFilter: "none",
+                  }
+                : {}),
+              left: `${bubble.left}%`,
+              top: `${bubble.top}%`,
+              width: `${bubble.width}%`,
+              height: `${bubble.height}%`,
+            };
 
               return (
                 <button
@@ -854,7 +850,6 @@ export default function MonsterMapOverlay({
               style={styles.mobileInfoClose}
               onClick={() => setSelectedBubbleKey("")}
             >
-              ×
             </button>
 
             <div style={styles.mobileInfoTop}>

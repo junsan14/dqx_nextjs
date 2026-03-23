@@ -7,6 +7,7 @@ import { fetchMonsterMapSpawns } from "@/lib/monsterMapSpawns";
 import { fetchMonsterDetail } from "@/lib/monsters";
 import MonsterMapOverlay from "./MonsterMapOverlay";
 import PageHeroTitle from "@/components/PageHeroTitle";
+import MapMonsterBrowserSkeleton from "@/components/ui/MapMonsterBrowserSkeleton";
 function uniqBy(array, keyGetter) {
   const map = new Map();
 
@@ -1349,17 +1350,26 @@ export default function MapMonsterBrowserClient() {
             大陸
           </span>
           <select
-            value={selectedContinent}
+            value={loading ? "" : selectedContinent}
             onChange={(e) => handleContinentChange(e.target.value)}
             className="rounded-xl px-3 py-2 text-base md:text-sm outline-none"
-            style={styles.selectInput}
+            style={{
+              ...styles.selectInput,
+              opacity: loading ? 0.8 : 1,
+              cursor: loading ? "wait" : "pointer",
+            }}
+            disabled={loading}
           >
-            <option value="">大陸を選択</option>
-            {continents.map((continent) => (
-              <option key={continent} value={continent}>
-                {continent}
-              </option>
-            ))}
+            <option value="">
+              {loading ? "大陸データを読み込んでいます..." : "大陸を選択"}
+            </option>
+
+            {!loading &&
+              continents.map((continent) => (
+                <option key={continent} value={continent}>
+                  {continent}
+                </option>
+              ))}
           </select>
         </label>
 
@@ -1403,10 +1413,13 @@ export default function MapMonsterBrowserClient() {
       </div>
 
       {loading ? (
-        <div className="mt-6 rounded-2xl p-6 text-sm" style={styles.loadingBox}>
-          データ読み込み中...
-        </div>
-      ) : null}
+  <>
+    <div className="mt-6 rounded-2xl p-4 text-sm" style={styles.loadingBox}>
+      大陸データを読み込んでいます...
+    </div>
+    <MapMonsterBrowserSkeleton />
+  </>
+) : null}
 
       {error ? (
         <div className="mt-6 rounded-2xl p-4 text-sm" style={styles.errorBox}>

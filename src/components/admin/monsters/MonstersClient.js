@@ -398,7 +398,7 @@ export default function MonstersClient() {
             createLabel={!isAdmin ? "新規追加（管理者のみ）" : "新規追加"}
             loading={loadingList}
             title="モンスター検索"
-            searchPlaceholder="モンスター名で検索"
+            searchPlaceholder="モンスター名 / IDで検索"
           >
             <MonsterList
               monsters={monsters}

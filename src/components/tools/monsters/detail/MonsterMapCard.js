@@ -1,38 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { FaMoon } from "react-icons/fa6";
+import { IoSunnyOutline } from "react-icons/io5";
 import MonsterMapOverlay from "./MonsterMapOverlay";
 
-const AREA_PREVIEW_COUNT = 2;
 
-function joinDisplayValue(value) {
-  if (value == null) return "";
 
-  if (Array.isArray(value)) {
-    return value.map((v) => String(v).trim()).filter(Boolean).join(" / ");
-  }
 
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    if (!trimmed || trimmed === "[]") return "";
-
-    try {
-      const parsed = JSON.parse(trimmed);
-
-      if (Array.isArray(parsed)) {
-        return parsed.map((v) => String(v).trim()).filter(Boolean).join(" / ");
-      }
-
-      if (typeof parsed === "string") return parsed.trim();
-    } catch (_) {
-      return trimmed;
-    }
-
-    return trimmed;
-  }
-
-  return String(value);
-}
 
 function normalizeSpawnTime(value) {
   const v = String(value ?? "").trim().toLowerCase();
@@ -50,18 +25,7 @@ function normalizeLayerName(value) {
   return String(value ?? "").trim();
 }
 
-function splitSlashValues(text = "") {
-  return String(text)
-    .split("/")
-    .map((x) => x.trim())
-    .filter(Boolean);
-}
 
-function shouldHideLayerNames(layerNames = []) {
-  if (!Array.isArray(layerNames) || layerNames.length === 0) return true;
-  if (layerNames.length === 1 && layerNames[0] === "地上") return true;
-  return false;
-}
 
 function getSpawnLayerName(spawn = {}) {
   return normalizeLayerName(spawn?.map_layer_name ?? spawn?.layer_name ?? "");
@@ -75,64 +39,6 @@ function getSpawnImagePath(spawn = {}, mapItem = {}) {
     mapItem?.image_url ??
     ""
   );
-}
-
-function parseAreaList(area) {
-  if (!area) return [];
-
-  if (Array.isArray(area)) {
-    return area.map((v) => String(v).trim()).filter(Boolean);
-  }
-
-  if (typeof area === "string") {
-    const trimmed = area.trim();
-    if (!trimmed || trimmed === "[]") return [];
-
-    try {
-      const parsed = JSON.parse(trimmed);
-      if (Array.isArray(parsed)) {
-        return parsed.map((v) => String(v).trim()).filter(Boolean);
-      }
-    } catch (_) {
-      return trimmed
-        .split(",")
-        .map((v) => v.trim())
-        .filter(Boolean);
-    }
-  }
-
-  return [];
-}
-
-function buildSummary(mapItem) {
-  const spawns = Array.isArray(mapItem?.spawns) ? mapItem.spawns : [];
-  const timeSet = new Set();
-  const layerSet = new Set();
-
-  for (const spawn of spawns) {
-    const timeText = joinDisplayValue(spawn?.spawn_time);
-    if (timeText) {
-      for (const time of splitSlashValues(timeText)) {
-        const normalized = normalizeSpawnTime(time);
-        if (normalized) timeSet.add(normalized);
-      }
-    }
-
-    const layerText = getSpawnLayerName(spawn);
-    if (layerText) {
-      for (const name of splitSlashValues(layerText)) {
-        const normalized = normalizeLayerName(name);
-        if (normalized) layerSet.add(normalized);
-      }
-    }
-  }
-
-  const layerNames = Array.from(layerSet);
-
-  return {
-    times: Array.from(timeSet),
-    layerNames: shouldHideLayerNames(layerNames) ? [] : layerNames,
-  };
 }
 
 function buildLayerGroups(mapItem) {
@@ -165,24 +71,7 @@ function buildLayerGroups(mapItem) {
   return Array.from(groups.values());
 }
 
-function buildAreaTags(spawns = []) {
-  const tags = [];
-  const seen = new Set();
 
-  for (const spawn of spawns) {
-    const areas = parseAreaList(spawn?.area ?? spawn?.coords);
-
-    for (const area of areas) {
-      const normalized = String(area).trim().toUpperCase();
-      if (!normalized) continue;
-      if (seen.has(normalized)) continue;
-      seen.add(normalized);
-      tags.push(normalized);
-    }
-  }
-
-  return tags;
-}
 
 function useIsMobile(breakpoint = 920) {
   const [isMobile, setIsMobile] = useState(false);
@@ -212,6 +101,31 @@ function getContinentName(mapItem = {}) {
   ).trim();
 }
 
+function hasHuntingGround(mapItem = {}, spawns = []) {
+  if (mapItem?.is_hunting_ground) return true;
+
+  const list = Array.isArray(spawns) ? spawns : [];
+  return list.some((spawn) => spawn?.is_hunting_ground);
+}
+
+function getSpawnTimeFlags(spawns = []) {
+  const list = Array.isArray(spawns) ? spawns : [];
+
+  let hasDay = false;
+  let hasNight = false;
+
+  for (const spawn of list) {
+    const normalized = normalizeSpawnTime(spawn?.spawn_time);
+
+    if (normalized === "日中") hasDay = true;
+    if (normalized === "夜") hasNight = true;
+
+    if (hasDay && hasNight) break;
+  }
+
+  return { hasDay, hasNight };
+}
+
 function getStyles() {
   return {
     card: {
@@ -221,10 +135,8 @@ function getStyles() {
       boxSizing: "border-box",
       overflow: "hidden",
       background: "var(--soft-bg)",
-      borderRadius: "18px",
+      borderRadius: "5px",
       padding: "16px",
-      boxShadow:
-        "0 10px 28px color-mix(in srgb, var(--page-text) 8%, transparent)",
       height: "100%",
       minHeight: "100%",
       border: `1px solid var(--card-border)`,
@@ -260,6 +172,13 @@ function getStyles() {
       color: "var(--text-title)",
       wordBreak: "break-word",
     },
+    titleMetaRow: {
+      display: "inline-flex",
+      alignItems: "center",
+      flexWrap: "wrap",
+      gap: "8px",
+      minWidth: 0,
+    },
     continentText: {
       display: "inline-flex",
       alignItems: "center",
@@ -271,6 +190,36 @@ function getStyles() {
       background: "var(--badge-bg)",
       color: "var(--badge-text)",
       border: `1px solid var(--tag-border)`,
+    },
+    huntingBadge: {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      minHeight: "28px",
+      padding: "4px 10px",
+      borderRadius: "999px",
+      fontSize: "12px",
+      fontWeight: 900,
+      lineHeight: 1,
+      color: "var(--selected-text)",
+      background:
+        "color-mix(in srgb, var(--selected-border) 16%, transparent)",
+      border:
+        "1px solid color-mix(in srgb, var(--selected-border) 38%, transparent)",
+      whiteSpace: "nowrap",
+    },
+    timeIconGroup: {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: "6px",
+      padding: "0 2px",
+    },
+    timeIcon: {
+      width: "18px",
+      height: "18px",
+      display: "block",
+      flexShrink: 0,
+      color: "var(--text-main)",
     },
     layerSwitchRow: {
       display: "flex",
@@ -417,7 +366,7 @@ export default function MonsterMapCard({ mapItem }) {
   const isMobile = useIsMobile();
   const styles = useMemo(() => getStyles(), []);
 
-  const summary = useMemo(() => buildSummary(mapItem), [mapItem]);
+  
   const layerGroups = useMemo(() => buildLayerGroups(mapItem), [mapItem]);
 
   const hasLayerSwitch = layerGroups.length > 0;
@@ -425,7 +374,6 @@ export default function MonsterMapCard({ mapItem }) {
   const [activeLayerName, setActiveLayerName] = useState(
     layerGroups[0]?.layerName ?? ""
   );
-  const [coordsExpanded, setCoordsExpanded] = useState(false);
 
   useEffect(() => {
     if (!hasLayerSwitch) {
@@ -433,15 +381,13 @@ export default function MonsterMapCard({ mapItem }) {
       return;
     }
 
-    const exists = layerGroups.some((group) => group.layerName === activeLayerName);
+    const exists = layerGroups.some(
+      (group) => group.layerName === activeLayerName
+    );
     if (!exists) {
       setActiveLayerName(layerGroups[0]?.layerName ?? "");
     }
   }, [activeLayerName, hasLayerSwitch, layerGroups]);
-
-  useEffect(() => {
-    setCoordsExpanded(false);
-  }, [mapItem?.id, activeLayerName]);
 
   const activeLayerGroup = useMemo(() => {
     if (!hasLayerSwitch) return null;
@@ -460,18 +406,15 @@ export default function MonsterMapCard({ mapItem }) {
     ? activeLayerGroup?.imagePath ?? mapItem?.image_path ?? ""
     : mapItem?.image_path ?? mapItem?.image_url ?? "";
 
-  const areaTags = useMemo(() => buildAreaTags(displaySpawns), [displaySpawns]);
-  const displayTimes = summary.times;
   const continentName = getContinentName(mapItem);
-
-  const previewAreaTags = areaTags.slice(0, AREA_PREVIEW_COUNT);
-  const hiddenAreaTags = areaTags.slice(AREA_PREVIEW_COUNT);
-  const hasHiddenCoords = hiddenAreaTags.length > 0;
-
-  const hasSpawnMeta =
-    previewAreaTags.length > 0 ||
-    displayTimes.length > 0 ||
-    summary.layerNames.length > 0;
+  const isHuntingGround = useMemo(
+    () => hasHuntingGround(mapItem, displaySpawns),
+    [mapItem, displaySpawns]
+  );
+  const { hasDay, hasNight } = useMemo(
+    () => getSpawnTimeFlags(displaySpawns),
+    [displaySpawns]
+  );
 
   return (
     <article style={styles.card}>
@@ -484,9 +427,23 @@ export default function MonsterMapCard({ mapItem }) {
         <div style={styles.titleWrap}>
           <div style={styles.titleLine}>
             <h3 style={styles.mapTitle}>{mapItem?.name || "マップ"}</h3>
-            {continentName ? (
-              <span style={styles.continentText}>{continentName}</span>
-            ) : null}
+
+            <div style={styles.titleMetaRow}>
+              {continentName ? (
+                <span style={styles.continentText}>{continentName}</span>
+              ) : null}
+
+              {isHuntingGround ? (
+                <span style={styles.huntingBadge}>狩場</span>
+              ) : null}
+
+              {hasDay || hasNight ? (
+                <span style={styles.timeIconGroup}>
+                  {hasDay ? <IoSunnyOutline style={styles.timeIcon} /> : null}
+                  {hasNight ? <FaMoon style={styles.timeIcon} /> : null}
+                </span>
+              ) : null}
+            </div>
           </div>
         </div>
 
@@ -517,74 +474,6 @@ export default function MonsterMapCard({ mapItem }) {
           </div>
         ) : null}
       </div>
-
-      {hasSpawnMeta ? (
-        <div style={styles.spawnInfoSection}>
-          <div style={styles.spawnInfoRow}>
-            <span style={styles.spawnInfoLabel}>生息</span>
-
-            <div style={styles.spawnMetaWrap}>
-              <div style={styles.spawnMetaWrapTag}>
-                {previewAreaTags.map((area) => (
-                  <div key={area} style={{ ...styles.tag, ...styles.tagArea }}>
-                    {area}
-                  </div>
-                ))}
-
-                {!coordsExpanded && hasHiddenCoords ? (
-                  <button
-                    type="button"
-                    onClick={() => setCoordsExpanded(true)}
-                    style={styles.coordsToggleButton}
-                  >
-                    +{hiddenAreaTags.length}
-                  </button>
-                ) : null}
-              </div>
-
-              <div style={styles.timeTagWrap}>
-                {displayTimes.map((time) => (
-                  <div
-                    key={time}
-                    style={{
-                      ...styles.tag,
-                      ...(time === "夜" ? styles.tagNight : {}),
-                      ...((time === "日中" || time === "昼") ? styles.tagDay : {}),
-                      ...(time === "いつでも" ? styles.tagAnytime : {}),
-                    }}
-                  >
-                    {time}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {coordsExpanded && hasHiddenCoords ? (
-            <div style={styles.coordsAccordion}>
-              <div style={styles.spawnInfoRow}>
-                <span style={styles.spawnInfoLabelSub}>追加</span>
-
-                <div style={styles.spawnMetaWrap}>
-                  {hiddenAreaTags.map((area) => (
-                    <span key={area} style={{ ...styles.tag, ...styles.tagArea }}>
-                      {area}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setCoordsExpanded(false)}
-                style={styles.coordsCloseButton}
-              >
-                閉じる
-              </button>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
 
       <div style={styles.mapWrap}>
         <MonsterMapOverlay

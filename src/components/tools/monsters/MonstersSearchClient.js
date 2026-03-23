@@ -11,7 +11,7 @@ import PageHeroTitle from "@/components/PageHeroTitle";
 
 const SEARCH_OPTIONS = [
   { value: "monster", label: "モンスター" },
-  { value: "orb", label: "オーブ" },
+  { value: "orb", label: "宝珠" },
   { value: "item", label: "アイテム" },
   { value: "equipment", label: "装備" },
 ];
@@ -571,7 +571,7 @@ function getLoadingStyles() {
       WebkitBackdropFilter: "blur(14px)",
       borderRadius: "24px",
       padding: "18px",
-      boxShadow: "0 18px 50px color-mix(in srgb, var(--page-text) 8%, transparent)",
+
       width: "100%",
       boxSizing: "border-box",
       marginBottom: "28px",
@@ -619,7 +619,7 @@ function getLoadingStyles() {
       borderRadius: "24px",
       background: "var(--card-bg)",
       border: "1px solid var(--card-border)",
-      boxShadow: "0 18px 40px color-mix(in srgb, var(--page-text) 6%, transparent)",
+     
       overflow: "hidden",
     },
     cardInner: {
@@ -666,7 +666,7 @@ function getLoadingStyles() {
       background: "var(--panel-bg)",
       border: "1px solid var(--selected-border)",
       borderTop: "1px solid var(--selected-border)",
-      boxShadow: "0 14px 34px color-mix(in srgb, var(--selected-border) 16%, transparent)",
+     
       width: "100%",
       boxSizing: "border-box",
     },
@@ -723,7 +723,7 @@ function getStyles() {
       WebkitBackdropFilter: "blur(14px)",
       borderRadius: "24px",
       padding: "18px",
-      boxShadow: "0 18px 50px color-mix(in srgb, var(--page-text) 8%, transparent)",
+     
       width: "100%",
       maxWidth: "100%",
       minWidth: 0,
@@ -755,7 +755,7 @@ function getStyles() {
       background: "var(--primary-bg)",
       color: "var(--primary-text)",
       border: "1px solid var(--primary-border)",
-      boxShadow: "0 10px 24px color-mix(in srgb, var(--primary-border) 18%, transparent)",
+     
     },
     searchArea: {
       position: "relative",
@@ -792,7 +792,7 @@ function getStyles() {
       background: "var(--panel-bg)",
       border: "1px solid var(--input-border)",
       borderRadius: "18px",
-      boxShadow: "0 18px 40px color-mix(in srgb, var(--page-text) 12%, transparent)",
+    
       overflow: "hidden",
       zIndex: 999,
       minWidth: 0,
@@ -910,7 +910,7 @@ function getStyles() {
       background: "var(--panel-bg)",
       border: "1px solid var(--selected-border)",
       borderTop: "1px solid var(--selected-border)",
-      boxShadow: "0 14px 34px color-mix(in srgb, var(--selected-border) 16%, transparent)",
+     
       width: "100%",
       maxWidth: "100%",
       minWidth: 0,

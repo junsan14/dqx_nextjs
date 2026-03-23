@@ -61,7 +61,7 @@ export default function EditorSidebar({
           />
         </div>
 
-        {loading && <div style={styles.loading}>読み込み中...</div>}
+        {loading ? <div style={styles.loading}>読み込み中...</div> : null}
 
         {(!isMobile || isOpen) && <div style={styles.listWrap}>{children}</div>}
       </div>
@@ -71,21 +71,13 @@ export default function EditorSidebar({
 
 const styles = {
   sidebar: {
-    width: 400,
-    minWidth: 320,
-    maxWidth: 400,
-    padding: 12,
-    position: "sticky",
-    top: "0",
-    alignSelf: "flex-start",
+    width: "100%",
+    height: "100%",
+    minWidth: 0,
   },
 
   sidebarMobile: {
-    width: "100%",
-    minWidth: 0,
-    maxWidth: "100%",
-    padding: "16px 0 0",
-    position: "static",
+    height: "auto",
   },
 
   box: {
@@ -97,6 +89,9 @@ const styles = {
     flexDirection: "column",
     gap: 12,
     minWidth: 0,
+    height: "100%",
+    overflow: "hidden",
+    boxSizing: "border-box",
   },
 
   topRow: {
@@ -104,6 +99,7 @@ const styles = {
     alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
+    flexShrink: 0,
   },
 
   title: {
@@ -119,6 +115,7 @@ const styles = {
     display: "flex",
     flexDirection: "column",
     gap: 10,
+    flexShrink: 0,
   },
 
   input: {
@@ -130,11 +127,13 @@ const styles = {
     borderRadius: 10,
     padding: "10px 12px",
     outline: "none",
+    boxSizing: "border-box",
   },
 
   loading: {
     color: "var(--text-muted)",
     fontSize: 13,
+    flexShrink: 0,
   },
 
   listWrap: {
@@ -142,6 +141,10 @@ const styles = {
     display: "flex",
     flexDirection: "column",
     gap: 8,
+    flex: 1,
+    minHeight: 0,
+    overflowY: "auto",
+    paddingRight: 4,
   },
 };
 

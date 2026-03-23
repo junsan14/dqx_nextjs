@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { FcLike } from "react-icons/fc";
+
 import MonsterMapCard from "./MonsterMapCard";
 
 function useIsMobile(breakpoint = 920) {
@@ -30,20 +32,28 @@ function chunkArray(items, size) {
   return result;
 }
 
-function buildTabLabel(group, index, isMobile) {
-  if (!group?.length) return `タブ${index + 1}`;
+function hasHuntingGround(mapItem) {
+  if (!mapItem) return false;
+  if ((mapItem.is_hunting_ground)) return true;
 
-  if (isMobile) {
-    return group[0]?.name || `タブ${index + 1}`;
-  }
+  const spawns = Array.isArray(mapItem.spawns) ? mapItem.spawns : [];
+  return spawns.some((spawn) => Boolean(spawn?.is_hunting_ground));
+}
 
-  if (group.length === 1) {
-    return group[0]?.name || `タブ${index + 1}`;
-  }
+function sortMapsByHuntingGround(items = []) {
+  return items
+    .map((item, index) => ({ item, index }))
+    .sort((a, b) => {
+      const aHunting = hasHuntingGround(a.item);
+      const bHunting = hasHuntingGround(b.item);
 
-  const first = group[0]?.name || "";
-  const second = group[1]?.name || "";
-  return `${first} / ${second}`;
+      if (aHunting !== bHunting) {
+        return aHunting ? -1 : 1;
+      }
+
+      return a.index - b.index;
+    })
+    .map(({ item }) => item);
 }
 
 function getStyles() {
@@ -81,6 +91,13 @@ function getStyles() {
       boxSizing: "border-box",
       scrollbarWidth: "thin",
     },
+    tabGroup: {
+      display: "flex",
+      gap: "8px",
+      flex: "0 0 auto",
+      minWidth: 0,
+      maxWidth: "100%",
+    },
     tabButton: {
       appearance: "none",
       border: `1px solid var(--panel-border)`,
@@ -103,8 +120,28 @@ function getStyles() {
       background: "var(--primary-bg)",
       color: "var(--primary-text)",
       border: `1px solid var(--primary-border)`,
-      boxShadow:
-        "0 10px 24px color-mix(in srgb, var(--primary-border) 16%, transparent)",
+    },
+    tabButtonContent: {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: "6px",
+      minWidth: 0,
+    },
+    tabButtonText: {
+      display: "inline-block",
+      minWidth: 0,
+    },
+    huntingLikeIcon: {
+      display: "inline-block",
+      width: "14px",
+      height: "14px",
+      flexShrink: 0,
+      color: "var(--warning-text, #f59e0b)",
+      transform: "translateY(-0.5px)",
+    },
+    huntingLikeIconActive: {
+      color: "var(--primary-text)",
+      opacity: 0.92,
     },
     emptyCard: {
       borderRadius: "18px",
@@ -151,6 +188,33 @@ function getStyles() {
   };
 }
 
+function MapTabButton({ mapItem, isActive, onClick, styles }) {
+  const liked = hasHuntingGround(mapItem);
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        ...styles.tabButton,
+        ...(isActive ? styles.tabButtonActive : {}),
+      }}
+    >
+      <span style={styles.tabButtonContent}>
+        <span style={styles.tabButtonText}>{mapItem?.name || "地名なし"}</span>
+        {liked ? (
+          <FcLike
+            style={{
+              ...styles.huntingLikeIcon,
+              ...(isActive ? styles.huntingLikeIconActive : {}),
+            }}
+          />
+        ) : null}
+      </span>
+    </button>
+  );
+}
+
 export default function MonsterMapSection({ maps = [] }) {
   const isMobile = useIsMobile();
   const styles = useMemo(() => getStyles(), []);
@@ -161,9 +225,11 @@ export default function MonsterMapSection({ maps = [] }) {
   const isProgrammaticScrollRef = useRef(false);
 
   const normalizedMaps = useMemo(() => {
-    return Array.isArray(maps)
+    const filtered = Array.isArray(maps)
       ? maps.filter((item) => item && (item.name || item.id))
       : [];
+
+    return sortMapsByHuntingGround(filtered);
   }, [maps]);
 
   const pageSize = isMobile ? 1 : 2;
@@ -258,20 +324,23 @@ export default function MonsterMapSection({ maps = [] }) {
           const isActive = index === activeTab;
 
           return (
-            <button
-              key={`tab-${index}`}
+            <div
+              key={`tab-group-${index}`}
               ref={(el) => {
                 tabRefs.current[index] = el;
               }}
-              type="button"
-              onClick={() => setActiveTab(index)}
-              style={{
-                ...styles.tabButton,
-                ...(isActive ? styles.tabButtonActive : {}),
-              }}
+              style={styles.tabGroup}
             >
-              {buildTabLabel(group, index, isMobile)}
-            </button>
+              {group.map((mapItem) => (
+                <MapTabButton
+                  key={`tab-${index}-${mapItem.id ?? mapItem.name}`}
+                  mapItem={mapItem}
+                  isActive={isActive}
+                  onClick={() => setActiveTab(index)}
+                  styles={styles}
+                />
+              ))}
+            </div>
           );
         })}
       </div>
@@ -282,7 +351,10 @@ export default function MonsterMapSection({ maps = [] }) {
             <div key={`page-${index}`} style={styles.mobilePage}>
               <div style={styles.mobilePageInner}>
                 {group.map((mapItem) => (
-                  <div key={mapItem.id ?? mapItem.name} style={styles.mobileCardWrap}>
+                  <div
+                    key={mapItem.id ?? mapItem.name}
+                    style={styles.mobileCardWrap}
+                  >
                     <MonsterMapCard mapItem={mapItem} />
                   </div>
                 ))}
@@ -293,7 +365,10 @@ export default function MonsterMapSection({ maps = [] }) {
       ) : (
         <div style={styles.desktopGrid}>
           {(pagedMaps[activeTab] ?? []).map((mapItem) => (
-            <div key={mapItem.id ?? mapItem.name} style={styles.desktopCardWrap}>
+            <div
+              key={mapItem.id ?? mapItem.name}
+              style={styles.desktopCardWrap}
+            >
               <MonsterMapCard mapItem={mapItem} />
             </div>
           ))}

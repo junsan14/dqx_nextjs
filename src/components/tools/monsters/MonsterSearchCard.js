@@ -68,7 +68,7 @@ function getStyles() {
       borderBottom: "1px solid transparent",
       borderBottomLeftRadius: 0,
       borderBottomRightRadius: 0,
-      boxShadow: "0 14px 34px color-mix(in srgb, var(--selected-border) 18%, transparent)",
+
       background: "var(--panel-bg)",
     },
     topRow: {

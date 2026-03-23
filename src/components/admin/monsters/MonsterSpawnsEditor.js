@@ -11,9 +11,10 @@ const COLS_4 = ["A", "B", "C", "D"];
 const ROWS_4 = [1, 2, 3, 4];
 
 const SPAWN_TIME_OPTIONS = [
-  { value: "normal", label: "いつでも" },
-  { value: "day", label: "昼のみ" },
-  { value: "night", label: "夜のみ" },
+  { value: "いつでも", label: "いつでも" },
+  { value: "昼", label: "昼のみ" },
+  { value: "夜", label: "夜のみ" },
+  { value: "吹雪", label: "吹雪" },
 ];
 
 const DEFAULT_MAP_GRID_INSET = {
@@ -51,7 +52,7 @@ function makeSpawn() {
     imported_note: "",
     note: "",
     is_hunting_ground: false,
-    grid_mode: "block",
+    grid_mode: "single",
   };
 }
 
@@ -67,13 +68,12 @@ function uniqCoords(coords = []) {
   ];
 }
 
-function toggleCoordSet(currentCoords = [], targetCoords = []) {
+
+function applyCoordSet(currentCoords = [], targetCoords = [], mode = "add") {
   const current = uniqCoords(currentCoords);
   const targets = uniqCoords(targetCoords);
 
-  const hasAll = targets.every((coord) => current.includes(coord));
-
-  if (hasAll) {
+  if (mode === "remove") {
     return current.filter((coord) => !targets.includes(coord));
   }
 
@@ -113,13 +113,67 @@ function SpawnMapGrid({
   mapImageUrl = "",
   mapName = "",
   coords = [],
-  onToggle,
-  gridMode = "block",
+  onApplyCoords,
+  gridMode = "single",
   styles,
 }) {
   const activeSet = useMemo(() => new Set(uniqCoords(coords)), [coords]);
   const isMobile = isMobileViewport();
   const inset = getMapGridInset(mapName);
+
+  const dragStateRef = useRef({
+    active: false,
+    mode: "add",
+    visited: new Set(),
+  });
+
+  useEffect(() => {
+    function handleWindowMouseUp() {
+      dragStateRef.current.active = false;
+      dragStateRef.current.visited = new Set();
+    }
+
+    window.addEventListener("mouseup", handleWindowMouseUp);
+    return () => {
+      window.removeEventListener("mouseup", handleWindowMouseUp);
+    };
+  }, []);
+
+  function getDragKey(targetCoords = []) {
+    return uniqCoords(targetCoords).join("|");
+  }
+
+  function startDrag(targetCoords = []) {
+    const normalized = uniqCoords(targetCoords);
+    if (!normalized.length) return;
+
+    const shouldRemove = normalized.every((coord) => activeSet.has(coord));
+    const mode = shouldRemove ? "remove" : "add";
+
+    dragStateRef.current.active = true;
+    dragStateRef.current.mode = mode;
+    dragStateRef.current.visited = new Set([getDragKey(normalized)]);
+
+    onApplyCoords(normalized, mode);
+  }
+
+  function moveDrag(targetCoords = []) {
+    if (!dragStateRef.current.active) return;
+
+    const normalized = uniqCoords(targetCoords);
+    if (!normalized.length) return;
+
+    const key = getDragKey(normalized);
+    if (dragStateRef.current.visited.has(key)) return;
+
+    dragStateRef.current.visited.add(key);
+    onApplyCoords(normalized, dragStateRef.current.mode);
+  }
+
+  function endDrag() {
+    dragStateRef.current.active = false;
+    dragStateRef.current.visited = new Set();
+  }
 
   const overlayStyle =
     gridMode === "single"
@@ -164,7 +218,13 @@ function SpawnMapGrid({
                   <button
                     key={label}
                     type="button"
-                    onClick={() => onToggle([label])}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      startDrag([label]);
+                    }}
+                    onMouseEnter={() => moveDrag([label])}
+                    onMouseUp={endDrag}
+                    onDragStart={(e) => e.preventDefault()}
                     style={{
                       ...styles.gridCellSingle,
                       ...(active ? styles.gridCellActive : {}),
@@ -197,7 +257,13 @@ function SpawnMapGrid({
                   <button
                     key={label}
                     type="button"
-                    onClick={() => onToggle(blockCoords)}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      startDrag(blockCoords);
+                    }}
+                    onMouseEnter={() => moveDrag(blockCoords)}
+                    onMouseUp={endDrag}
+                    onDragStart={(e) => e.preventDefault()}
                     style={{
                       ...styles.gridCell,
                       ...(hasAnyActive ? styles.gridCellPartialActive : {}),
@@ -491,8 +557,9 @@ function SpawnCard({
     });
   }
 
-  function handleToggleCoords(targetCoords) {
-    const nextCoords = toggleCoordSet(spawn?.coords ?? [], targetCoords);
+
+  function handleApplyCoords(targetCoords, mode = "add") {
+    const nextCoords = applyCoordSet(spawn?.coords ?? [], targetCoords, mode);
 
     onChange({
       ...spawn,
@@ -554,39 +621,19 @@ function SpawnCard({
           ) : null}
         </div>
 
+        <label style={styles.checkboxRow}>
+          <input
+            type="checkbox"
+            checked={Boolean(spawn?.is_hunting_ground)}
+            onChange={(e) => setField("is_hunting_ground", e.target.checked)}
+            style={styles.checkbox}
+          />
+          <span style={styles.checkboxLabel}>狩場</span>
+        </label>
+
         <button type="button" onClick={onRemove} style={styles.removeButton}>
           削除
         </button>
-      </div>
-
-      <div style={styles.modeRow}>
-        <span style={styles.modeLabel}>選択モード</span>
-
-        <div style={styles.modeButtons}>
-          <button
-            type="button"
-            onClick={() => setGridMode("block")}
-            style={{
-              ...styles.modeButton,
-              ...(spawn?.grid_mode !== "single" ? styles.modeButtonActive : {}),
-            }}
-            className="monster-spawns-chip-button"
-          >
-            4マス
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setGridMode("single")}
-            style={{
-              ...styles.modeButton,
-              ...(spawn?.grid_mode === "single" ? styles.modeButtonActive : {}),
-            }}
-            className="monster-spawns-chip-button"
-          >
-            1マス
-          </button>
-        </div>
       </div>
 
       <div className="monster-spawns-form-grid" style={styles.formGrid}>
@@ -752,22 +799,42 @@ function SpawnCard({
         </label>
       </div>
 
-      <label style={styles.checkboxRow}>
-        <input
-          type="checkbox"
-          checked={Boolean(spawn?.is_hunting_ground)}
-          onChange={(e) => setField("is_hunting_ground", e.target.checked)}
-          style={styles.checkbox}
-        />
-        <span style={styles.checkboxLabel}>狩場</span>
-      </label>
+      <div style={styles.modeRow}>
+        <span style={styles.modeLabel}>選択モード</span>
+
+        <div style={styles.modeButtons}>
+          <button
+            type="button"
+            onClick={() => setGridMode("block")}
+            style={{
+              ...styles.modeButton,
+              ...(spawn?.grid_mode !== "single" ? styles.modeButtonActive : {}),
+            }}
+            className="monster-spawns-chip-button"
+          >
+            4マス
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setGridMode("single")}
+            style={{
+              ...styles.modeButton,
+              ...(spawn?.grid_mode === "single" ? styles.modeButtonActive : {}),
+            }}
+            className="monster-spawns-chip-button"
+          >
+            1マス
+          </button>
+        </div>
+      </div>
 
       <SpawnMapGrid
         mapImageUrl={spawn?.map_image_url ?? ""}
         mapName={spawn?.map_name ?? ""}
         coords={spawn?.coords ?? []}
-        onToggle={handleToggleCoords}
-        gridMode={spawn?.grid_mode ?? "block"}
+        onApplyCoords={handleApplyCoords}
+        gridMode={spawn?.grid_mode ?? "single"}
         styles={styles}
       />
     </div>
@@ -1070,36 +1137,38 @@ const baseStyles = {
     maxWidth: "100%",
   },
   tabWrap: {
-    display: "flex",
-    gap: 8,
-    overflowX: "auto",
-    overflowY: "hidden",
-    flexWrap: "nowrap",
-    paddingBottom: 4,
-    marginTop: -2,
-    width: "100%",
-    maxWidth: "100%",
-    minWidth: 0,
-    boxSizing: "border-box",
-  },
-  tab: {
-    flex: "0 0 auto",
-    maxWidth: "calc(100vw - 96px)",
-    border: "1px solid var(--soft-border)",
-    background: "var(--soft-bg)",
-    color: "var(--text-muted)",
-    borderRadius: 999,
-    padding: "8px 12px",
-    cursor: "pointer",
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    fontSize: 13,
-    fontWeight: 700,
-    lineHeight: 1.2,
-    minHeight: 38,
-    boxSizing: "border-box",
-  },
+  display: "flex",
+  gap: 8,
+  overflowX: "visible",
+  overflowY: "visible",
+  flexWrap: "wrap",
+  paddingBottom: 4,
+  marginTop: -2,
+  width: "100%",
+  maxWidth: "100%",
+  minWidth: 0,
+  boxSizing: "border-box",
+},
+
+tab: {
+  flex: "0 1 auto",
+  maxWidth: "100%",
+  border: "1px solid var(--soft-border)",
+  background: "var(--soft-bg)",
+  color: "var(--text-muted)",
+  borderRadius: 999,
+  padding: "8px 12px",
+  cursor: "pointer",
+  whiteSpace: "normal",
+  overflow: "visible",
+  textOverflow: "clip",
+  fontSize: 13,
+  fontWeight: 700,
+  lineHeight: 1.4,
+  minHeight: 38,
+  boxSizing: "border-box",
+  wordBreak: "break-word",
+},
   tabHover: {
     background: "var(--card-bg)",
     color: "var(--text-main)",
@@ -1408,12 +1477,14 @@ const baseStyles = {
     display: "grid",
     gridTemplateColumns: "repeat(4, 1fr)",
     gridTemplateRows: "repeat(4, 1fr)",
+    userSelect: "none",
   },
   singleOverlay: {
     position: "absolute",
     display: "grid",
     gridTemplateColumns: "repeat(8, 1fr)",
     gridTemplateRows: "repeat(8, 1fr)",
+    userSelect: "none",
   },
   gridCell: {
     position: "relative",
@@ -1426,6 +1497,7 @@ const baseStyles = {
     cursor: "pointer",
     minWidth: 0,
     minHeight: 0,
+    userSelect: "none",
   },
   gridCellSingle: {
     position: "relative",
@@ -1438,9 +1510,10 @@ const baseStyles = {
     cursor: "pointer",
     minWidth: 0,
     minHeight: 0,
+    userSelect: "none",
   },
   gridCellActive: {
-    background: "rgba(59, 130, 246, 0.28)",
+    background: "rgba(59, 130, 246, 0.55)",
   },
   gridCellPartialActive: {
     background: "rgba(59, 130, 246, 0.16)",
@@ -1474,6 +1547,7 @@ const baseStyles = {
     borderRadius: 999,
     maxWidth: "100%",
     boxSizing: "border-box",
+    pointerEvents: "none",
   },
   gridCellLabelMobile: {
     fontSize: 11,
@@ -1488,6 +1562,7 @@ const baseStyles = {
     borderRadius: 999,
     maxWidth: "100%",
     boxSizing: "border-box",
+    pointerEvents: "none",
   },
   gridCellLabelSingleMobile: {
     fontSize: 9,
