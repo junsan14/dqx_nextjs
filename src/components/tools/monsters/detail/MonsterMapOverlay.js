@@ -235,17 +235,7 @@ function normalizeMetaValue(value) {
   return text;
 }
 
-function normalizeSpawnTime(value) {
-  const v = String(value ?? "").trim().toLowerCase();
 
-  if (v.includes("night") || v.includes("夜")) return "夜";
-  if (v.includes("day") || v.includes("昼") || v.includes("日中")) return "日中";
-  if (v.includes("normal") || v.includes("always") || v.includes("いつでも")) {
-    return "いつでも";
-  }
-
-  return String(value ?? "").trim();
-}
 
 function joinUniqueValues(values = []) {
   const uniq = [];
@@ -317,11 +307,11 @@ function getBubblePosition(group, spawns = []) {
     relatedSpawns.map((spawn) => spawn?.spawn_count)
   );
 
-  const spawnTimes = joinUniqueValues(
-    relatedSpawns
-      .map((spawn) => normalizeSpawnTime(spawn?.spawn_time))
-      .filter(Boolean)
-  );
+const spawnTimes = joinUniqueValues(
+  relatedSpawns
+    .map((spawn) => spawn?.spawn_time)
+    .filter(Boolean)
+);
 
   const notes = joinUniqueValues(relatedSpawns.map(getPreferredNote));
   const isHuntingGround = relatedSpawns.some(

@@ -591,7 +591,133 @@ function AreaBadgeList({ area, styles, initialLimit = 4 }) {
     </div>
   );
 }
+function SearchableContinentSelect({
+  disabled = false,
+  value = "",
+  onChange,
+  options = [],
+  placeholder = "大陸を入力",
+  styles,
+}) {
+  const rootRef = useRef(null);
+  const [inputValue, setInputValue] = useState("");
+  const [open, setOpen] = useState(false);
+  const [hoveredOption, setHoveredOption] = useState("");
 
+  useEffect(() => {
+    setInputValue(value ?? "");
+  }, [value]);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (!rootRef.current) return;
+      if (!rootRef.current.contains(event.target)) setOpen(false);
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const filteredOptions = useMemo(() => {
+    const keyword = normalizeKana(inputValue);
+    const base = [...options].sort(sortJa);
+
+    if (!keyword) return base.slice(0, 30);
+
+    return base
+      .filter((option) => normalizeKana(option).includes(keyword))
+      .slice(0, 30);
+  }, [options, inputValue]);
+
+  function handleSelect(option) {
+    onChange?.(option);
+    setInputValue(option);
+    setOpen(false);
+    setHoveredOption("");
+  }
+
+  function handleInputChange(next) {
+    setInputValue(next);
+    setOpen(true);
+
+    const exact = options.find(
+      (option) => normalizeText(option) === normalizeText(next)
+    );
+
+    if (!next.trim()) {
+      onChange?.("");
+      return;
+    }
+
+    if (!exact) onChange?.("");
+  }
+
+  return (
+    <div ref={rootRef} className="relative">
+      <input
+        type="text"
+        value={inputValue}
+        onChange={(e) => handleInputChange(e.target.value)}
+        onFocus={() => {
+          if (!disabled) setOpen(true);
+        }}
+        placeholder={placeholder}
+        disabled={disabled}
+        className="w-full rounded-xl px-3 py-2 text-base outline-none md:text-sm"
+        style={{
+          ...styles.textInput,
+          opacity: disabled ? 0.65 : 1,
+          cursor: disabled ? "not-allowed" : "text",
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && filteredOptions.length > 0) {
+            e.preventDefault();
+            handleSelect(filteredOptions[0]);
+          }
+        }}
+      />
+
+      {open && !disabled ? (
+        <div
+          className="absolute z-20 mt-2 max-h-80 w-full overflow-y-auto rounded-2xl p-2"
+          style={styles.dropdownPanel}
+        >
+          {filteredOptions.length === 0 ? (
+            <div className="px-3 py-2 text-sm" style={styles.dropdownEmpty}>
+              候補なし
+            </div>
+          ) : (
+            filteredOptions.map((option) => {
+              const active = normalizeText(option) === normalizeText(value);
+              const hovered = hoveredOption === option;
+
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => handleSelect(option)}
+                  onMouseEnter={() => setHoveredOption(option)}
+                  onMouseLeave={() => setHoveredOption("")}
+                  className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition"
+                  style={{
+                    ...(active
+                      ? styles.dropdownItemActive
+                      : styles.dropdownItemIdle),
+                    ...(!active && hovered
+                      ? { background: getHoverBackground() }
+                      : {}),
+                  }}
+                >
+                  <span>{option}</span>
+                </button>
+              );
+            })
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
 function SearchableMapSelect({
   disabled = false,
   value = "",
@@ -1495,33 +1621,21 @@ export default function MapMonsterBrowserClient() {
         className="grid gap-4 rounded-2xl p-4 md:grid-cols-2 xl:grid-cols-4"
         style={styles.filterPanel}
       >
-        <label className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2">
           <span className="text-sm font-medium" style={styles.labelText}>
             大陸
           </span>
-          <select
-            value={loading ? "" : selectedContinent}
-            onChange={(e) => handleContinentChange(e.target.value)}
-            className="rounded-xl px-3 py-2 text-base outline-none md:text-sm"
-            style={{
-              ...styles.selectInput,
-              opacity: loading ? 0.8 : 1,
-              cursor: loading ? "wait" : "pointer",
-            }}
+          <SearchableContinentSelect
             disabled={loading}
-          >
-            <option value="">
-              {loading ? "大陸データを読み込んでいます..." : "大陸を選択"}
-            </option>
-
-            {!loading &&
-              continents.map((continent) => (
-                <option key={continent} value={continent}>
-                  {continent}
-                </option>
-              ))}
-          </select>
-        </label>
+            value={loading ? "" : selectedContinent}
+            onChange={handleContinentChange}
+            options={continents}
+            placeholder={
+              loading ? "大陸データを読み込んでいます..." : "大陸を入力"
+            }
+            styles={styles}
+          />
+        </div>
 
         <div className="flex flex-col gap-2 xl:col-span-2">
           <span className="text-sm font-medium" style={styles.labelText}>
