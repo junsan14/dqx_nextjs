@@ -5,9 +5,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { fetchMaps, fetchMapOptions } from "@/lib/maps";
 import { fetchMonsterMapSpawns } from "@/lib/monsterMapSpawns";
 import { fetchMonsterDetail } from "@/lib/monsters";
-import MonsterMapOverlay from "./MonsterMapOverlay";
+import MonsterMapOverlay, {
+  getStyles as getMonsterMapOverlayStyles,
+} from "./MonsterMapOverlay";
 import PageHeroTitle from "@/components/PageHeroTitle";
 import MapMonsterBrowserSkeleton from "@/components/ui/MapMonsterBrowserSkeleton";
+import {
+  MdOutlineSwipe,
+  MdOutlineSwipeLeft,
+  MdOutlineSwipeRight,
+} from "react-icons/md";
 function uniqBy(array, keyGetter) {
   const map = new Map();
 
@@ -59,6 +66,24 @@ function sortJa(a, b) {
   return String(a ?? "").localeCompare(String(b ?? ""), "ja");
 }
 
+function useIsMobile(breakpoint = 1200) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    function handleResize() {
+      setIsMobile(window.innerWidth < breakpoint);
+    }
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [breakpoint]);
+
+  return isMobile;
+}
+
 function isBrowsableMapType(mapType) {
   const value = normalizeText(mapType).toLowerCase();
 
@@ -105,19 +130,13 @@ function getRelatedMonsterIds(targetMonsterId, monsters = {}) {
   return ids;
 }
 
-function getStyles() {
+function getMapMonsterBrowserStyles() {
   return {
     page: {
       background: "var(--page-bg)",
       color: "var(--page-text)",
+      marginBottom:"50px"
     },
-    pageTitle: {
-      color: "var(--text-title)",
-    },
-    pageSubText: {
-      color: "var(--text-muted)",
-    },
-
     filterPanel: {
       border: "1px solid var(--panel-border)",
       background: "var(--soft-bg)",
@@ -150,7 +169,6 @@ function getStyles() {
     dropdownItemIdle: {
       color: "var(--text-main)",
     },
-
     loadingBox: {
       border: "1px solid var(--card-border)",
       background: "var(--card-bg)",
@@ -161,10 +179,12 @@ function getStyles() {
       background: "var(--soft-danger-bg)",
       color: "var(--danger-text)",
     },
-
     asideCard: {
       border: "1px solid var(--card-border)",
       background: "var(--card-bg)",
+      height: "100%",
+      display: "flex",
+      flexDirection: "column",
     },
     continentText: {
       color: "var(--text-muted)",
@@ -181,13 +201,11 @@ function getStyles() {
     selectedSystemText: {
       color: "var(--secondary-text)",
     },
-
     emptyDashed: {
       border: "1px dashed var(--soft-border)",
       background: "var(--soft-bg)",
       color: "var(--text-muted)",
     },
-
     card: {
       border: "1px solid var(--card-border)",
       background: "var(--card-bg)",
@@ -201,19 +219,35 @@ function getStyles() {
     cardHeaderSub: {
       color: "var(--text-muted)",
     },
-    cardFooter: {
-      borderTop: "1px solid var(--card-border)",
-    },
 
-    infoRow: {
+    statGrid: {
+      display: "grid",
+      gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+      gap: "10px",
+    },
+    statBox: {
+      width: "100%",
+      borderRadius: "14px",
       border: "1px solid var(--card-border)",
-      background: "var(--soft-bg)",
+      background: "color-mix(in srgb, var(--soft-bg) 92%, transparent)",
+      padding: "10px 12px",
+      display: "grid",
+      gap: "6px",
+      minWidth: 0,
     },
-    infoRowLabel: {
+    statLabel: {
+      fontSize: "11px",
+      fontWeight: 800,
       color: "var(--text-muted)",
+      letterSpacing: "0.02em",
+      whiteSpace: "nowrap",
     },
-    infoRowValue: {
+    statValue: {
+      fontSize: "14px",
+      lineHeight: 1.45,
       color: "var(--text-main)",
+      wordBreak: "break-word",
+      whiteSpace: "pre-wrap",
     },
 
     areaWrap: {
@@ -232,13 +266,41 @@ function getStyles() {
       color: "var(--tag-text)",
       boxShadow: "0 2px 8px rgba(15, 23, 42, 0.06)",
     },
+    areaMoreButton: {
+      border: "1px dashed var(--soft-border)",
+      background: "transparent",
+      color: "var(--secondary-text)",
+      cursor: "pointer",
+    },
 
-    spawnCard: {
+    spawnCardDesktop: {
       border: "1px solid var(--card-border)",
       background: "var(--card-bg)",
+      minWidth: "320px",
+      width: "320px",
+      maxWidth: "320px",
+      scrollSnapAlign: "start",
+      flexShrink: 0,
+    },
+    spawnCardMobile: {
+      border: "1px solid var(--card-border)",
+      background: "var(--card-bg)",
+      width: "100%",
+      minWidth: "100%",
+      maxWidth: "100%",
+      scrollSnapAlign: "start",
+      flexShrink: 0,
+      boxSizing: "border-box",
     },
     monsterName: {
       color: "var(--text-title)",
+      lineHeight: 1.35,
+      wordBreak: "break-word",
+    },
+    monsterNameLine: {
+      display: "block",
+      whiteSpace: "normal",
+      wordBreak: "break-word",
     },
     badgeSystemActive: {
       background: "var(--badge-bg)",
@@ -258,6 +320,56 @@ function getStyles() {
       color: "var(--secondary-text)",
     },
 
+    mapAndCardsDesktop: {
+      gridTemplateColumns: "minmax(320px, 410px) minmax(0, 1fr)",
+      gap: "16px",
+      alignItems: "center",
+      minWidth: 0,
+      minHeight: "100%",
+    },
+    mapDesktopBox: {
+      width: "100%",
+      maxWidth: "410px",
+      minWidth: 0,
+      alignSelf: "center",
+    },
+    mapMobileBox: {
+      width: "100%",
+      minWidth: 0,
+    },
+    cardsDesktopScrollerWrap: {
+      minWidth: 0,
+      overflow: "hidden",
+      alignSelf: "center",
+    },
+    cardsDesktopScroller: {
+      display: "flex",
+      gap: "14px",
+      width: "100%",
+      maxWidth: "100%",
+      overflowX: "auto",
+      paddingBottom: "8px",
+      paddingRight: "28px",
+      scrollSnapType: "x proximity",
+      WebkitOverflowScrolling: "touch",
+      boxSizing: "border-box",
+    },
+
+    cardsMobileScrollerOuter: {
+      width: "100%",
+      overflow: "hidden",
+    },
+    cardsMobileScroller: {
+      display: "flex",
+      gap: "12px",
+      overflowX: "auto",
+      paddingBottom: "6px",
+      scrollSnapType: "x mandatory",
+      WebkitOverflowScrolling: "touch",
+      width: "100%",
+      boxSizing: "border-box",
+    },
+
     chipDefaultIdle: {
       border: "1px solid var(--card-border)",
       background: "var(--card-bg)",
@@ -273,7 +385,6 @@ function getStyles() {
       background: "var(--primary-bg)",
       color: "var(--primary-text)",
     },
-
     chipSubtleIdle: {
       border: "1px solid var(--soft-border)",
       background: "var(--soft-bg)",
@@ -289,12 +400,10 @@ function getStyles() {
       background: "var(--primary-bg)",
       color: "var(--primary-text)",
     },
-
     reincarnationMiniBadge: {
       background: "var(--warning-border)",
       color: "var(--primary-text)",
     },
-
     layerTabActive: {
       border: "1px solid var(--primary-border)",
       background: "var(--primary-bg)",
@@ -305,15 +414,65 @@ function getStyles() {
       background: "var(--card-bg)",
       color: "var(--text-main)",
     },
+    mobileLayerHeader: {
+      display: "grid",
+      gap: "12px",
+    },
+    mobileLayerTabs: {
+      display: "flex",
+      gap: "8px",
+      overflowX: "auto",
+      paddingBottom: "2px",
+      WebkitOverflowScrolling: "touch",
+    },
+    pageColumnsDesktop: {
+      alignItems: "stretch",
+    },
+    rightColumnDesktop: {
+      minHeight: "100%",
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "center",
+    },
+      
+    swipeHint: {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: "8px",
+      padding: "6px 12px",
+      borderRadius: "999px",
+
+      
+      color: "var(--text-muted)",
+      fontSize: "12px",
+      fontWeight: 700,
+      lineHeight: 1,
+      whiteSpace: "nowrap",
+      width: "fit-content",
+      maxWidth: "100%",
+    },
+    swipeHintIcon: {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: "16px",
+      opacity: 0.95,
+      flexShrink: 0,
+    },
+    swipeHintText: {
+      display: "inline-block",
+      lineHeight: 1.2,
+    },
+    swipeHintWrap: {
+      display: "flex",
+      justifyContent: "flex-end",
+      marginBottom: "8px",
+    },
   };
 }
 
 function getHoverBackground() {
   return "var(--hover-bg)";
-}
-
-function getInputFocusBorder() {
-  return "var(--selected-border)";
 }
 
 function MonsterChip({
@@ -323,7 +482,7 @@ function MonsterChip({
   variant = "default",
   emphasized = false,
   className = "",
-  styles
+  styles,
 }) {
   const base =
     "rounded-full border px-3 py-1.5 text-sm transition whitespace-nowrap";
@@ -348,9 +507,7 @@ function MonsterChip({
       className={base + " " + className}
       style={variantStyle}
       onMouseEnter={(e) => {
-        if (!active) {
-          e.currentTarget.style.background = getHoverBackground();
-        }
+        if (!active) e.currentTarget.style.background = getHoverBackground();
       }}
       onMouseLeave={(e) => {
         Object.assign(e.currentTarget.style, variantStyle);
@@ -361,25 +518,20 @@ function MonsterChip({
   );
 }
 
-function InfoRow({ label, value, styles }) {
+function StatBox({ label, value, styles }) {
   if (!normalizeText(value)) return null;
 
   return (
-    <div
-      className="flex items-start justify-between gap-3 rounded-xl px-3 py-2"
-      style={styles.infoRow}
-    >
-      <div className="text-xs font-semibold" style={styles.infoRowLabel}>
-        {label}
-      </div>
-      <div className="text-right text-sm" style={styles.infoRowValue}>
-        {value}
-      </div>
+    <div style={styles.statBox}>
+      <div style={styles.statLabel}>{label}</div>
+      <div style={styles.statValue}>{value}</div>
     </div>
   );
 }
 
-function AreaBadgeList({ area, styles }) {
+function AreaBadgeList({ area, styles, initialLimit = 4 }) {
+  const [expanded, setExpanded] = useState(false);
+
   const cells = parseAreaList(area)
     .map((cell) => String(cell ?? "").trim().toUpperCase())
     .filter(Boolean);
@@ -394,13 +546,17 @@ function AreaBadgeList({ area, styles }) {
     );
   }
 
+  const visibleCells = expanded ? cells : cells.slice(0, initialLimit);
+  const hiddenCount = Math.max(0, cells.length - visibleCells.length);
+
   return (
     <div className="rounded-2xl px-3 py-3" style={styles.areaWrap}>
       <div className="mb-2 text-xs font-semibold" style={styles.areaTitle}>
         生息エリア
       </div>
+
       <div className="flex flex-wrap gap-2">
-        {cells.map((cell, index) => (
+        {visibleCells.map((cell, index) => (
           <span
             key={`${cell}-${index}`}
             className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold"
@@ -409,6 +565,28 @@ function AreaBadgeList({ area, styles }) {
             {cell}
           </span>
         ))}
+
+        {hiddenCount > 0 && !expanded ? (
+          <button
+            type="button"
+            className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold"
+            style={styles.areaMoreButton}
+            onClick={() => setExpanded(true)}
+          >
+            すべて見る
+          </button>
+        ) : null}
+
+        {expanded && cells.length > initialLimit ? (
+          <button
+            type="button"
+            className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold"
+            style={styles.areaMoreButton}
+            onClick={() => setExpanded(false)}
+          >
+            閉じる
+          </button>
+        ) : null}
       </div>
     </div>
   );
@@ -420,7 +598,7 @@ function SearchableMapSelect({
   onChange,
   options = [],
   placeholder = "地名を検索",
-  styles
+  styles,
 }) {
   const rootRef = useRef(null);
   const [inputValue, setInputValue] = useState("");
@@ -437,30 +615,21 @@ function SearchableMapSelect({
   useEffect(() => {
     function handleClickOutside(event) {
       if (!rootRef.current) return;
-      if (!rootRef.current.contains(event.target)) {
-        setOpen(false);
-      }
+      if (!rootRef.current.contains(event.target)) setOpen(false);
     }
 
     document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const filteredOptions = useMemo(() => {
     const keyword = normalizeKana(inputValue);
     const base = [...options].sort((a, b) => sortJa(a.name, b.name));
 
-    if (!keyword) {
-      return base.slice(0, 30);
-    }
+    if (!keyword) return base.slice(0, 30);
 
     return base
-      .filter((option) => {
-        const normalizedName = normalizeKana(option.name);
-        return normalizedName.includes(keyword);
-      })
+      .filter((option) => normalizeKana(option.name).includes(keyword))
       .slice(0, 30);
   }, [options, inputValue]);
 
@@ -483,9 +652,7 @@ function SearchableMapSelect({
       return;
     }
 
-    if (!exact) {
-      onChange?.("");
-    }
+    if (!exact) onChange?.("");
   }
 
   return (
@@ -493,26 +660,29 @@ function SearchableMapSelect({
       <input
         type="text"
         value={inputValue}
-        disabled={disabled}
-        placeholder={placeholder}
-        onFocus={() => setOpen(true)}
         onChange={(e) => handleInputChange(e.target.value)}
-        className="w-full rounded-xl px-3 py-2 text-base md:text-sm outline-none ring-0 transition"
+        onFocus={() => {
+          if (!disabled) setOpen(true);
+        }}
+        placeholder={placeholder}
+        disabled={disabled}
+        className="w-full rounded-xl px-3 py-2 text-base outline-none md:text-sm"
         style={{
           ...styles.textInput,
-          opacity: disabled ? 0.7 : 1,
+          opacity: disabled ? 0.65 : 1,
+          cursor: disabled ? "not-allowed" : "text",
         }}
-        onFocusCapture={(e) => {
-          e.currentTarget.style.borderColor = getInputFocusBorder();
-        }}
-        onBlurCapture={(e) => {
-          e.currentTarget.style.borderColor = "var(--input-border)";
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && filteredOptions.length > 0) {
+            e.preventDefault();
+            handleSelect(filteredOptions[0]);
+          }
         }}
       />
 
       {open && !disabled ? (
         <div
-          className="absolute z-30 mt-2 max-h-80 w-full overflow-auto rounded-2xl p-2"
+          className="absolute z-20 mt-2 max-h-80 w-full overflow-y-auto rounded-2xl p-2"
           style={styles.dropdownPanel}
         >
           {filteredOptions.length === 0 ? (
@@ -528,24 +698,19 @@ function SearchableMapSelect({
                   key={option.id}
                   type="button"
                   onClick={() => handleSelect(option)}
-                  className="flex w-full items-start justify-between gap-3 rounded-xl px-3 py-2 text-left transition"
+                  className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition"
                   style={active ? styles.dropdownItemActive : styles.dropdownItemIdle}
                   onMouseEnter={(e) => {
-                    if (!active) {
-                      e.currentTarget.style.background = getHoverBackground();
-                    }
+                    if (!active) e.currentTarget.style.background = getHoverBackground();
                   }}
                   onMouseLeave={(e) => {
-                    if (!active) {
-                      e.currentTarget.style.background = "transparent";
-                    }
+                    Object.assign(
+                      e.currentTarget.style,
+                      active ? styles.dropdownItemActive : styles.dropdownItemIdle
+                    );
                   }}
                 >
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-medium">
-                      {option.name}
-                    </div>
-                  </div>
+                  <span>{option.name}</span>
                 </button>
               );
             })
@@ -559,67 +724,68 @@ function SearchableMapSelect({
 function MonsterSpawnCard({
   spawn,
   monster,
-  selectedSystemType,
-  styles
+  emphasized = false,
+  styles,
+  mobile = false,
 }) {
-  const systemTypeIsActive =
-    normalizeText(selectedSystemType) &&
-    normalizeText(monster?.system_type) === normalizeText(selectedSystemType);
+  const cardStyle = mobile ? styles.spawnCardMobile : styles.spawnCardDesktop;
 
   return (
-    <article className="h-full min-w-0 rounded-2xl p-4" style={styles.spawnCard}>
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="text-base font-semibold" style={styles.monsterName}>
-          {monster?.name || `monster_id: ${spawn.monster_id}`}
+    <article className="overflow-hidden rounded-2xl" style={cardStyle}>
+      <div className="flex items-start justify-between gap-3 px-4 py-4">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-base font-bold" style={styles.monsterName}>
+              <span style={styles.monsterNameLine}>
+                {monster?.name || "不明なモンスター"}
+              </span>
+            </h3>
+
+            {monster?.system_type ? (
+              <span
+                className="rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                style={emphasized ? styles.badgeSystemActive : styles.badgeSystemIdle}
+              >
+                {monster.system_type}
+              </span>
+            ) : null}
+
+            {monster?.is_reincarnated ? (
+              <span
+                className="rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                style={styles.badgeReincarnated}
+              >
+                転生
+              </span>
+            ) : null}
+          </div>
         </div>
 
-        {monster?.system_type ? (
-          <span
-            className="rounded-full px-2 py-1 text-xs"
-            style={
-              systemTypeIsActive
-                ? styles.badgeSystemActive
-                : styles.badgeSystemIdle
-            }
+        {monster?.id ? (
+          <Link
+            href={`/tools/monster-search/${monster.id}?from=zukan`}
+            className="shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition"
+            style={styles.detailLink}
           >
-            {monster.system_type}
-          </span>
-        ) : null}
-
-        {monster?.is_reincarnated ? (
-          <span
-            className="rounded-full px-2 py-1 text-xs"
-            style={styles.badgeReincarnated}
-          >
-            転生
-          </span>
+            詳細
+          </Link>
         ) : null}
       </div>
 
-      <div className="mt-3">
-        <AreaBadgeList area={spawn.area} styles={styles} />
+      <div className="px-4">
+        <div style={styles.statGrid}>
+          <StatBox label="出現数" value={spawn?.spawn_count} styles={styles} />
+          <StatBox label="シンボル数" value={spawn?.symbol_count} styles={styles} />
+          <StatBox label="時間帯" value={spawn?.spawn_time} styles={styles} />
+        </div>
       </div>
 
-      <div className="mt-3 grid gap-2">
-        <InfoRow label="出現時間" value={spawn.spawn_time} styles={styles} />
-        <InfoRow label="出現数" value={spawn.spawn_count} styles={styles} />
-        <InfoRow label="シンボル数" value={spawn.symbol_count} styles={styles} />
+      <div className="px-4 pt-3">
+        <StatBox label="メモ" value={spawn?.note} styles={styles} />
       </div>
 
-      <div className="mt-4">
-        <Link
-          href={`/tools/monster-search/${spawn.monster_id}?from=zukan`}
-          className="inline-flex items-center rounded-full px-3 py-1.5 text-sm font-medium transition"
-          style={styles.detailLink}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = getHoverBackground();
-          }}
-          onMouseLeave={(e) => {
-            Object.assign(e.currentTarget.style, styles.detailLink);
-          }}
-        >
-          モンスター詳細を見る
-        </Link>
+      <div className="px-4 pb-4 pt-3">
+        <AreaBadgeList area={spawn?.area} styles={styles} />
       </div>
     </article>
   );
@@ -629,78 +795,152 @@ function MonsterSpawnCarousel({
   spawns,
   monstersById,
   selectedSystemType,
-  styles
+  styles,
+  mobile = false,
 }) {
-  if (spawns.length === 0) {
+  const scrollerRef = useRef(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+
+    function updateScrollState() {
+      const maxScrollLeft = el.scrollWidth - el.clientWidth;
+      const currentLeft = el.scrollLeft;
+
+      setCanScrollLeft(currentLeft > 4);
+      setCanScrollRight(currentLeft < maxScrollLeft - 4);
+    }
+
+    updateScrollState();
+
+    el.addEventListener("scroll", updateScrollState, { passive: true });
+    window.addEventListener("resize", updateScrollState);
+
+    return () => {
+      el.removeEventListener("scroll", updateScrollState);
+      window.removeEventListener("resize", updateScrollState);
+    };
+  }, [spawns, mobile]);
+
+  if (!spawns.length) return null;
+
+  const showSwipeHint = spawns.length > 1;
+
+  let HintIcon = MdOutlineSwipe;
+  
+
+  if (canScrollLeft && canScrollRight) {
+    HintIcon = MdOutlineSwipe;
+  } else if (canScrollRight) {
+    HintIcon = MdOutlineSwipeRight;
+  } else if (canScrollLeft) {
+    HintIcon = MdOutlineSwipeLeft;
+  }
+
+  const scroller = (
+    <div
+      ref={scrollerRef}
+      style={mobile ? styles.cardsMobileScroller : styles.cardsDesktopScroller}
+      className="[scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+    >
+      {spawns.map((spawn, index) => {
+        const monster = monstersById[spawn.monster_id];
+        const emphasized =
+          normalizeText(selectedSystemType) &&
+          normalizeText(monster?.system_type) === normalizeText(selectedSystemType);
+
+        return (
+          <MonsterSpawnCard
+            key={spawn.__key || `${spawn.monster_id}-${index}`}
+            spawn={spawn}
+            monster={monster}
+            emphasized={Boolean(emphasized)}
+            styles={styles}
+            mobile={mobile}
+          />
+        );
+      })}
+    </div>
+  );
+
+  const hint = showSwipeHint ? (
+    <div style={styles.swipeHintWrap}>
+      <div style={styles.swipeHint}>
+        <span style={styles.swipeHintIcon}>
+          <HintIcon />
+        </span>
+      </div>
+    </div>
+  ) : null;
+
+  if (mobile) {
     return (
-      <div className="rounded-xl p-4 text-sm" style={styles.emptyDashed}>
-        この階層に一致するモンスターはいない
+      <div style={styles.cardsMobileScrollerOuter}>
+        {hint}
+        {scroller}
       </div>
     );
   }
 
   return (
-    <>
-      <div className="md:hidden">
-        <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto px-[4%] pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {spawns.map((spawn) => {
-            const monster = monstersById[spawn.monster_id];
-
-            return (
-              <div key={spawn.__key} className="w-[92%] shrink-0 snap-center">
-                <MonsterSpawnCard
-                  spawn={spawn}
-                  monster={monster}
-                  selectedSystemType={selectedSystemType}
-                  styles={styles}
-                />
-              </div>
-            );
-          })}
+    <div style={styles.cardsDesktopScrollerWrap}>
+      {hint}
+      {scroller}
+    </div>
+  );
+}
+function MapWithCards({
+  layer,
+  spawns,
+  monstersById,
+  selectedSystemType,
+  styles,
+  isMobile,
+}) {
+  if (isMobile) {
+    return (
+      <div className="grid gap-4">
+        <div style={styles.mapMobileBox}>
+          <MonsterMapOverlay
+            imagePath={layer?.image_path || layer?.image_url || ""}
+            spawns={spawns}
+            monstersById={monstersById}
+            showMonsterNameInBubble
+          />
         </div>
+
+        <MonsterSpawnCarousel
+          spawns={spawns}
+          monstersById={monstersById}
+          selectedSystemType={selectedSystemType}
+          styles={styles}
+          mobile
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "grid", ...styles.mapAndCardsDesktop }}>
+      <div style={styles.mapDesktopBox}>
+        <MonsterMapOverlay
+          imagePath={layer?.image_path || layer?.image_url || ""}
+          spawns={spawns}
+          monstersById={monstersById}
+          showMonsterNameInBubble
+        />
       </div>
 
-      <div className="hidden md:block lg:hidden">
-        <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto px-[4%] pb-2 [scrollbar-width:thin]">
-          {spawns.map((spawn) => {
-            const monster = monstersById[spawn.monster_id];
-
-            return (
-              <div key={spawn.__key} className="w-[92%] min-w-[92%] shrink-0 snap-center">
-                <MonsterSpawnCard
-                  spawn={spawn}
-                  monster={monster}
-                  selectedSystemType={selectedSystemType}
-                  styles={styles}
-                />
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="hidden lg:block">
-        <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto px-[2%] pb-2 [scrollbar-width:thin]">
-          {spawns.map((spawn) => {
-            const monster = monstersById[spawn.monster_id];
-
-            return (
-              <div
-                key={spawn.__key}
-                className="w-[46%] min-w-[46%] shrink-0 snap-start"
-              >
-                <MonsterSpawnCard
-                  spawn={spawn}
-                  monster={monster}
-                  selectedSystemType={selectedSystemType}
-                  styles={styles}
-                />
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </>
+      <MonsterSpawnCarousel
+        spawns={spawns}
+        monstersById={monstersById}
+        selectedSystemType={selectedSystemType}
+        styles={styles}
+      />
+    </div>
   );
 }
 
@@ -711,7 +951,8 @@ function LayerSection({
   selectedMonsterId,
   selectedSystemType,
   relatedSelectedMonsterIds,
-  styles
+  styles,
+  isMobile,
 }) {
   const filteredLayerSpawns = useMemo(() => {
     return spawns.filter((spawn) => {
@@ -741,33 +982,39 @@ function LayerSection({
     relatedSelectedMonsterIds,
   ]);
 
+  if (filteredLayerSpawns.length === 0) return null;
+
   return (
-    <section className="overflow-hidden rounded-2xl" style={styles.card}>
+    <section
+      className="overflow-hidden rounded-2xl"
+      style={{
+        ...styles.card,
+        height: isMobile ? "auto" : "100%",
+        display: isMobile ? "block" : "flex",
+        flexDirection: isMobile ? undefined : "column",
+      }}
+    >
       <div className="px-4 py-3" style={styles.cardHeader}>
         <div className="text-sm font-semibold" style={styles.cardHeaderTitle}>
           {layer?.layer_name || `階層 ${layer?.floor_no ?? ""}`}
         </div>
-        <div className="mt-1 text-xs" style={styles.cardHeaderSub}>
-          floor_no: {layer?.floor_no ?? "-"} / 出現データ数:{" "}
-          {filteredLayerSpawns.length}
-        </div>
       </div>
 
-      <div className="px-4 py-4">
-        <MonsterMapOverlay
-          imagePath={layer?.image_path || layer?.image_url || ""}
-          spawns={filteredLayerSpawns}
-          size="sm"
-          monstersById={monstersById}
-        />
-      </div>
-
-      <div className="p-4" style={styles.cardFooter}>
-        <MonsterSpawnCarousel
+      <div
+        className="p-4"
+        style={{
+          flex: isMobile ? undefined : 1,
+          display: isMobile ? "block" : "flex",
+          alignItems: isMobile ? undefined : "center",
+        }}
+      >
+        <MapWithCards
+          layer={layer}
           spawns={filteredLayerSpawns}
           monstersById={monstersById}
           selectedSystemType={selectedSystemType}
           styles={styles}
+          isMobile={isMobile}
         />
       </div>
     </section>
@@ -778,167 +1025,132 @@ function LayerCarousel({
   sections,
   monstersById,
   selectedSystemType,
-  styles
+  styles,
+  isMobile,
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
-  const mobileScrollRef = useRef(null);
-  const mobileSlideRefs = useRef([]);
 
   useEffect(() => {
     setActiveIndex(0);
   }, [sections]);
-
-  useEffect(() => {
-    mobileSlideRefs.current = mobileSlideRefs.current.slice(0, sections.length);
-  }, [sections.length]);
-
-  useEffect(() => {
-    const container = mobileScrollRef.current;
-    const target = mobileSlideRefs.current[activeIndex];
-
-    if (!container || !target) return;
-
-    target.scrollIntoView({
-      behavior: "smooth",
-      inline: "center",
-      block: "nearest",
-    });
-  }, [activeIndex]);
-
-  function handleMobileScroll() {
-    const container = mobileScrollRef.current;
-    if (!container) return;
-
-    const containerCenter = container.scrollLeft + container.clientWidth / 2;
-
-    let nearestIndex = 0;
-    let nearestDistance = Number.POSITIVE_INFINITY;
-
-    mobileSlideRefs.current.forEach((node, index) => {
-      if (!node) return;
-
-      const slideCenter = node.offsetLeft + node.clientWidth / 2;
-      const distance = Math.abs(slideCenter - containerCenter);
-
-      if (distance < nearestDistance) {
-        nearestDistance = distance;
-        nearestIndex = index;
-      }
-    });
-
-    setActiveIndex(nearestIndex);
-  }
 
   if (sections.length === 0) return null;
 
   const current = sections[activeIndex] ?? null;
   if (!current) return null;
 
-  return (
-    <>
-      <section className="overflow-hidden rounded-2xl md:hidden" style={styles.card}>
+  if (isMobile) {
+    return (
+      <section className="overflow-hidden rounded-2xl" style={styles.card}>
         <div className="px-4 py-3" style={styles.cardHeader}>
-          <div className="flex items-center justify-between">
+          <div style={styles.mobileLayerHeader}>
             <div className="text-xs" style={styles.cardHeaderSub}>
               {activeIndex + 1} / {sections.length}
             </div>
-          </div>
-        </div>
 
-        <div
-          ref={mobileScrollRef}
-          onScroll={handleMobileScroll}
-          className="flex snap-x snap-mandatory gap-4 overflow-x-auto px-[7%] py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        >
-          {sections.map((section, index) => (
             <div
-              key={section.layer.id}
-              ref={(node) => {
-                mobileSlideRefs.current[index] = node;
-              }}
-              className="w-[86%] shrink-0 snap-center"
+              style={styles.mobileLayerTabs}
+              className="[scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             >
-              <div
-                className="overflow-hidden rounded-2xl shadow-sm"
-                style={styles.card}
-              >
-                <div className="px-4 py-3" style={styles.cardHeader}>
-                  <div className="text-sm font-semibold" style={styles.cardHeaderTitle}>
+              {sections.map((section, index) => {
+                const active = index === activeIndex;
+
+                return (
+                  <button
+                    key={section.layer.id}
+                    type="button"
+                    onClick={() => setActiveIndex(index)}
+                    className="shrink-0 rounded-full px-3 py-1.5 text-sm transition"
+                    style={active ? styles.layerTabActive : styles.layerTabIdle}
+                    onMouseEnter={(e) => {
+                      if (!active) e.currentTarget.style.background = getHoverBackground();
+                    }}
+                    onMouseLeave={(e) => {
+                      Object.assign(
+                        e.currentTarget.style,
+                        active ? styles.layerTabActive : styles.layerTabIdle
+                      );
+                    }}
+                  >
                     {section.layer.layer_name || `階層 ${section.layer.floor_no}`}
-                  </div>
-                  <div className="mt-1 text-xs" style={styles.cardHeaderSub}>
-                    floor_no: {section.layer.floor_no ?? "-"} / 出現データ数:{" "}
-                    {section.spawns.length}
-                  </div>
-                </div>
-
-                <div className="px-4 py-4">
-                  <MonsterMapOverlay
-                    imagePath={
-                      section.layer?.image_path || section.layer?.image_url || ""
-                    }
-                    spawns={section.spawns}
-                    size="sm"
-                    monstersById={monstersById}
-                  />
-                </div>
-              </div>
+                  </button>
+                );
+              })}
             </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="hidden overflow-hidden rounded-2xl md:block" style={styles.card}>
-        <div className="px-4 py-3" style={styles.cardHeader}>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {sections.map((section, index) => {
-              const active = index === activeIndex;
-
-              return (
-                <button
-                  key={section.layer.id}
-                  type="button"
-                  onClick={() => setActiveIndex(index)}
-                  className="rounded-full px-3 py-1.5 text-sm transition"
-                  style={active ? styles.layerTabActive : styles.layerTabIdle}
-                  onMouseEnter={(e) => {
-                    if (!active) {
-                      e.currentTarget.style.background = getHoverBackground();
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    Object.assign(
-                      e.currentTarget.style,
-                      active ? styles.layerTabActive : styles.layerTabIdle
-                    );
-                  }}
-                >
-                  {section.layer.layer_name || `階層 ${section.layer.floor_no}`}
-                </button>
-              );
-            })}
           </div>
         </div>
 
-        <div className="px-4 py-4">
-          <MonsterMapOverlay
-            imagePath={current.layer?.image_path || current.layer?.image_url || ""}
-            spawns={current.spawns}
-            size="sm"
-            monstersById={monstersById}
-          />
-        </div>
-
-        <div className="p-4" style={styles.cardFooter}>
-          <MonsterSpawnCarousel
+        <div className="p-4">
+          <MapWithCards
+            layer={current.layer}
             spawns={current.spawns}
             monstersById={monstersById}
             selectedSystemType={selectedSystemType}
             styles={styles}
+            isMobile
           />
         </div>
       </section>
-    </>
+    );
+  }
+
+  return (
+    <section
+      className="overflow-hidden rounded-2xl"
+      style={{
+        ...styles.card,
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <div className="px-4 py-3" style={styles.cardHeader}>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {sections.map((section, index) => {
+            const active = index === activeIndex;
+
+            return (
+              <button
+                key={section.layer.id}
+                type="button"
+                onClick={() => setActiveIndex(index)}
+                className="rounded-full px-3 py-1.5 text-sm transition"
+                style={active ? styles.layerTabActive : styles.layerTabIdle}
+                onMouseEnter={(e) => {
+                  if (!active) e.currentTarget.style.background = getHoverBackground();
+                }}
+                onMouseLeave={(e) => {
+                  Object.assign(
+                    e.currentTarget.style,
+                    active ? styles.layerTabActive : styles.layerTabIdle
+                  );
+                }}
+              >
+                {section.layer.layer_name || `階層 ${section.layer.floor_no}`}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div
+        className="p-4"
+        style={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+        }}
+      >
+        <MapWithCards
+          layer={current.layer}
+          spawns={current.spawns}
+          monstersById={monstersById}
+          selectedSystemType={selectedSystemType}
+          styles={styles}
+          isMobile={false}
+        />
+      </div>
+    </section>
   );
 }
 
@@ -957,7 +1169,15 @@ export default function MapMonsterBrowserClient() {
   const [selectedMonsterId, setSelectedMonsterId] = useState("");
   const [selectedSystemType, setSelectedSystemType] = useState("");
 
-  const styles = useMemo(() => getStyles(), []);
+  const isMobile = useIsMobile();
+
+  const styles = useMemo(
+    () => ({
+      ...getMonsterMapOverlayStyles(),
+      ...getMapMonsterBrowserStyles(),
+    }),
+    []
+  );
 
   useEffect(() => {
     let ignore = false;
@@ -997,18 +1217,13 @@ export default function MapMonsterBrowserClient() {
         );
       } catch (err) {
         console.error(err);
-        if (!ignore) {
-          setError(err?.message || "データ取得に失敗");
-        }
+        if (!ignore) setError(err?.message || "データ取得に失敗");
       } finally {
-        if (!ignore) {
-          setLoading(false);
-        }
+        if (!ignore) setLoading(false);
       }
     }
 
     bootstrap();
-
     return () => {
       ignore = true;
     };
@@ -1046,7 +1261,6 @@ export default function MapMonsterBrowserClient() {
     );
 
     const missingIds = ids.filter((id) => !monsterMaster[id]);
-
     if (missingIds.length === 0) return;
 
     let ignore = false;
@@ -1068,13 +1282,9 @@ export default function MapMonsterBrowserClient() {
 
         setMonsterMaster((prev) => {
           const next = { ...prev };
-
           for (const row of results) {
-            if (row?.id) {
-              next[row.id] = row;
-            }
+            if (row?.id) next[row.id] = row;
           }
-
           return next;
         });
       } catch (error) {
@@ -1083,7 +1293,6 @@ export default function MapMonsterBrowserClient() {
     }
 
     fillMonsterDetails();
-
     return () => {
       ignore = true;
     };
@@ -1091,10 +1300,7 @@ export default function MapMonsterBrowserClient() {
 
   const candidateSpawns = useMemo(() => {
     if (!selectedMapId) return [];
-
-    if (selectedLayerId === "all") {
-      return spawnsForSelectedMap;
-    }
+    if (selectedLayerId === "all") return spawnsForSelectedMap;
 
     return spawnsForSelectedMap.filter(
       (spawn) => Number(spawn.map_layer_id) === Number(selectedLayerId)
@@ -1109,7 +1315,6 @@ export default function MapMonsterBrowserClient() {
     return uniqBy(rows, (row) => row.id).sort((a, b) => {
       const aOrder = Number(a?.display_order ?? 999999);
       const bOrder = Number(b?.display_order ?? 999999);
-
       if (aOrder !== bOrder) return aOrder - bOrder;
       return sortJa(a?.name, b?.name);
     });
@@ -1167,14 +1372,7 @@ export default function MapMonsterBrowserClient() {
       );
       if (!layer) return [];
 
-      return filteredSpawns.length > 0
-        ? [
-            {
-              layer,
-              spawns: filteredSpawns,
-            },
-          ]
-        : [];
+      return filteredSpawns.length > 0 ? [{ layer, spawns: filteredSpawns }] : [];
     }
 
     if (mapLayers.length === 0) {
@@ -1217,10 +1415,12 @@ export default function MapMonsterBrowserClient() {
   }, [filteredSpawns, selectedLayerId]);
 
   const unlayeredSpawns = useMemo(() => {
-    return filteredSpawns.map((spawn, index) => ({
-      ...spawn,
-      __key: `unlayered-${spawn.monster_id}-${index}`,
-    })).filter((spawn) => !spawn.map_layer_id);
+    return filteredSpawns
+      .map((spawn, index) => ({
+        ...spawn,
+        __key: `unlayered-${spawn.monster_id}-${index}`,
+      }))
+      .filter((spawn) => !spawn.map_layer_id);
   }, [filteredSpawns]);
 
   useEffect(() => {
@@ -1232,9 +1432,7 @@ export default function MapMonsterBrowserClient() {
         Number(spawn.monster_id) === Number(selectedMonsterId)
     );
 
-    if (!exists) {
-      setSelectedMonsterId("");
-    }
+    if (!exists) setSelectedMonsterId("");
   }, [candidateSpawns, selectedMonsterId, relatedSelectedMonsterIds]);
 
   useEffect(() => {
@@ -1245,53 +1443,8 @@ export default function MapMonsterBrowserClient() {
         normalizeText(systemType) === normalizeText(selectedSystemType)
     );
 
-    if (!exists) {
-      setSelectedSystemType("");
-    }
+    if (!exists) setSelectedSystemType("");
   }, [systemTypesOnCurrentScope, selectedSystemType]);
-
-  const MONSTER_GRID_GAP_PX = 8;
-  const MONSTER_GRID_SIDE_PADDING_PX = 16;
-  const MONSTER_GRID_MAX_WIDTH_PX = 420;
-
-  const monsterGridLayout = useMemo(() => {
-    const names = monstersOnCurrentScope.map((monster) => String(monster?.name ?? ""));
-    const longestNameLength = names.reduce(
-      (max, name) => Math.max(max, name.length),
-      0
-    );
-
-    const hasReincarnated = monstersOnCurrentScope.some(
-      (monster) => monster?.is_reincarnated
-    );
-
-    const estimatedNaturalWidth =
-      longestNameLength * 14 + (hasReincarnated ? 28 : 0) + 32;
-
-    const containerMaxWidth = MONSTER_GRID_MAX_WIDTH_PX;
-    const maxColumnWidth = Math.floor(
-      (containerMaxWidth - MONSTER_GRID_GAP_PX - MONSTER_GRID_SIDE_PADDING_PX) / 2
-    );
-
-    const columnWidth = Math.min(
-      Math.max(estimatedNaturalWidth, 120),
-      maxColumnWidth
-    );
-
-    let fontClass = "text-sm";
-    if (estimatedNaturalWidth > maxColumnWidth) {
-      fontClass = "text-[13px]";
-    }
-    if (estimatedNaturalWidth > maxColumnWidth + 20) {
-      fontClass = "text-xs";
-    }
-
-    return {
-      columnWidth,
-      gridWidth: columnWidth * 2 + MONSTER_GRID_GAP_PX,
-      fontClass,
-    };
-  }, [monstersOnCurrentScope]);
 
   function handleContinentChange(value) {
     setSelectedContinent(value);
@@ -1332,10 +1485,7 @@ export default function MapMonsterBrowserClient() {
     selectedLayerId === "all" && layerSections.length > 1;
 
   return (
-    <main
-     
-      style={styles.page}
-    >
+    <main style={styles.page}>
       <PageHeroTitle
         kicker="DQX MAP DATABASE"
         title="マップ別モンスター検索"
@@ -1352,7 +1502,7 @@ export default function MapMonsterBrowserClient() {
           <select
             value={loading ? "" : selectedContinent}
             onChange={(e) => handleContinentChange(e.target.value)}
-            className="rounded-xl px-3 py-2 text-base md:text-sm outline-none"
+            className="rounded-xl px-3 py-2 text-base outline-none md:text-sm"
             style={{
               ...styles.selectInput,
               opacity: loading ? 0.8 : 1,
@@ -1413,13 +1563,13 @@ export default function MapMonsterBrowserClient() {
       </div>
 
       {loading ? (
-  <>
-    <div className="mt-6 rounded-2xl p-4 text-sm" style={styles.loadingBox}>
-      大陸データを読み込んでいます...
-    </div>
-    <MapMonsterBrowserSkeleton />
-  </>
-) : null}
+        <>
+          <div className="mt-6 rounded-2xl p-4 text-sm" style={styles.loadingBox}>
+            大陸データを読み込んでいます...
+          </div>
+          <MapMonsterBrowserSkeleton />
+        </>
+      ) : null}
 
       {error ? (
         <div className="mt-6 rounded-2xl p-4 text-sm" style={styles.errorBox}>
@@ -1428,8 +1578,11 @@ export default function MapMonsterBrowserClient() {
       ) : null}
 
       {!loading && !error && selectedMap ? (
-        <div className="mt-6 grid gap-6 md:grid-cols-[380px_minmax(0,1fr)] lg:grid-cols-[420px_minmax(0,1fr)]">
-          <aside className="md:sticky md:top-4 md:self-start">
+        <div
+          className="mt-6 grid gap-6 md:grid-cols-[350px_minmax(0,1fr)] lg:grid-cols-[370px_minmax(0,1fr)] xl:grid-cols-[370px_minmax(0,1fr)]"
+          style={!isMobile ? styles.pageColumnsDesktop : undefined}
+        >
+          <aside className="md:sticky md:top-4 md:self-stretch">
             <div className="rounded-2xl p-4" style={styles.asideCard}>
               <div>
                 <div className="text-sm" style={styles.continentText}>
@@ -1454,9 +1607,7 @@ export default function MapMonsterBrowserClient() {
                   className="grid max-h-[420px] gap-2 overflow-y-auto"
                   style={{
                     width: "100%",
-                    maxWidth: `${monsterGridLayout.gridWidth}px`,
-                    margin: "0 auto",
-                    gridTemplateColumns: `repeat(2, minmax(0, ${monsterGridLayout.columnWidth}px))`,
+                    gridTemplateColumns: "minmax(0, 1fr)",
                   }}
                 >
                   <MonsterChip
@@ -1464,7 +1615,7 @@ export default function MapMonsterBrowserClient() {
                     onClick={() => setSelectedMonsterId("")}
                     className="col-span-2 justify-self-start"
                     styles={styles}
-                    >
+                  >
                     すべて
                   </MonsterChip>
 
@@ -1480,11 +1631,11 @@ export default function MapMonsterBrowserClient() {
                         active={relatedSelectedMonsterIds.has(Number(monster.id))}
                         emphasized={Boolean(emphasized)}
                         onClick={() => handleMonsterToggle(monster.id)}
-                        className={`w-full text-center ${monsterGridLayout.fontClass}`}
+                        className="w-full text-left text-sm"
                         styles={styles}
-                            >
-                        <span className="flex min-w-0 items-center justify-center gap-1">
-                          <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
+                      >
+                        <span className="flex min-w-0 items-start justify-start gap-1">
+                          <span className="min-w-0 whitespace-normal break-words text-left leading-5">
                             {monster.name}
                           </span>
 
@@ -1514,7 +1665,7 @@ export default function MapMonsterBrowserClient() {
                     active={!selectedSystemType}
                     onClick={() => setSelectedSystemType("")}
                     styles={styles}
-                    >
+                  >
                     すべて
                   </MonsterChip>
 
@@ -1528,7 +1679,7 @@ export default function MapMonsterBrowserClient() {
                       }
                       onClick={() => handleSystemTypeToggle(systemType)}
                       styles={styles}
-                        >
+                    >
                       {systemType}
                     </MonsterChip>
                   ))}
@@ -1543,8 +1694,8 @@ export default function MapMonsterBrowserClient() {
             </div>
           </aside>
 
-          <div className="min-w-0">
-            <div className="grid gap-6">
+          <div className="min-w-0" style={!isMobile ? styles.rightColumnDesktop : undefined}>
+            <div className="grid gap-6 h-full">
               {layerSections.length === 0 ? (
                 <div className="rounded-2xl p-6 text-sm" style={styles.emptyDashed}>
                   この条件に一致するモンスターはいない
@@ -1555,6 +1706,7 @@ export default function MapMonsterBrowserClient() {
                   monstersById={monsterMaster}
                   selectedSystemType={selectedSystemType}
                   styles={styles}
+                  isMobile={isMobile}
                 />
               ) : (
                 layerSections.map((section) => (
@@ -1567,7 +1719,8 @@ export default function MapMonsterBrowserClient() {
                     selectedSystemType={selectedSystemType}
                     relatedSelectedMonsterIds={relatedSelectedMonsterIds}
                     styles={styles}
-                    />
+                    isMobile={isMobile}
+                  />
                 ))
               )}
 
@@ -1585,7 +1738,8 @@ export default function MapMonsterBrowserClient() {
                       monstersById={monsterMaster}
                       selectedSystemType={selectedSystemType}
                       styles={styles}
-                        />
+                      mobile={isMobile}
+                    />
                   </div>
                 </section>
               ) : null}

@@ -330,6 +330,7 @@ function getStyles() {
       padding: "16px 16px 10px",
       borderBottom: `1px solid var(--soft-border)`,
       background: "var(--soft-bg)",
+      textAlign:"center"
     },
     panelEyebrow: {
       fontSize: "11px",
@@ -356,7 +357,7 @@ function getStyles() {
     tagList: {
       display: "flex",
       flexDirection: "column",
-      gap: "10px",
+      gap: "5px",
       width: "100%",
       maxWidth: "420px",
       justifyContent:"center"
@@ -378,7 +379,6 @@ function getStyles() {
       borderRadius: "999px",
       padding: "2px 12px",
       color: "var(--tag-text)",
-      minHeight: "38px",
       boxSizing: "border-box",
       maxWidth: "100%",
     },
@@ -478,7 +478,6 @@ export default function MonsterDropSection({
         content: (
           <Panel
             title="ドロップ"
-            eyebrow="ドロップアイテム"
             styles={styles}
             showTitle={!isMobile}
           >
@@ -492,7 +491,6 @@ export default function MonsterDropSection({
         content: (
           <Panel
             title="白宝箱"
-            eyebrow="装備ドロップ"
             styles={styles}
             showTitle={!isMobile}
           >
@@ -506,7 +504,6 @@ export default function MonsterDropSection({
         content: (
           <Panel
             title="宝珠"
-            eyebrow="獲得できる宝珠"
             styles={styles}
             showTitle={!isMobile}
           >

@@ -68,7 +68,6 @@ function uniqCoords(coords = []) {
   ];
 }
 
-
 function applyCoordSet(currentCoords = [], targetCoords = [], mode = "add") {
   const current = uniqCoords(currentCoords);
   const targets = uniqCoords(targetCoords);
@@ -115,6 +114,7 @@ function SpawnMapGrid({
   coords = [],
   onApplyCoords,
   gridMode = "single",
+  disabled = false,
   styles,
 }) {
   const activeSet = useMemo(() => new Set(uniqCoords(coords)), [coords]);
@@ -144,6 +144,8 @@ function SpawnMapGrid({
   }
 
   function startDrag(targetCoords = []) {
+    if (disabled) return;
+
     const normalized = uniqCoords(targetCoords);
     if (!normalized.length) return;
 
@@ -158,6 +160,7 @@ function SpawnMapGrid({
   }
 
   function moveDrag(targetCoords = []) {
+    if (disabled) return;
     if (!dragStateRef.current.active) return;
 
     const normalized = uniqCoords(targetCoords);
@@ -225,9 +228,11 @@ function SpawnMapGrid({
                     onMouseEnter={() => moveDrag([label])}
                     onMouseUp={endDrag}
                     onDragStart={(e) => e.preventDefault()}
+                    disabled={disabled}
                     style={{
                       ...styles.gridCellSingle,
                       ...(active ? styles.gridCellActive : {}),
+                      ...(disabled ? styles.gridCellDisabled : {}),
                     }}
                     title={label}
                   >
@@ -264,9 +269,11 @@ function SpawnMapGrid({
                     onMouseEnter={() => moveDrag(blockCoords)}
                     onMouseUp={endDrag}
                     onDragStart={(e) => e.preventDefault()}
+                    disabled={disabled}
                     style={{
                       ...styles.gridCell,
                       ...(hasAnyActive ? styles.gridCellPartialActive : {}),
+                      ...(disabled ? styles.gridCellDisabled : {}),
                     }}
                     title={`${label} → ${blockCoords.join(", ")}`}
                   >
@@ -362,6 +369,7 @@ function MapSearchInput({
   selectedContinent = "",
   selectedMap = null,
   onSelect,
+  disabled = false,
   styles,
 }) {
   const [keyword, setKeyword] = useState("");
@@ -427,22 +435,22 @@ function MapSearchInput({
           selectedContinent ? "その大陸の地名を入力" : "先に大陸を選択"
         }
         onChange={(e) => {
-          if (!selectedContinent) return;
+          if (!selectedContinent || disabled) return;
           setKeyword(e.target.value);
           setOpen(true);
         }}
         onFocus={() => {
-          if (selectedContinent) setOpen(true);
+          if (selectedContinent && !disabled) setOpen(true);
         }}
         style={{
           ...styles.input,
-          ...(!selectedContinent ? styles.inputDisabled : {}),
+          ...(!selectedContinent || disabled ? styles.inputDisabled : {}),
         }}
-        disabled={!selectedContinent}
+        disabled={!selectedContinent || disabled}
         className="monster-spawns-input"
       />
 
-      {open && selectedContinent ? (
+      {open && selectedContinent && !disabled ? (
         <div style={styles.mapSearchDropdown}>
           {filteredMaps.length > 0 ? (
             filteredMaps.map((map) => (
@@ -475,6 +483,7 @@ function SpawnCard({
   onChange,
   onRemove,
   layerNamesForMap = [],
+  isReincarnated = false,
   styles,
 }) {
   const selectedMap = useMemo(() => {
@@ -551,14 +560,17 @@ function SpawnCard({
   }, [selectedMap, selectedLayer, spawn, onChange]);
 
   function setField(key, value) {
+    if (isReincarnated) return;
+
     onChange({
       ...spawn,
       [key]: value,
     });
   }
 
-
   function handleApplyCoords(targetCoords, mode = "add") {
+    if (isReincarnated) return;
+
     const nextCoords = applyCoordSet(spawn?.coords ?? [], targetCoords, mode);
 
     onChange({
@@ -569,6 +581,8 @@ function SpawnCard({
   }
 
   function setGridMode(nextMode) {
+    if (isReincarnated) return;
+
     onChange({
       ...spawn,
       grid_mode: nextMode,
@@ -576,6 +590,8 @@ function SpawnCard({
   }
 
   function handleChangeContinent(nextContinent) {
+    if (isReincarnated) return;
+
     setSelectedContinent(nextContinent);
 
     const currentMapContinent = selectedMap?.continent ?? "";
@@ -621,17 +637,32 @@ function SpawnCard({
           ) : null}
         </div>
 
-        <label style={styles.checkboxRow}>
+        <label
+          style={{
+            ...styles.checkboxRow,
+            ...(isReincarnated ? styles.disabledRow : {}),
+          }}
+        >
           <input
             type="checkbox"
             checked={Boolean(spawn?.is_hunting_ground)}
             onChange={(e) => setField("is_hunting_ground", e.target.checked)}
             style={styles.checkbox}
+            disabled={isReincarnated}
           />
           <span style={styles.checkboxLabel}>狩場</span>
         </label>
 
-        <button type="button" onClick={onRemove} style={styles.removeButton}>
+        <button
+          type="button"
+          onClick={onRemove}
+          style={{
+            ...styles.removeButton,
+            ...(isReincarnated ? styles.buttonDisabled : {}),
+          }}
+          disabled={isReincarnated}
+          title={isReincarnated ? "転生モンスターは編集できない" : "削除"}
+        >
           削除
         </button>
       </div>
@@ -642,8 +673,12 @@ function SpawnCard({
           <select
             value={selectedContinent}
             onChange={(e) => handleChangeContinent(e.target.value)}
-            style={styles.input}
+            style={{
+              ...styles.input,
+              ...(isReincarnated ? styles.inputDisabled : {}),
+            }}
             className="monster-spawns-input"
+            disabled={isReincarnated}
           >
             <option value="">選択してください</option>
             {continentOptions.map((continent) => (
@@ -662,6 +697,8 @@ function SpawnCard({
             selectedContinent={selectedContinent}
             selectedMap={selectedMap}
             onSelect={(nextMap) => {
+              if (isReincarnated) return;
+
               const firstLayer = getDefaultLayerForMap(nextMap);
 
               onChange({
@@ -674,6 +711,7 @@ function SpawnCard({
                   firstLayer?.image_url ?? nextMap?.image_url ?? "",
               });
             }}
+            disabled={isReincarnated}
             styles={styles}
           />
         </label>
@@ -683,6 +721,8 @@ function SpawnCard({
           <select
             value={spawn?.map_layer_id ?? ""}
             onChange={(e) => {
+              if (isReincarnated) return;
+
               const nextLayerId = e.target.value;
               const nextLayer =
                 selectedMap?.layers?.find(
@@ -699,9 +739,10 @@ function SpawnCard({
             }}
             style={{
               ...styles.input,
-              ...(hideLayerSelect ? styles.inputDisabled : {}),
+              ...(hideLayerSelect || isReincarnated ? styles.inputDisabled : {}),
             }}
             disabled={
+              isReincarnated ||
               !selectedMap ||
               !(selectedMap?.layers?.length > 0) ||
               hideLayerSelect
@@ -727,8 +768,12 @@ function SpawnCard({
           <select
             value={spawn?.spawn_time ?? "normal"}
             onChange={(e) => setField("spawn_time", e.target.value)}
-            style={styles.input}
+            style={{
+              ...styles.input,
+              ...(isReincarnated ? styles.inputDisabled : {}),
+            }}
             className="monster-spawns-input"
+            disabled={isReincarnated}
           >
             {SPAWN_TIME_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -756,9 +801,13 @@ function SpawnCard({
             type="text"
             value={spawn?.spawn_count ?? ""}
             onChange={(e) => setField("spawn_count", e.target.value)}
-            style={styles.input}
+            style={{
+              ...styles.input,
+              ...(isReincarnated ? styles.inputDisabled : {}),
+            }}
             placeholder="1 / 1〜2 / 2-3"
             className="monster-spawns-input"
+            disabled={isReincarnated}
           />
         </label>
 
@@ -768,9 +817,13 @@ function SpawnCard({
             type="text"
             value={spawn?.symbol_count ?? ""}
             onChange={(e) => setField("symbol_count", e.target.value)}
-            style={styles.input}
+            style={{
+              ...styles.input,
+              ...(isReincarnated ? styles.inputDisabled : {}),
+            }}
             placeholder="1 / 2 / 多数"
             className="monster-spawns-input"
+            disabled={isReincarnated}
           />
         </label>
       </div>
@@ -791,10 +844,14 @@ function SpawnCard({
           <textarea
             value={spawn?.note ?? ""}
             onChange={(e) => setField("note", e.target.value)}
-            style={styles.textarea}
+            style={{
+              ...styles.textarea,
+              ...(isReincarnated ? styles.inputDisabled : {}),
+            }}
             rows={4}
             className="monster-spawns-textarea"
             placeholder="表示用メモを入力"
+            disabled={isReincarnated}
           />
         </label>
       </div>
@@ -806,9 +863,11 @@ function SpawnCard({
           <button
             type="button"
             onClick={() => setGridMode("block")}
+            disabled={isReincarnated}
             style={{
               ...styles.modeButton,
               ...(spawn?.grid_mode !== "single" ? styles.modeButtonActive : {}),
+              ...(isReincarnated ? styles.buttonDisabled : {}),
             }}
             className="monster-spawns-chip-button"
           >
@@ -818,9 +877,11 @@ function SpawnCard({
           <button
             type="button"
             onClick={() => setGridMode("single")}
+            disabled={isReincarnated}
             style={{
               ...styles.modeButton,
               ...(spawn?.grid_mode === "single" ? styles.modeButtonActive : {}),
+              ...(isReincarnated ? styles.buttonDisabled : {}),
             }}
             className="monster-spawns-chip-button"
           >
@@ -835,6 +896,7 @@ function SpawnCard({
         coords={spawn?.coords ?? []}
         onApplyCoords={handleApplyCoords}
         gridMode={spawn?.grid_mode ?? "single"}
+        disabled={isReincarnated}
         styles={styles}
       />
     </div>
@@ -844,6 +906,7 @@ function SpawnCard({
 export default function MonsterSpawnsEditor({
   spawns = [],
   maps = [],
+  is_reincarnated = false,
   onChange,
 }) {
   const styles = useMemo(() => getComponentStyles(), []);
@@ -878,16 +941,21 @@ export default function MonsterSpawnsEditor({
   }, [spawns, activeIndex]);
 
   function setNextSpawns(nextSpawns) {
+    if (is_reincarnated) return;
     onChange(nextSpawns);
   }
 
   function addSpawn() {
+    if (is_reincarnated) return;
+
     const next = [...(spawns ?? []), makeSpawn()];
     setNextSpawns(next);
     setActiveIndex(next.length - 1);
   }
 
   function updateSpawn(spawnKey, nextSpawn) {
+    if (is_reincarnated) return;
+
     setNextSpawns(
       (spawns ?? []).map((spawn) =>
         spawn.__key === spawnKey ? nextSpawn : spawn
@@ -896,6 +964,8 @@ export default function MonsterSpawnsEditor({
   }
 
   function removeSpawn(spawnKey) {
+    if (is_reincarnated) return;
+
     const current = spawns ?? [];
     const removeIndex = current.findIndex((spawn) => spawn.__key === spawnKey);
     const next = current.filter((spawn) => spawn.__key !== spawnKey);
@@ -938,7 +1008,8 @@ export default function MonsterSpawnsEditor({
             background-color 0.18s ease,
             border-color 0.18s ease,
             color 0.18s ease,
-            box-shadow 0.18s ease;
+            box-shadow 0.18s ease,
+            opacity 0.18s ease;
         }
 
         .monster-spawns-input:focus,
@@ -952,7 +1023,7 @@ export default function MonsterSpawnsEditor({
           background: ${styles.mapSearchItemHover.background} !important;
         }
 
-        .monster-spawns-chip-button:hover {
+        .monster-spawns-chip-button:hover:not(:disabled) {
           background: ${styles.modeButtonHover.background} !important;
           color: ${styles.modeButtonHover.color} !important;
         }
@@ -1021,10 +1092,27 @@ export default function MonsterSpawnsEditor({
         <div style={styles.header}>
           <div style={styles.headerTextBlock}>
             <h2 style={styles.title}>生息地編集</h2>
-            <p style={styles.desc}>先に大陸を選んでから地名を検索する</p>
+            <p style={styles.desc}>
+              {is_reincarnated
+                ? "転生モンスターは転生元の生息地情報を使うため編集できない"
+                : "先に大陸を選んでから地名を検索する"}
+            </p>
           </div>
 
-          <button type="button" onClick={addSpawn} style={styles.addButton}>
+          <button
+            type="button"
+            onClick={addSpawn}
+            style={{
+              ...styles.addButton,
+              ...(is_reincarnated ? styles.buttonDisabled : {}),
+            }}
+            disabled={is_reincarnated}
+            title={
+              is_reincarnated
+                ? "転生モンスターは編集できない"
+                : "生息地を追加"
+            }
+          >
             生息地を追加
           </button>
         </div>
@@ -1071,6 +1159,7 @@ export default function MonsterSpawnsEditor({
                   updateSpawn(activeSpawn.__key, nextSpawn)
                 }
                 onRemove={() => removeSpawn(activeSpawn.__key)}
+                isReincarnated={Boolean(is_reincarnated)}
                 styles={styles}
               />
             ) : null}
@@ -1136,39 +1225,47 @@ const baseStyles = {
     flexShrink: 0,
     maxWidth: "100%",
   },
+  buttonDisabled: {
+    opacity: 0.55,
+    cursor: "not-allowed",
+    pointerEvents: "auto",
+  },
+  disabledRow: {
+    opacity: 0.7,
+    cursor: "not-allowed",
+  },
   tabWrap: {
-  display: "flex",
-  gap: 8,
-  overflowX: "visible",
-  overflowY: "visible",
-  flexWrap: "wrap",
-  paddingBottom: 4,
-  marginTop: -2,
-  width: "100%",
-  maxWidth: "100%",
-  minWidth: 0,
-  boxSizing: "border-box",
-},
-
-tab: {
-  flex: "0 1 auto",
-  maxWidth: "100%",
-  border: "1px solid var(--soft-border)",
-  background: "var(--soft-bg)",
-  color: "var(--text-muted)",
-  borderRadius: 999,
-  padding: "8px 12px",
-  cursor: "pointer",
-  whiteSpace: "normal",
-  overflow: "visible",
-  textOverflow: "clip",
-  fontSize: 13,
-  fontWeight: 700,
-  lineHeight: 1.4,
-  minHeight: 38,
-  boxSizing: "border-box",
-  wordBreak: "break-word",
-},
+    display: "flex",
+    gap: 8,
+    overflowX: "visible",
+    overflowY: "visible",
+    flexWrap: "wrap",
+    paddingBottom: 4,
+    marginTop: -2,
+    width: "100%",
+    maxWidth: "100%",
+    minWidth: 0,
+    boxSizing: "border-box",
+  },
+  tab: {
+    flex: "0 1 auto",
+    maxWidth: "100%",
+    border: "1px solid var(--soft-border)",
+    background: "var(--soft-bg)",
+    color: "var(--text-muted)",
+    borderRadius: 999,
+    padding: "8px 12px",
+    cursor: "pointer",
+    whiteSpace: "normal",
+    overflow: "visible",
+    textOverflow: "clip",
+    fontSize: 13,
+    fontWeight: 700,
+    lineHeight: 1.4,
+    minHeight: 38,
+    boxSizing: "border-box",
+    wordBreak: "break-word",
+  },
   tabHover: {
     background: "var(--card-bg)",
     color: "var(--text-main)",
@@ -1511,6 +1608,9 @@ tab: {
     minWidth: 0,
     minHeight: 0,
     userSelect: "none",
+  },
+  gridCellDisabled: {
+    cursor: "not-allowed",
   },
   gridCellActive: {
     background: "rgba(59, 130, 246, 0.55)",

@@ -434,7 +434,10 @@ export default function MonstersSearchClient() {
                 setKeyword(e.target.value);
                 setShowSuggestions(true);
               }}
-              onFocus={() => setShowSuggestions(true)}
+              onFocus={(e) => {
+                setShowSuggestions(true);
+                e.target.select();
+              }}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   setShowSuggestions(false);

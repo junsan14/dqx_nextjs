@@ -594,28 +594,35 @@ function getStyles() {
       display: "grid",
       gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
       gap: "10px",
-      alignItems: "start",
+      alignItems: "center",
     },
+
     summaryStat: {
       minWidth: 0,
       display: "grid",
       gap: "4px",
+      justifyItems: "center",
+      textAlign: "center",
     },
+
     summaryStatLabel: {
       fontSize: "12px",
       fontWeight: 900,
       color: "var(--text-muted)",
       lineHeight: 1.2,
       whiteSpace: "nowrap",
+      textAlign: "center",
     },
+
     summaryStatValue: {
       fontSize: "13px",
       fontWeight: 700,
       color: "var(--text-main)",
       lineHeight: 1.45,
-      paddingLeft: "6px",
+      paddingLeft: 0,
       wordBreak: "break-word",
       whiteSpace: "pre-wrap",
+      textAlign: "center",
     },
     infoBlock: {
       display: "grid",

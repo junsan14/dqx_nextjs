@@ -381,7 +381,6 @@ export default function MonstersClient() {
   const saveDisabled = saving;
   const deleteDisabled = saving || !isAdmin || !selectedMonster?.id;
   const createDisabled = !isAdmin;
-
   return (
     <>
       <EditorShell
@@ -457,6 +456,7 @@ export default function MonstersClient() {
             <MonsterSpawnsEditor
               spawns={selectedMonster?.spawns ?? []}
               maps={mapOptions}
+              is_reincarnated = {selectedMonster.is_reincarnated}
               onChange={(nextSpawns) =>
                 setSelectedMonster((prev) => ({
                   ...prev,

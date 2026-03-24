@@ -151,7 +151,7 @@ export default function AboutPage() {
     <main style={styles.page}>
       <div style={styles.container}>
         <PageHeroTitle
-            kicker="DQX MAP DATABASE"
+            kicker="TERMS OF USE"
             title="ご利用にあたって"
         />
         <section style={styles.section}>

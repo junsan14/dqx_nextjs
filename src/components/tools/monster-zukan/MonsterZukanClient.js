@@ -34,6 +34,7 @@ function getStyles() {
     summaryText: {
       color: "var(--text-sub)",
       textAlign: "center",
+      marginTop:"20px"
     },
     emptyBox: {
       border: "1px dashed var(--soft-border)",
@@ -46,6 +47,7 @@ function getStyles() {
       color: "var(--text-main)",
       boxShadow: "0 1px 2px rgba(15, 23, 42, 0.06)",
       textDecoration: "none",
+      minWidth: 0,
     },
     cardHover: {
       background: "var(--hover-bg)",
@@ -55,13 +57,10 @@ function getStyles() {
     },
     nameText: {
       color: "var(--text-title)",
+      lineHeight: 1.35,
+      wordBreak: "break-word",
     },
     systemTypePc: {
-      background: "var(--tag-bg)",
-      color: "var(--tag-text)",
-      border: "1px solid var(--tag-border)",
-    },
-    systemTypeSp: {
       background: "var(--tag-bg)",
       color: "var(--tag-text)",
       border: "1px solid var(--tag-border)",
@@ -108,6 +107,24 @@ function getStyles() {
       background: "var(--soft-bg)",
       border: "1px solid var(--soft-border)",
       color: "var(--text-muted)",
+      lineHeight: 1.2,
+    },
+
+    pageMetaRow: {
+      display: "flex",
+      justifyContent: "flex-end",
+      marginBottom: "8px",
+    },
+    pageMetaBadge: {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: "6px",
+      padding: "4px 10px",
+      borderRadius: "999px",
+      border: "1px solid var(--soft-border)",
+      background: "var(--soft-bg)",
+      color: "var(--text-muted)",
+      fontSize: "12px",
       lineHeight: 1.2,
     },
 
@@ -182,7 +199,7 @@ function MonsterCard({ monster, currentPage, sort, styles }) {
   return (
     <Link
       href={`/tools/monster-search/${monster.id}?from=zukan&page=${currentPage}&sort=${sort}`}
-      className="block rounded-lg px-3 py-2 transition"
+      className="block rounded-lg px-2.5 py-2 transition sm:px-3 sm:py-2.5"
       style={{
         ...styles.card,
         ...(isHovered ? styles.cardHover : {}),
@@ -190,18 +207,18 @@ function MonsterCard({ monster, currentPage, sort, styles }) {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="hidden sm:flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className="text-xs" style={styles.orderText}>
+      <div className="hidden sm:flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="shrink-0 text-xs" style={styles.orderText}>
             No.{monster.display_order}
           </span>
 
-          <span className="font-medium" style={styles.nameText}>
+          <span className="min-w-0 truncate font-medium" style={styles.nameText}>
             {monster.name}
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {monster.system_type && (
             <span
               className="rounded-full px-2 py-1 text-xs"
@@ -223,35 +240,23 @@ function MonsterCard({ monster, currentPage, sort, styles }) {
         </div>
       </div>
 
-      <div className="sm:hidden flex flex-col gap-1">
-        <div className="flex items-center justify-between text-xs">
-          <span style={styles.orderText}>No.{monster.display_order}</span>
-
-          <div className="flex items-center gap-1">
-            {monster.system_type && (
-              <span
-                className="rounded px-2 py-[2px]"
-                style={styles.systemTypeSp}
-              >
-                {monster.system_type}
-              </span>
-            )}
-
-            {(monster.is_reincarnated === true ||
-              monster.is_reincarnated === 1) && (
-              <span
-                className="rounded px-2 py-[2px]"
-                style={styles.reincarnatedSp}
-              >
-                転生
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="text-sm font-medium" style={styles.nameText}>
+      <div className="flex min-w-0 items-center justify-between gap-2 sm:hidden">
+        <div
+          className="min-w-0 text-[12px] font-medium leading-4"
+          style={styles.nameText}
+        >
           {monster.name}
         </div>
+
+        {(monster.is_reincarnated === true ||
+          monster.is_reincarnated === 1) && (
+          <span
+            className="shrink-0 rounded px-1.5 py-[2px] text-[10px]"
+            style={styles.reincarnatedSp}
+          >
+            転生
+          </span>
+        )}
       </div>
     </Link>
   );
@@ -268,7 +273,7 @@ function SortTabs({ sort, styles }) {
 
   const moveSort = (nextSort, soon = false) => {
     if (soon) return;
-    router.push(`?page=1&sort=${nextSort}`);
+    router.push(`?page=1&sort=${nextSort}`, { scroll: false });
   };
 
   const getTabStyle = (key, active = false, soon = false) => {
@@ -339,7 +344,7 @@ function Pagination({ currentPage, lastPage, sort, styles }) {
 
   const moveToPage = (page) => {
     const safePage = Math.max(1, Math.min(Number(page) || 1, safeLastPage));
-    router.push(`?page=${safePage}&sort=${sort}`);
+    router.push(`?page=${safePage}&sort=${sort}`, { scroll: false });
   };
 
   const handleSubmit = (e) => {
@@ -481,17 +486,17 @@ export default function MonsterZukanClient({
       />
 
       <SortTabs sort={sort} styles={styles} />
-
-      <div className="mb-4 text-sm" style={styles.summaryText}>
-        {start}〜{end}件 / 全{safeTotal}件
+      <div style={styles.pageMetaRow}>
+        <div style={styles.pageMetaBadge}>
+          {safeCurrentPage} / {safeLastPage}ページ
+        </div>
       </div>
-
       {safeMonsters.length === 0 ? (
         <div className="rounded-xl p-8 text-center" style={styles.emptyBox}>
           モンスターがいない
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-2 sm:gap-3">
           {safeMonsters.map((monster) => (
             <MonsterCard
               key={monster.id}
@@ -503,7 +508,9 @@ export default function MonsterZukanClient({
           ))}
         </div>
       )}
-
+      <div className="mb-4 text-sm" style={styles.summaryText}>
+        {start}〜{end}件 / 全{safeTotal}件
+      </div>
       <Pagination
         currentPage={safeCurrentPage}
         lastPage={safeLastPage}

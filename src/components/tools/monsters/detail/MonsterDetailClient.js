@@ -395,7 +395,10 @@ export default function MonsterDetailClient() {
                 setKeyword(e.target.value);
                 setShowSuggestions(true);
               }}
-              onFocus={() => setShowSuggestions(true)}
+              onFocus={(e) => {
+                setShowSuggestions(true);
+                e.target.select();
+              }}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   setShowSuggestions(false);
@@ -403,7 +406,6 @@ export default function MonsterDetailClient() {
               }}
               style={styles.input}
             />
-
             {showSuggestions && suggestions.length > 0 && (
               <div style={styles.suggestionBox}>
                 <div style={styles.suggestionHeader}>候補</div>

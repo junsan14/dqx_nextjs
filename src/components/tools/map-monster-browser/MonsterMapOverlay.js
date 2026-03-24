@@ -1,22 +1,30 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import Image from "next/image";
-import { resolveMapImageUrl } from "@/lib/maps";
+import { getMonsterAssetUrl } from "@/lib/monsters";
 
 const GRID_SIZE = 8;
 const ORIGINAL_IMAGE_WIDTH = 490;
 const ORIGINAL_IMAGE_HEIGHT = 565;
 const CROP_TOP_PX = ORIGINAL_IMAGE_HEIGHT - ORIGINAL_IMAGE_WIDTH;
-
-const TOP_AXIS_PX = 2;
-const LEFT_AXIS_PX = 2.5;
+const TOP_AXIS_PX = 13;
+const LEFT_AXIS_PX = 3.3;
 const RIGHT_TRIM_PX = 0;
 const BOTTOM_TRIM_PX = 0;
 
-const TOOLTIP_EDGE_THRESHOLD_X = 20;
-const TOOLTIP_EDGE_THRESHOLD_TOP = 26;
-const TOOLTIP_EDGE_THRESHOLD_BOTTOM = 16;
+const BUBBLE_OFFSET_X_PERCENT = 3;
+const BUBBLE_OFFSET_Y_PERCENT = 3;
+const BUBBLE_WIDTH_SCALE = 1;
+const BUBBLE_HEIGHT_SCALE = 1;
+const BUBBLE_BORDER_RADIUS_PX = 5;
+const BUBBLE_INNER_PADDING_CELLS = 0.08;
+
+const DESKTOP_BREAKPOINT = 920;
+const LABEL_GAP_PX = 12;
+const CONNECTOR_LENGTH_PX = 14;
+const LABEL_LANE_STEP_PX = 34;
 
 const GRID_SOURCE_X = LEFT_AXIS_PX;
 const GRID_SOURCE_Y = CROP_TOP_PX + TOP_AXIS_PX;
@@ -27,16 +35,13 @@ const GRID_SOURCE_SIZE = Math.min(
 );
 
 const MAP_CROP = {
-  sourceX: GRID_SOURCE_X,
-  sourceY: GRID_SOURCE_Y,
-  sourceSize: GRID_SOURCE_SIZE,
   widthPercent: (ORIGINAL_IMAGE_WIDTH / GRID_SOURCE_SIZE) * 100,
   heightPercent: (ORIGINAL_IMAGE_HEIGHT / GRID_SOURCE_SIZE) * 100,
   offsetXPercent: (GRID_SOURCE_X / ORIGINAL_IMAGE_WIDTH) * 100,
   offsetYPercent: (GRID_SOURCE_Y / ORIGINAL_IMAGE_HEIGHT) * 100,
 };
 
-function useIsMobile(breakpoint = 920) {
+function useIsMobile(breakpoint = DESKTOP_BREAKPOINT) {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -49,9 +54,7 @@ function useIsMobile(breakpoint = 920) {
     handleResize();
     window.addEventListener("resize", handleResize);
 
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
+    return () => window.removeEventListener("resize", handleResize);
   }, [breakpoint]);
 
   return isMobile;
@@ -59,7 +62,6 @@ function useIsMobile(breakpoint = 920) {
 
 function parseAreaList(area) {
   if (!area) return [];
-
   if (Array.isArray(area)) return area;
 
   if (typeof area === "string") {
@@ -125,48 +127,9 @@ function collectUniqueCells(spawns = []) {
   return result;
 }
 
-function makeCellMap(cells = []) {
-  const map = new Map();
-
-  for (const cell of cells) {
-    map.set(`${cell.col}:${cell.row}`, cell);
-  }
-
-  return map;
-}
-
-function hasAllCellsInRect(cellMap, minCol, maxCol, minRow, maxRow) {
-  for (let col = minCol; col <= maxCol; col += 1) {
-    for (let row = minRow; row <= maxRow; row += 1) {
-      if (!cellMap.has(`${col}:${row}`)) {
-        return false;
-      }
-    }
-  }
-
-  return true;
-}
-
 function compareCells(a, b) {
-  const colDiff = a.col - b.col;
-  if (colDiff !== 0) return colDiff;
-  return a.row - b.row;
-}
-
-function buildShortLabel(rectCells = []) {
-  if (!rectCells.length) return "";
-
-  const sorted = [...rectCells].sort(compareCells);
-
-  if (sorted.length === 1) return sorted[0].label;
-
-  const first = sorted[0];
-  const last = sorted[sorted.length - 1];
-
-  if (first.row === last.row) return `${first.label}〜${last.label}`;
-  if (first.col === last.col) return `${first.label}〜${last.label}`;
-
-  return `${first.label}〜${last.label}`;
+  if (a.row !== b.row) return a.row - b.row;
+  return a.col - b.col;
 }
 
 function buildRectLabel(cells = []) {
@@ -176,78 +139,69 @@ function buildRectLabel(cells = []) {
     .join(", ");
 }
 
+function areCellsOrthogonallyAdjacent(a, b) {
+  const colDiff = Math.abs(a.col - b.col);
+  const rowDiff = Math.abs(a.row - b.row);
+  return colDiff + rowDiff === 1;
+}
+
 function buildMergedGroups(cells = []) {
-  const cellMap = makeCellMap(cells);
-  const used = new Set();
+  if (!cells.length) return [];
+
+  const sortedCells = [...cells].sort(compareCells);
+  const visited = new Set();
   const groups = [];
 
-  const sortedCells = [...cells].sort((a, b) => {
-    if (a.row !== b.row) return a.row - b.row;
-    return a.col - b.col;
-  });
+  for (let i = 0; i < sortedCells.length; i += 1) {
+    if (visited.has(i)) continue;
 
-  for (const startCell of sortedCells) {
-    const startKey = `${startCell.col}:${startCell.row}`;
-    if (used.has(startKey)) continue;
+    const stack = [i];
+    visited.add(i);
+    const groupCells = [];
 
-    let bestRect = {
-      minCol: startCell.col,
-      maxCol: startCell.col,
-      minRow: startCell.row,
-      maxRow: startCell.row,
-      area: 1,
-    };
+    while (stack.length) {
+      const currentIndex = stack.pop();
+      const current = sortedCells[currentIndex];
+      groupCells.push(current);
 
-    for (let maxCol = startCell.col; maxCol < GRID_SIZE; maxCol += 1) {
-      for (let maxRow = startCell.row; maxRow < GRID_SIZE; maxRow += 1) {
-        const width = maxCol - startCell.col + 1;
-        const height = maxRow - startCell.row + 1;
-        const area = width * height;
+      for (let j = 0; j < sortedCells.length; j += 1) {
+        if (visited.has(j)) continue;
 
-        if (area <= bestRect.area) continue;
-
-        if (
-          hasAllCellsInRect(
-            cellMap,
-            startCell.col,
-            maxCol,
-            startCell.row,
-            maxRow
-          )
-        ) {
-          bestRect = {
-            minCol: startCell.col,
-            maxCol,
-            minRow: startCell.row,
-            maxRow,
-            area,
-          };
+        const target = sortedCells[j];
+        if (areCellsOrthogonallyAdjacent(current, target)) {
+          visited.add(j);
+          stack.push(j);
         }
       }
     }
 
-    const rectCells = [];
-
-    for (let col = bestRect.minCol; col <= bestRect.maxCol; col += 1) {
-      for (let row = bestRect.minRow; row <= bestRect.maxRow; row += 1) {
-        const key = `${col}:${row}`;
-        const cell = cellMap.get(key);
-
-        if (cell && !used.has(key)) {
-          rectCells.push(cell);
-          used.add(key);
-        }
-      }
-    }
+    const normalizedCells = groupCells.sort(compareCells);
+    const minCol = Math.min(...normalizedCells.map((cell) => cell.col));
+    const maxCol = Math.max(...normalizedCells.map((cell) => cell.col));
+    const minRow = Math.min(...normalizedCells.map((cell) => cell.row));
+    const maxRow = Math.max(...normalizedCells.map((cell) => cell.row));
+    const widthCells = maxCol - minCol + 1;
+    const heightCells = maxRow - minRow + 1;
+    const cellCount = normalizedCells.length;
 
     groups.push({
-      cells: rectCells,
-      minCol: bestRect.minCol,
-      maxCol: bestRect.maxCol,
-      minRow: bestRect.minRow,
-      maxRow: bestRect.maxRow,
-      label: buildRectLabel(rectCells),
-      shortLabel: buildShortLabel(rectCells),
+      cells: normalizedCells,
+      minCol,
+      maxCol,
+      minRow,
+      maxRow,
+      label: buildRectLabel(normalizedCells),
+      isMerged: normalizedCells.length > 1,
+      widthCells,
+      heightCells,
+      cellCount,
+      isBigBubble:
+        widthCells >= 4 || heightCells >= 4 || cellCount >= 10,
+      isFullArea:
+        (widthCells >= 7 && heightCells >= 7) ||
+        cellCount >= 32 ||
+        (widthCells === 8 && heightCells >= 6) ||
+        (heightCells === 8 && widthCells >= 6),
     });
   }
 
@@ -257,21 +211,23 @@ function buildMergedGroups(cells = []) {
 function normalizeMetaValue(value) {
   if (value == null) return "";
   const text = String(value).trim();
-  if (!text) return "";
-  if (text === "[]" || text === "null" || text === "undefined") return "";
+  if (!text || text === "[]" || text === "null" || text === "undefined") return "";
   return text;
 }
 
-function normalizeSpawnTime(value) {
-  const v = String(value ?? "").trim().toLowerCase();
+function joinUniqueMonsterNames(spawns = [], monstersById = {}) {
+  const result = [];
+  const seen = new Set();
 
-  if (v.includes("night") || v.includes("夜")) return "夜";
-  if (v.includes("day") || v.includes("昼") || v.includes("日中")) return "日中";
-  if (v.includes("normal") || v.includes("always") || v.includes("いつでも")) {
-    return "いつでも";
+  for (const spawn of spawns) {
+    const name = normalizeMetaValue(monstersById?.[spawn?.monster_id]?.name);
+    if (!name) continue;
+    if (seen.has(name)) continue;
+    seen.add(name);
+    result.push(name);
   }
 
-  return String(value ?? "").trim();
+  return result;
 }
 
 function bubbleContainsSpawn(group, spawn) {
@@ -283,371 +239,241 @@ function bubbleContainsSpawn(group, spawn) {
   return spawnCells.some((cell) => bubbleCellSet.has(cell));
 }
 
-function buildMonsterLines(spawns = [], monstersById = {}) {
-  const map = new Map();
-
-  for (const spawn of spawns) {
-    const monster = monstersById?.[spawn.monster_id];
-    const monsterName = monster?.name || `monster_id: ${spawn.monster_id}`;
-    const key = `${spawn.monster_id}:${spawn.spawn_time ?? ""}:${spawn.spawn_count ?? ""}:${spawn.symbol_count ?? ""}`;
-
-    if (!map.has(key)) {
-      map.set(key, {
-        monsterName,
-        spawnTime: normalizeSpawnTime(spawn?.spawn_time),
-        spawnCount: normalizeMetaValue(spawn?.spawn_count),
-        symbolCount: normalizeMetaValue(spawn?.symbol_count),
-      });
-    }
-  }
-
-  return Array.from(map.values()).sort((a, b) =>
-    String(a.monsterName).localeCompare(String(b.monsterName), "ja")
-  );
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
 }
 
-function getBubblePosition(group, spawns = [], monstersById = {}) {
+function getEdgePlacement(leftPercent, topPercent) {
+  if (topPercent <= 26) return "top";
+  if (leftPercent >= 74) return "right";
+  if (leftPercent <= 26) return "left";
+  if (topPercent >= 74) return "bottom";
+  return "bottom";
+}
+
+function getLabelPlacementForBubble(bubbleLike) {
+  if (bubbleLike.isFullArea || bubbleLike.isBigBubble) return "center";
+
+  const edge = getEdgePlacement(bubbleLike.left, bubbleLike.top);
+
+  if (edge === "top") return "bottom";
+  if (edge === "right") return "left";
+  if (edge === "left") return "right";
+  if (edge === "bottom") return "top";
+
+  return "bottom";
+}
+
+function getBubblePosition(
+  group,
+  spawns = [],
+  monstersById = {},
+  showMonsterNameInBubble = false
+) {
   const cellPercent = 100 / GRID_SIZE;
+  const paddingPercent = cellPercent * BUBBLE_INNER_PADDING_CELLS;
 
   const widthCells = group.maxCol - group.minCol + 1;
   const heightCells = group.maxRow - group.minRow + 1;
 
-  const left = group.minCol * cellPercent + (widthCells * cellPercent) / 2;
-  const top = group.minRow * cellPercent + (heightCells * cellPercent) / 2;
+  let left =
+    group.minCol * cellPercent +
+    (widthCells * cellPercent) / 2 +
+    BUBBLE_OFFSET_X_PERCENT;
 
-  const width = widthCells * cellPercent * 0.9;
-  const height = heightCells * cellPercent * 0.9;
+  let top =
+    group.minRow * cellPercent +
+    (heightCells * cellPercent) / 2 +
+    BUBBLE_OFFSET_Y_PERCENT;
+
+  const width = Math.max(
+    cellPercent * BUBBLE_WIDTH_SCALE,
+    widthCells * cellPercent * BUBBLE_WIDTH_SCALE - paddingPercent
+  );
+
+  const height = Math.max(
+    cellPercent * BUBBLE_HEIGHT_SCALE,
+    heightCells * cellPercent * BUBBLE_HEIGHT_SCALE - paddingPercent
+  );
+
+  const halfW = width / 2;
+  const halfH = height / 2;
+
+  left = clamp(left, halfW + 1, 100 - halfW - 1);
+  top = clamp(top, halfH + 1, 100 - halfH - 1);
 
   const relatedSpawns = (spawns ?? []).filter((spawn) =>
     bubbleContainsSpawn(group, spawn)
   );
 
-  return {
+  const monsterNames = joinUniqueMonsterNames(relatedSpawns, monstersById);
+
+  const base = {
     key: group.label,
     label: group.label,
-    shortLabel: group.shortLabel,
+    monsterLabel: showMonsterNameInBubble ? monsterNames.join(" / ") : "",
+    monsterNames,
     left,
     top,
     width,
     height,
-    isMerged: group.cells.length > 1,
-    relatedSpawns,
-    monsterLines: buildMonsterLines(relatedSpawns, monstersById),
+    isFullArea: group.isFullArea,
+    isBigBubble: group.isBigBubble,
   };
-}
-
-function getTooltipPlacement(bubble) {
-  if (!bubble) {
-    return {
-      vertical: "top",
-      horizontal: "center",
-    };
-  }
-
-  let vertical = "top";
-  if (bubble.top <= TOOLTIP_EDGE_THRESHOLD_TOP) {
-    vertical = "bottom";
-  } else if (bubble.top >= 100 - TOOLTIP_EDGE_THRESHOLD_BOTTOM) {
-    vertical = "top";
-  }
-
-  let horizontal = "center";
-  if (bubble.left <= TOOLTIP_EDGE_THRESHOLD_X) {
-    horizontal = "right";
-  } else if (bubble.left >= 100 - TOOLTIP_EDGE_THRESHOLD_X) {
-    horizontal = "left";
-  }
 
   return {
-    vertical,
-    horizontal,
+    ...base,
+    labelPlacement: getLabelPlacementForBubble(base),
   };
 }
 
-function getDesktopTooltipStyle(bubble, styles) {
-  const placement = getTooltipPlacement(bubble);
+function withTooltipLanes(bubbles = []) {
+  const grouped = { top: [], bottom: [], left: [], right: [] };
 
-  let left = `${bubble.left}%`;
-  let top = `${bubble.top}%`;
-  let transform = "translate(-50%, -100%)";
-  let paddingTop = "0px";
-  let paddingBottom = "12px";
+  bubbles.forEach((bubble, index) => {
+    if (bubble.labelPlacement === "center") return;
+    grouped[bubble.labelPlacement]?.push({ bubble, index });
+  });
 
-  if (placement.vertical === "bottom") {
-    transform = "translate(-50%, 0)";
-    paddingTop = "12px";
-    paddingBottom = "0px";
-  }
-
-  if (placement.horizontal === "right") {
-    left = `calc(${bubble.left}% - 2px)`;
-    transform =
-      placement.vertical === "bottom"
-        ? "translate(0, 0)"
-        : "translate(0, -100%)";
-  }
-
-  if (placement.horizontal === "left") {
-    left = `calc(${bubble.left}% + 2px)`;
-    transform =
-      placement.vertical === "bottom"
-        ? "translate(-100%, 0)"
-        : "translate(-100%, -100%)";
-  }
-
-  return {
-    ...styles.hoverTooltip,
-    left,
-    top,
-    transform,
-    paddingTop,
-    paddingBottom,
-  };
-}
-
-function BubbleInfoContent({ bubble, styles }) {
-  if (!bubble) return null;
-
-  return (
-    <div style={styles.infoCardContent}>
-      {bubble.monsterLines?.length ? (
-        <div style={styles.monsterList}>
-          {bubble.monsterLines.map((line, index) => (
-            <div
-              key={`${line.monsterName}-${index}`}
-              style={styles.monsterListItem}
-            >
-              <div style={styles.monsterName}>{line.monsterName}</div>
-
-              <div style={styles.monsterMeta}>
-                {line.spawnTime ? <span>時間: {line.spawnTime}</span> : null}
-                {line.spawnCount ? <span>出現数: {line.spawnCount}</span> : null}
-                {line.symbolCount ? <span>シンボル: {line.symbolCount}</span> : null}
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-export default function MonsterMapOverlay({
-  spawns = [],
-  imagePath = "",
-  size = "sm",
-  monstersById = {},
-}) {
-  const isMobile = useIsMobile();
-
-  const styles = useMemo(() => getStyles(size, isMobile), [size, isMobile]);
-
-  const resolvedImageUrl = useMemo(
-    () => resolveMapImageUrl(imagePath),
-    [imagePath]
+  const result = bubbles.map((bubble) =>
+    bubble.labelPlacement === "center" ? { ...bubble, lane: 0 } : null
   );
 
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [hoveredBubbleKey, setHoveredBubbleKey] = useState("");
-  const [selectedBubbleKey, setSelectedBubbleKey] = useState("");
+  Object.entries(grouped).forEach(([placement, items]) => {
+    const sorted = [...items].sort((a, b) => {
+      if (placement === "left" || placement === "right") {
+        return a.bubble.top - b.bubble.top;
+      }
+      return a.bubble.left - b.bubble.left;
+    });
 
-  useEffect(() => {
-    setImageLoaded(false);
-  }, [resolvedImageUrl]);
+    let lane = 0;
+    let prevAnchor = null;
 
-  useEffect(() => {
-    setHoveredBubbleKey("");
-    setSelectedBubbleKey("");
-  }, [spawns]);
+    sorted.forEach(({ bubble, index }) => {
+      const anchor =
+        placement === "left" || placement === "right" ? bubble.top : bubble.left;
+      const threshold = placement === "left" || placement === "right" ? 10 : 12;
 
-  const cells = useMemo(() => collectUniqueCells(spawns), [spawns]);
+      if (prevAnchor == null || Math.abs(anchor - prevAnchor) > threshold) {
+        lane = 0;
+      } else {
+        lane += 1;
+      }
 
-  const bubbles = useMemo(() => {
-    return buildMergedGroups(cells)
-      .map((group) => getBubblePosition(group, spawns, monstersById))
-      .filter(Boolean);
-  }, [cells, spawns, monstersById]);
+      prevAnchor = anchor;
+      result[index] = { ...bubble, lane };
+    });
+  });
 
-  const activeDesktopBubble = useMemo(() => {
-    if (!hoveredBubbleKey) return null;
-    return bubbles.find((bubble) => bubble.key === hoveredBubbleKey) ?? null;
-  }, [bubbles, hoveredBubbleKey]);
-
-  const activeMobileBubble = useMemo(() => {
-    if (!selectedBubbleKey) return null;
-    return bubbles.find((bubble) => bubble.key === selectedBubbleKey) ?? null;
-  }, [bubbles, selectedBubbleKey]);
-
-  function handleBubbleClick(bubbleKey) {
-    if (!isMobile) return;
-    setSelectedBubbleKey((prev) => (prev === bubbleKey ? "" : bubbleKey));
-  }
-
-  if (!resolvedImageUrl) {
-    return (
-      <div style={styles.mapCard}>
-        <div style={styles.noImageBox}>画像なし</div>
-      </div>
-    );
-  }
-
-  return (
-    <div style={styles.mapCard}>
-      <div style={styles.mapImageFrame}>
-        <div
-          style={styles.mapImageBox}
-          onClick={() => {
-            if (isMobile) setSelectedBubbleKey("");
-          }}
-        >
-          <div
-            style={{
-              ...styles.imageInner,
-              opacity: imageLoaded ? 1 : 0,
-            }}
-          >
-            <div
-              style={{
-                ...styles.imageCropInner,
-                width: `${MAP_CROP.widthPercent}%`,
-                height: `${MAP_CROP.heightPercent}%`,
-                transform: `translate(-${MAP_CROP.offsetXPercent}%, -${MAP_CROP.offsetYPercent}%)`,
-              }}
-            >
-              <Image
-                key={resolvedImageUrl}
-                src={resolvedImageUrl}
-                alt="map"
-                fill
-                sizes="(max-width: 768px) 100vw, 420px"
-                style={styles.mapImage}
-                priority={false}
-                onLoad={() => setImageLoaded(true)}
-              />
-            </div>
-          </div>
-
-          {!imageLoaded && (
-            <div style={styles.loadingOverlay}>
-              <div style={styles.loadingShimmer} />
-              <div style={styles.loadingText}>読み込み中...</div>
-            </div>
-          )}
-
-          {imageLoaded && bubbles.length > 0 && (
-            <div style={styles.bubbleLayer}>
-              {bubbles.map((bubble) => {
-                const isSelected = selectedBubbleKey === bubble.key;
-
-                return (
-                  <button
-                    key={bubble.key}
-                    type="button"
-                    title={bubble.label}
-                    aria-label={`${bubble.label} の詳細`}
-                    onMouseEnter={() => {
-                      if (!isMobile) setHoveredBubbleKey(bubble.key);
-                    }}
-                    onMouseLeave={() => {
-                      if (!isMobile) setHoveredBubbleKey("");
-                    }}
-                    onFocus={() => {
-                      if (!isMobile) setHoveredBubbleKey(bubble.key);
-                    }}
-                    onBlur={() => {
-                      if (!isMobile) setHoveredBubbleKey("");
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleBubbleClick(bubble.key);
-                    }}
-                    style={{
-                      ...styles.spawnBubble,
-                      ...(bubble.isMerged ? styles.spawnBubbleMerged : {}),
-                      ...(isSelected ? styles.spawnBubbleSelected : {}),
-                      left: `${bubble.left}%`,
-                      top: `${bubble.top}%`,
-                      width: `${bubble.width}%`,
-                      height: `${bubble.height}%`,
-                    }}
-                  >
-                    <span style={styles.bubbleInner}>
-                      <span style={styles.bubbleText}>{bubble.shortLabel}</span>
-                      <span style={styles.bubbleHintIcon} aria-hidden="true">
-                        👆
-                      </span>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {!isMobile && imageLoaded && activeDesktopBubble ? (
-          <div style={getDesktopTooltipStyle(activeDesktopBubble, styles)}>
-            <BubbleInfoContent bubble={activeDesktopBubble} styles={styles} />
-          </div>
-        ) : null}
-
-        {isMobile && imageLoaded && activeMobileBubble ? (
-          <div style={styles.mobileInfoWrap}>
-            <div style={styles.mobileInfoCard}>
-              <button
-                type="button"
-                onClick={() => setSelectedBubbleKey("")}
-                style={styles.mobileInfoClose}
-                aria-label="閉じる"
-              >
-                ×
-              </button>
-
-              <div style={styles.mobileInfoTop}>
-                <div style={styles.mobileInfoBody}>
-                  <BubbleInfoContent
-                    bubble={activeMobileBubble}
-                    styles={styles}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : null}
-      </div>
-
-      <style>{`
-        @keyframes monsterMapShimmer {
-          0% {
-            background-position: 200% 0;
-          }
-          100% {
-            background-position: -200% 0;
-          }
-        }
-      `}</style>
-    </div>
-  );
+  return result.filter(Boolean);
 }
 
-function getStyles(size = "sm", isMobile = false) {
-  const isSmall = size === "sm";
+function getExternalPositionStyle(placement, lane = 0) {
+  const laneOffset = lane * LABEL_LANE_STEP_PX;
 
+  switch (placement) {
+    case "top":
+      return {
+        bottom: `calc(100% + ${LABEL_GAP_PX + laneOffset}px)`,
+        left: "50%",
+        transform: "translateX(-50%)",
+      };
+    case "left":
+      return {
+        right: `calc(100% + ${LABEL_GAP_PX + laneOffset}px)`,
+        top: "50%",
+        transform: "translateY(-50%)",
+      };
+    case "right":
+      return {
+        left: `calc(100% + ${LABEL_GAP_PX + laneOffset}px)`,
+        top: "50%",
+        transform: "translateY(-50%)",
+      };
+    case "bottom":
+      return {
+        top: `calc(100% + ${LABEL_GAP_PX + laneOffset}px)`,
+        left: "50%",
+        transform: "translateX(-50%)",
+      };
+    case "center":
+    default:
+      return {
+        left: "50%",
+        top: "50%",
+        transform: "translate(-50%, -50%)",
+      };
+  }
+}
+
+function getConnectorStyle(placement, lane = 0) {
+  const length = CONNECTOR_LENGTH_PX + lane * LABEL_LANE_STEP_PX;
+
+  switch (placement) {
+    case "top":
+      return {
+        bottom: "100%",
+        left: "50%",
+        width: "2px",
+        height: `${length}px`,
+        transform: "translateX(-50%)",
+      };
+    case "left":
+      return {
+        right: "100%",
+        top: "50%",
+        width: `${length}px`,
+        height: "2px",
+        transform: "translateY(-50%)",
+      };
+    case "right":
+      return {
+        left: "100%",
+        top: "50%",
+        width: `${length}px`,
+        height: "2px",
+        transform: "translateY(-50%)",
+      };
+    case "bottom":
+      return {
+        top: "100%",
+        left: "50%",
+        width: "2px",
+        height: `${length}px`,
+        transform: "translateX(-50%)",
+      };
+    default:
+      return null;
+  }
+}
+
+function BubbleNameLabel({ bubble, styles }) {
+  if (!bubble?.monsterLabel) return null;
+
+  return <span style={styles.externalLabelMonster}>{bubble.monsterLabel}</span>;
+}
+
+export function getStyles() {
   return {
     mapCard: {
       width: "100%",
       display: "flex",
       flexDirection: "column",
       gap: "10px",
+      overflow: "visible",
       height: "100%",
-      maxWidth: isMobile ? "100%" : "500px",
-      margin: "0 auto",
     },
     mapImageFrame: {
       width: "100%",
       display: "flex",
       flexDirection: "column",
-      gap: "12px",
-      position: "relative",
+      gap: "10px",
+      overflow: "visible",
+    },
+    linkWrap: {
+      display: "block",
+      textDecoration: "none",
       overflow: "visible",
     },
     mapImageBox: {
@@ -655,13 +481,18 @@ function getStyles(size = "sm", isMobile = false) {
       width: "100%",
       aspectRatio: "1 / 1",
       borderRadius: "18px",
-      overflow: "hidden",
-      background: "var(--soft-bg)",
-      border: "1px solid var(--soft-border)",
+      overflow: "visible",
+      background: "transparent",
       flexShrink: 0,
-      touchAction: "pan-y",
-      WebkitUserSelect: "none",
-      userSelect: "none",
+    },
+    mapImageViewport: {
+      position: "absolute",
+      inset: 0,
+      overflow: "hidden",
+      borderRadius: "18px",
+      background: "var(--page-bg)",
+      border: "1px solid var(--panel-border)",
+      zIndex: 1,
     },
     loadingOverlay: {
       position: "absolute",
@@ -672,7 +503,7 @@ function getStyles(size = "sm", isMobile = false) {
       alignItems: "center",
       justifyContent: "center",
       gap: "10px",
-      background: "rgba(15, 23, 42, 0.16)",
+      background: "color-mix(in srgb, var(--page-bg) 92%, transparent)",
     },
     loadingShimmer: {
       width: "100%",
@@ -680,7 +511,7 @@ function getStyles(size = "sm", isMobile = false) {
       position: "absolute",
       inset: 0,
       background:
-        "linear-gradient(90deg, rgba(148,163,184,0.2) 0%, rgba(148,163,184,0.34) 50%, rgba(148,163,184,0.2) 100%)",
+        "linear-gradient(90deg, color-mix(in srgb, var(--soft-border) 88%, transparent) 0%, color-mix(in srgb, var(--soft-bg) 100%, white 0%) 50%, color-mix(in srgb, var(--soft-border) 88%, transparent) 100%)",
       backgroundSize: "200% 100%",
       animation: "monsterMapShimmer 1.2s ease-in-out infinite",
     },
@@ -690,10 +521,10 @@ function getStyles(size = "sm", isMobile = false) {
       fontSize: "13px",
       fontWeight: 700,
       color: "var(--text-sub)",
-      background: "var(--card-bg)",
+      background: "var(--panel-bg)",
       borderRadius: "999px",
       padding: "6px 10px",
-      border: "1px solid var(--soft-border)",
+      border: "1px solid var(--input-border)",
     },
     imageInner: {
       position: "absolute",
@@ -712,41 +543,35 @@ function getStyles(size = "sm", isMobile = false) {
       width: "100%",
       height: "100%",
       objectFit: "fill",
-      pointerEvents: "none",
     },
     bubbleLayer: {
       position: "absolute",
       inset: 0,
+      zIndex: 4,
+      overflow: "visible",
       pointerEvents: "none",
-      zIndex: 2,
+    },
+    bubbleWrap: {
+      position: "absolute",
+      transform: "translate(-50%, -50%)",
+      pointerEvents: "auto",
+      overflow: "visible",
     },
     spawnBubble: {
-      position: "absolute",
-      borderRadius: "999px",
-      transform: "translate(-50%, -50%)",
-      background:
-        "radial-gradient(circle at 50% 50%, rgba(14,165,233,0.46) 0%, rgba(59,130,246,0.36) 48%, rgba(37,99,235,0.22) 74%, rgba(37,99,235,0.1) 100%)",
-      border: "3px solid var(--selected-border)",
-      boxShadow:
-        "0 0 0 3px rgba(255,255,255,0.22), 0 10px 24px rgba(15,23,42,0.22), inset 0 0 24px rgba(255,255,255,0.14)",
-      backdropFilter: "blur(1px)",
+      position: "relative",
+      borderRadius: `${BUBBLE_BORDER_RADIUS_PX}px`,
+      border: "1px solid color-mix(in srgb, var(--page-text) 62%, transparent)",
+      background: "color-mix(in srgb, var(--panel-bg) 26%, transparent)",
+      backdropFilter: "blur(2px)",
+      WebkitBackdropFilter: "blur(2px)",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      padding: "2px",
-      textAlign: "center",
+      padding: 0,
+      transition: "all 0.16s ease",
       pointerEvents: "auto",
-      cursor: "pointer",
-      appearance: "none",
-      transition: "transform 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease",
-    },
-    spawnBubbleMerged: {
-      borderRadius: "999px",
-    },
-    spawnBubbleSelected: {
-      transform: "translate(-50%, -50%) scale(1.05)",
       boxShadow:
-        "0 0 0 3px rgba(255,255,255,0.22), 0 0 0 6px rgba(59,130,246,0.18), 0 14px 30px rgba(15,23,42,0.28)",
+        "0 0 0 1px color-mix(in srgb, var(--page-bg) 16%, transparent), 0 4px 14px color-mix(in srgb, var(--page-text) 10%, transparent)",
     },
     bubbleInner: {
       position: "relative",
@@ -755,120 +580,219 @@ function getStyles(size = "sm", isMobile = false) {
       justifyContent: "center",
       gap: "4px",
       pointerEvents: "none",
-    },
-    bubbleText: {
-      fontSize: isSmall ? "10px" : "11px",
-      fontWeight: 800,
-      color: "var(--text-main)",
-      background: "var(--card-bg)",
-      borderRadius: "999px",
-      padding: "3px 7px",
-      lineHeight: 1.1,
-      boxShadow: "0 2px 8px rgba(15,23,42,0.12)",
-      whiteSpace: "nowrap",
-      border: "1px solid var(--soft-border)",
+      minWidth: 0,
+      maxWidth: "100%",
+      paddingInline: "4px",
     },
     bubbleHintIcon: {
+      display: "none",
+    },
+    externalConnector: {
+      position: "absolute",
+      background:
+        "color-mix(in srgb, var(--page-text) 72%, color-mix(in srgb, var(--panel-bg) 18%, transparent))",
+      pointerEvents: "none",
+      zIndex: 1,
+      borderRadius: "999px",
+      boxShadow:
+        "0 0 0 1px color-mix(in srgb, var(--page-bg) 10%, transparent), 0 0 10px color-mix(in srgb, var(--page-text) 10%, transparent)",
+      opacity: 0.92,
+    },
+    externalLabel: {
+      position: "absolute",
+      zIndex: 2,
       display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
-      width: "18px",
-      height: "18px",
-      borderRadius: "999px",
-      fontSize: "11px",
-      lineHeight: 1,
-      background: "var(--secondary-border)",
-      color: "#ffffff",
-      boxShadow: "0 3px 10px rgba(37,99,235,0.24)",
-      transform: "translateY(-1px)",
-    },
-    hoverTooltip: {
-      position: "absolute",
-      zIndex: 20,
-      minWidth: "220px",
-      maxWidth: "320px",
-      maxHeight: "280px",
-      overflowY: "auto",
+      width: "max-content",
+      maxWidth: "170px",
+      minHeight: "26px",
+      padding: "5px 9px",
+      borderRadius: "10px",
+      background: "color-mix(in srgb, var(--panel-bg) 97%, transparent)",
+      border: "1px solid color-mix(in srgb, var(--soft-border) 82%, transparent)",
+      boxShadow:
+        "0 8px 20px color-mix(in srgb, var(--page-text) 10%, transparent)",
+      backdropFilter: "blur(4px)",
+      WebkitBackdropFilter: "blur(4px)",
       pointerEvents: "none",
+      whiteSpace: "normal",
     },
-    mobileInfoWrap: {
-      position: "relative",
-      zIndex: 10,
-    },
-    mobileInfoCard: {
-      position: "relative",
-      borderRadius: "18px",
-      background: "var(--card-bg)",
-      border: "1px solid var(--card-border)",
-      boxShadow: "0 18px 36px rgba(15,23,42,0.16)",
-      overflow: "hidden",
-    },
-    mobileInfoClose: {
-      position: "absolute",
-      top: "10px",
-      right: "10px",
-      width: "32px",
-      height: "32px",
-      borderRadius: "999px",
-      border: "1px solid var(--soft-border)",
-      background: "var(--soft-bg)",
-      color: "var(--text-sub)",
-      fontSize: "18px",
-      lineHeight: 1,
-      cursor: "pointer",
-      zIndex: 2,
-    },
-    mobileInfoTop: {
-      padding: "14px",
-    },
-    mobileInfoBody: {
-      paddingTop: "24px",
-    },
-    infoCardContent: {
-      display: "grid",
-      gap: "10px",
-      borderRadius: "16px",
-      background: "var(--card-bg)",
-      border: "1px solid var(--card-border)",
-      boxShadow: "0 12px 28px rgba(15,23,42,0.12)",
-      padding: "12px",
-    },
-    monsterList: {
-      display: "grid",
-      gap: "10px",
-    },
-    monsterListItem: {
-      display: "grid",
-      gap: "6px",
-      borderRadius: "12px",
-      padding: "10px",
-      background: "var(--soft-bg)",
-    },
-    monsterName: {
-      fontSize: "14px",
-      fontWeight: 700,
-      color: "var(--text-title)",
-      lineHeight: 1.4,
-    },
-    monsterMeta: {
-      display: "flex",
-      flexWrap: "wrap",
-      gap: "6px 10px",
-      fontSize: "12px",
-      color: "var(--text-sub)",
+    externalLabelMonster: {
+      display: "block",
+      width: "100%",
+      textAlign: "center",
+      fontSize: "11px",
+      fontWeight: 800,
+      lineHeight: 1.25,
+      color: "var(--text-main)",
+      whiteSpace: "normal",
+      overflowWrap: "anywhere",
+      wordBreak: "break-word",
     },
     noImageBox: {
       width: "100%",
       aspectRatio: "1 / 1",
-      borderRadius: "18px",
-      border: "1px dashed var(--soft-border)",
-      background: "var(--soft-bg)",
-      color: "var(--text-muted)",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      fontSize: "14px",
+      borderRadius: "18px",
+      background: "var(--soft-bg)",
+      border: "1px dashed var(--soft-border)",
+      color: "var(--text-muted)",
       fontWeight: 700,
     },
   };
+}
+
+export default function MonsterMapOverlay({
+  spawns = [],
+  imagePath,
+  href,
+  monstersById = {},
+  showMonsterNameInBubble = false,
+}) {
+  const isMobile = useIsMobile();
+  const styles = useMemo(() => getStyles(), []);
+
+  const resolvedImageUrl = useMemo(
+    () => getMonsterAssetUrl(imagePath),
+    [imagePath]
+  );
+
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  useEffect(() => {
+    setImageLoaded(false);
+  }, [resolvedImageUrl]);
+
+  const cells = useMemo(() => collectUniqueCells(spawns), [spawns]);
+
+  const bubbles = useMemo(() => {
+    const base = buildMergedGroups(cells)
+      .map((group) =>
+        getBubblePosition(group, spawns, monstersById, showMonsterNameInBubble)
+      )
+      .filter(Boolean);
+
+    return withTooltipLanes(base);
+  }, [cells, spawns, monstersById, showMonsterNameInBubble]);
+
+  if (!resolvedImageUrl) {
+    return (
+      <div style={styles.mapCard}>
+        <div style={styles.noImageBox}>画像なし</div>
+      </div>
+    );
+  }
+
+  const content = (
+    <div style={styles.mapCard}>
+      <div style={styles.mapImageFrame}>
+        <div style={styles.mapImageBox}>
+          <div style={styles.mapImageViewport}>
+            {!imageLoaded ? (
+              <div style={styles.loadingOverlay}>
+                <div style={styles.loadingShimmer} />
+                <span style={styles.loadingText}>読み込み中...</span>
+              </div>
+            ) : null}
+
+            <div
+              style={{
+                ...styles.imageInner,
+                opacity: imageLoaded ? 1 : 0,
+              }}
+            >
+              <div
+                style={{
+                  ...styles.imageCropInner,
+                  width: `${MAP_CROP.widthPercent}%`,
+                  height: `${MAP_CROP.heightPercent}%`,
+                  left: `-${MAP_CROP.offsetXPercent}%`,
+                  top: `-${MAP_CROP.offsetYPercent}%`,
+                }}
+              >
+                <Image
+                  src={resolvedImageUrl}
+                  alt="map"
+                  fill
+                  sizes="(max-width: 920px) 100vw, 430px"
+                  style={styles.mapImage}
+                  onLoad={() => setImageLoaded(true)}
+                  unoptimized
+                />
+              </div>
+            </div>
+          </div>
+
+          <div style={styles.bubbleLayer}>
+            {bubbles.map((bubble) => {
+              const wrapperStyle = {
+                ...styles.bubbleWrap,
+                left: `${bubble.left}%`,
+                top: `${bubble.top}%`,
+                width: `${bubble.width}%`,
+                height: `${bubble.height}%`,
+              };
+
+              const bubbleStyle = {
+                ...styles.spawnBubble,
+                width: "100%",
+                height: "100%",
+              };
+
+              const labelStyle = {
+                ...styles.externalLabel,
+                ...getExternalPositionStyle(bubble.labelPlacement, bubble.lane),
+              };
+
+              const connectorStyle =
+                bubble.labelPlacement === "center"
+                  ? null
+                  : {
+                      ...styles.externalConnector,
+                      ...getConnectorStyle(bubble.labelPlacement, bubble.lane),
+                    };
+
+              return (
+                <div key={bubble.key} style={wrapperStyle}>
+                  <div style={bubbleStyle}>
+                    <span style={styles.bubbleInner}>
+                      {isMobile ? <span style={styles.bubbleHintIcon}>i</span> : null}
+                    </span>
+                  </div>
+
+                  {connectorStyle ? <span style={connectorStyle} /> : null}
+
+                  {bubble.monsterLabel ? (
+                    <span style={labelStyle}>
+                      <BubbleNameLabel bubble={bubble} styles={styles} />
+                    </span>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes monsterMapShimmer {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+      `}</style>
+    </div>
+  );
+
+  if (href) {
+    return (
+      <Link href={href} style={styles.linkWrap}>
+        {content}
+      </Link>
+    );
+  }
+
+  return content;
 }
