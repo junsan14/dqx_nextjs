@@ -4,6 +4,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import MonsterImageCropper from "./MonsterImageCropper";
 import { getMonsterAssetUrl } from "@/lib/monsters";
 
+const appendCacheBust = (url, version) => {
+  if (!url) return "";
+  const separator = url.includes("?") ? "&" : "?";
+  return `${url}${separator}v=${version}`;
+};
+
 export default function MonsterForm({
   monster,
   onChange,
@@ -22,6 +28,27 @@ export default function MonsterForm({
   const [parentOpen, setParentOpen] = useState(false);
   const [loadingParents, setLoadingParents] = useState(false);
   const [open, setOpen] = useState(defaultOpen);
+
+  const imageValue = useMemo(() => {
+    if (monster?.image_preview_url) {
+      return monster.image_preview_url;
+    }
+
+    const assetUrl = getMonsterAssetUrl(monster?.image_path || "");
+    const version =
+      monster?.image_updated_at ||
+      monster?.updated_at ||
+      monster?.image_version ||
+      "";
+
+    return version ? appendCacheBust(assetUrl, version) : assetUrl;
+  }, [
+    monster?.image_preview_url,
+    monster?.image_path,
+    monster?.image_updated_at,
+    monster?.updated_at,
+    monster?.image_version,
+  ]);
 
   useEffect(() => {
     setParentKeyword(monster?.reincarnation_parent_name ?? "");
@@ -287,12 +314,10 @@ export default function MonsterForm({
               </div>
             )}
           </div>
+
           <div style={embeddedSectionStyle()}>
             <MonsterImageCropper
-              value={
-                monster?.image_preview_url ||
-                getMonsterAssetUrl(monster?.image_path || "")
-              }
+              value={imageValue}
               aspect={1}
               disabled={disabled}
               onApply={({ file, previewUrl }) =>

@@ -108,12 +108,36 @@ function MonsterDetailLoading() {
         </div>
       </div>
 
-      <div style={loadingStyles.detailSection}>
-        <div style={{ ...loadingStyles.line, width: 120, height: 16 }} />
-        <div style={loadingStyles.detailList}>
-          <div style={{ ...loadingStyles.line, width: "100%", height: 14 }} />
-          <div style={{ ...loadingStyles.line, width: "88%", height: 14 }} />
-          <div style={{ ...loadingStyles.line, width: "76%", height: 14 }} />
+      <div style={loadingStyles.detailSplitGrid}>
+        <div style={loadingStyles.detailPanel}>
+          <div style={{ ...loadingStyles.line, width: 120, height: 16 }} />
+          <div style={loadingStyles.detailList}>
+            <div style={{ ...loadingStyles.line, width: "100%", height: 14 }} />
+            <div style={{ ...loadingStyles.line, width: "88%", height: 14 }} />
+            <div style={{ ...loadingStyles.line, width: "76%", height: 14 }} />
+            <div
+              style={{
+                ...loadingStyles.line,
+                width: "100%",
+                height: 220,
+                borderRadius: 22,
+                marginTop: 10,
+              }}
+            />
+          </div>
+        </div>
+
+        <div style={loadingStyles.detailPanel}>
+          <div style={{ ...loadingStyles.line, width: 140, height: 16 }} />
+          <div
+            style={{
+              ...loadingStyles.line,
+              width: "100%",
+              height: 320,
+              borderRadius: 22,
+              marginTop: 12,
+            }}
+          />
         </div>
       </div>
 
@@ -585,12 +609,19 @@ export default function MonstersSearchClient() {
                     ) : detail ? (
                       <div style={styles.detailCard}>
                         <MonsterDetailHero monster={detail} />
-                        <MonsterDropSection
-                          normalDrops={detail.normal_drops ?? []}
-                          rareDrops={detail.rare_drops ?? []}
-                          orbDrops={detail.orb_drops ?? []}
-                          equipmentDrops={detail.equipment_drops ?? []}
-                        />
+
+                     
+                            <MonsterDropSection
+                              monster={detail}
+                              normalDrops={detail.normal_drops ?? []}
+                              rareDrops={detail.rare_drops ?? []}
+                              orbDrops={detail.orb_drops ?? []}
+                              equipmentDrops={detail.equipment_drops ?? []}
+                            />
+
+
+      
+
                         <MonsterMapSection maps={detail.maps ?? []} />
                       </div>
                     ) : null}
@@ -609,6 +640,12 @@ export default function MonstersSearchClient() {
           }
           100% {
             background-position: -200% 0;
+          }
+        }
+
+        @media (max-width: 920px) {
+          .monster-detail-two-column {
+            grid-template-columns: minmax(0, 1fr) !important;
           }
         }
       `}</style>
@@ -640,7 +677,6 @@ function getLoadingStyles() {
       WebkitBackdropFilter: "blur(14px)",
       borderRadius: "24px",
       padding: "18px",
-
       width: "100%",
       boxSizing: "border-box",
       marginBottom: "28px",
@@ -748,6 +784,18 @@ function getLoadingStyles() {
       height: "88px",
       borderRadius: "24px",
       ...shimmer,
+    },
+    detailSplitGrid: {
+      display: "grid",
+      gridTemplateColumns: "minmax(0, 1.35fr) minmax(280px, 0.9fr)",
+      gap: "18px",
+      marginTop: "22px",
+      alignItems: "start",
+    },
+    detailPanel: {
+      minWidth: 0,
+      display: "grid",
+      gap: "12px",
     },
     detailSection: {
       marginTop: "22px",
@@ -979,6 +1027,24 @@ function getStyles() {
       minWidth: 0,
       overflowX: "hidden",
       boxSizing: "border-box",
+    },
+    detailTwoColumn: {
+      display: "grid",
+      gridTemplateColumns: "minmax(0, 1fr) 96px",
+      gap: "12px",
+      alignItems: "start",
+      marginTop: "18px",
+      width: "100%",
+      minWidth: 0,
+    },
+    detailMainColumn: {
+      minWidth: 0,
+      width: "100%",
+    },
+    detailSideColumn: {
+      minWidth: 0,
+      width: "96px",
+      flexShrink: 0,
     },
     errorCard: {
       borderRadius: "0 0 20px 20px",

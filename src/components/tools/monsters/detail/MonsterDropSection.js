@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import MonsterImageCard from "@/components/tools/monsters/detail/MonsterImageCard";
 
 function useIsMobile(breakpoint = 920) {
   const [isMobile, setIsMobile] = useState(false);
@@ -143,6 +144,7 @@ function uniqueByNameWithType(list) {
 
 function DropTagList({ items, styles }) {
   if (!items.length) return <div style={styles.emptyBox}>データなし</div>;
+
   return (
     <div style={styles.tagList}>
       {items.map((item, index) => {
@@ -151,10 +153,7 @@ function DropTagList({ items, styles }) {
         return (
           <span
             key={`${item?.id ?? item?.__display_name ?? "item"}-${index}`}
-            style={{
-              ...styles.itemTag,
-              ...(isRare ? styles.itemTagRare : styles.itemTagNormal),
-            }}
+            style={styles.itemTag}
           >
             <span
               style={{
@@ -240,57 +239,96 @@ function OrbTagList({ items, styles }) {
   );
 }
 
-function Panel({ title, eyebrow, children, styles, showTitle = true }) {
+function Panel({ title, children, styles }) {
   return (
     <section style={styles.panel}>
-      {showTitle ? (
-        <div style={styles.panelHeader}>
-          {eyebrow ? <div style={styles.panelEyebrow}>{eyebrow}</div> : null}
-          <h3 style={styles.panelTitle}>{title}</h3>
-        </div>
-      ) : null}
+      <div style={styles.panelHeader}>
+        <h3 style={styles.panelTitle}>{title}</h3>
+      </div>
       <div style={styles.panelBody}>{children}</div>
     </section>
   );
 }
 
-function getStyles() {
+function getStyles(isMobile) {
   return {
     section: {
-      marginTop: "8px",
+      marginTop: "14px",
       width: "100%",
       maxWidth: "100%",
       minWidth: 0,
       boxSizing: "border-box",
     },
-    tabListMobile: {
+
+    outerGrid: {
+      display: "grid",
+      gridTemplateColumns: "1fr",
+      gap: isMobile ? "8px" : "14px",
+      width: "100%",
+      minWidth: 0,
+    },
+
+    tabsRow: {
+      display: "grid",
+      gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+      gap: "6px",
+      width: "100%",
+      marginBottom: 0,
+    },
+
+    contentRow: {
+      display: "grid",
+      gridTemplateColumns: isMobile ? "minmax(0, 1fr) 84px" : "minmax(0, 1fr) 165px",
+      gap: isMobile ? "10px" : "14px",
+      alignItems: "stretch",
+      width: "100%",
+      minWidth: 0,
+    },
+
+    rightWrap: {
+      width: isMobile ? "84px" : "165px",
+      minWidth: isMobile ? "84px" : "165px",
       display: "flex",
       justifyContent: "center",
-      overflowX: "auto",
-      marginBottom: "12px",
-      paddingBottom: "4px",
-      scrollbarWidth: "thin",
-      WebkitOverflowScrolling: "touch",
+      alignItems: "stretch",
+      height: "100%",
+      position: isMobile ? "sticky" : "relative",
+      top: isMobile ? "12px" : "auto",
+    },
+
+    leftWrap: {
+      minWidth: 0,
       width: "100%",
     },
+
     tabButton: {
       appearance: "none",
-      border: `1px solid var(--panel-border)`,
+      border: "1px solid var(--panel-border)",
       background: "var(--panel-bg)",
       color: "var(--text-sub)",
-      padding: "10px 14px",
-      fontSize: "13px",
-      fontWeight: 800,
+      padding: isMobile ? "9px 6px" : "10px 10px",
+      fontSize: isMobile ? "11px" : "13px",
+      fontWeight: 900,
+      lineHeight: 1.2,
       cursor: "pointer",
-      whiteSpace: "nowrap",
-      width: "33%",
-      flexShrink: 0,
+      borderRadius: "5px",
+      width: "100%",
+      minWidth: 0,
+      boxSizing: "border-box",
     },
+
     tabButtonActive: {
       background: "var(--primary-bg)",
       color: "var(--primary-text)",
-      border: `1px solid var(--primary-border)`,
+      border: "1px solid var(--primary-border)",
     },
+
+    mobileContentViewport: {
+      overflow: "hidden",
+      width: "100%",
+      minWidth: 0,
+    },
+
     mobileScroller: {
       display: "flex",
       overflowX: "auto",
@@ -298,7 +336,10 @@ function getStyles() {
       WebkitOverflowScrolling: "touch",
       scrollbarWidth: "none",
       msOverflowStyle: "none",
+      width: "100%",
+      minWidth: 0,
     },
+
     mobilePage: {
       minWidth: "100%",
       width: "100%",
@@ -306,151 +347,158 @@ function getStyles() {
       scrollSnapAlign: "start",
       boxSizing: "border-box",
     },
-    desktopGrid: {
+
+    desktopPanels: {
       display: "grid",
-      gridTemplateColumns: "repeat(3, minmax(0,1fr))",
-      gap: "14px",
+      gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+      gap: "12px",
       width: "100%",
       minWidth: 0,
     },
-    desktopItem: {
-      minWidth: 0,
-    },
+
     panel: {
       height: "100%",
       borderRadius: "5px",
-      border: `1px solid var(--card-border)`,
+      border: "1px solid var(--card-border)",
       background: "var(--card-bg)",
-
       overflow: "hidden",
       display: "flex",
       flexDirection: "column",
+      minWidth: 0,
     },
+
     panelHeader: {
-      padding: "16px 16px 10px",
-      borderBottom: `1px solid var(--soft-border)`,
+      padding: isMobile ? "10px 10px 8px" : "12px 12px 10px",
+      borderBottom: "1px solid var(--soft-border)",
       background: "var(--soft-bg)",
-      textAlign:"center"
+      textAlign: "center",
     },
-    panelEyebrow: {
-      fontSize: "11px",
-      fontWeight: 900,
-      letterSpacing: "0.08em",
-      color: "var(--text-muted)",
-      marginBottom: "4px",
-    },
+
     panelTitle: {
       margin: 0,
-      fontSize: "18px",
-      lineHeight: 1.3,
+      fontSize: isMobile ? "13px" : "15px",
+      lineHeight: 1.2,
       fontWeight: 900,
       color: "var(--text-title)",
     },
-   panelBody: {
-    padding: "16px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    flex: 1,
-    minHeight: 0,
-  },
+
+    panelBody: {
+      padding: isMobile ? "10px 8px" : "12px 10px",
+      flex: 1,
+      minHeight: 0,
+    },
+
     tagList: {
       display: "flex",
       flexDirection: "column",
-      gap: "5px",
+      gap: isMobile ? "4px" : "5px",
       width: "100%",
-      maxWidth: "420px",
-      justifyContent:"center"
+      minWidth: 0,
     },
+
     emptyBox: {
-      borderRadius: "14px",
-      padding: "14px",
+      borderRadius: "10px",
+      padding: isMobile ? "10px" : "14px",
       background: "var(--soft-bg)",
-      border: `1px dashed var(--soft-border)`,
+      border: "1px dashed var(--soft-border)",
       color: "var(--text-muted)",
-      fontSize: "14px",
+      fontSize: isMobile ? "12px" : "13px",
       fontWeight: 700,
+      width: "100%",
+      textAlign: "center",
+      boxSizing: "border-box",
     },
+
     itemTag: {
-      display: "inline-flex",
+      display: "flex",
       alignItems: "center",
-      gap: "8px",
-      minWidth: "200px",
+      gap: isMobile ? "5px" : "8px",
+      minWidth: 0,
+      width: "100%",
       borderRadius: "999px",
-      padding: "2px 12px",
+      padding: isMobile ? "3px 8px" : "4px 10px",
       color: "var(--tag-text)",
       boxSizing: "border-box",
       maxWidth: "100%",
+      overflow: "hidden",
     },
-    itemTagNormal: {},
-    itemTagRare: {
 
-    },
     kindBadge: {
       display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
-      minWidth: "38px",
-      height: "22px",
-      padding: "0 8px",
+      minWidth: isMobile ? "32px" : "38px",
+      height: isMobile ? "18px" : "22px",
+      padding: isMobile ? "0 6px" : "0 8px",
       borderRadius: "999px",
-      fontSize: "11px",
+      fontSize: isMobile ? "9px" : "11px",
       fontWeight: 900,
       lineHeight: 1,
       whiteSpace: "nowrap",
+      flexShrink: 0,
     },
+
     kindBadgeNormal: {
       background: "var(--badge-bg)",
       color: "var(--badge-text)",
     },
+
     kindBadgeRare: {
       background: "var(--warning-bg)",
       color: "var(--warning-text)",
-      border: `1px solid var(--warning-border)`,
+      border: "1px solid var(--warning-border)",
     },
+
     kindBadgeEquipment: {
       background: "var(--badge-bg)",
       color: "var(--badge-text)",
-      border: `1px solid var(--tag-border)`,
+      border: "1px solid var(--tag-border)",
     },
+
     itemTagText: {
-      fontSize: "14px",
-      lineHeight: 1.5,
+      fontSize: isMobile ? "12px" : "13px",
+      lineHeight: isMobile ? 1.35 : 1.45,
       fontWeight: 700,
       color: "var(--text-main)",
       wordBreak: "break-word",
+      overflowWrap: "anywhere",
+      minWidth: 0,
+      flex: 1,
     },
+
     orbColorBadge: {
       display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
-      minWidth: "28px",
-      height: "22px",
-      padding: "0 8px",
+      minWidth: isMobile ? "24px" : "28px",
+      height: isMobile ? "18px" : "22px",
+      padding: isMobile ? "0 6px" : "0 8px",
       borderRadius: "999px",
-      fontSize: "11px",
+      fontSize: isMobile ? "9px" : "11px",
       fontWeight: 900,
       lineHeight: 1,
       whiteSpace: "nowrap",
+      flexShrink: 0,
     },
   };
 }
 
 export default function MonsterDropSection({
+  monster,
   normalDrops = [],
   rareDrops = [],
   equipmentDrops = [],
   orbDrops = [],
 }) {
   const isMobile = useIsMobile();
-  const styles = useMemo(() => getStyles(), []);
+  const styles = useMemo(() => getStyles(isMobile), [isMobile]);
 
   const scrollerRef = useRef(null);
   const [activeTab, setActiveTab] = useState(0);
   const isProgrammaticScrollRef = useRef(false);
-
-  const data = useMemo(() => {
-    const mergedDrops = uniqueByNameWithType([
+  const hasMonsterImage = Boolean(monster?.image_path);
+  const mergedDrops = useMemo(() => {
+    return uniqueByNameWithType([
       ...normalizeList(normalDrops).map((item) => ({
         ...item,
         __drop_kind: "normal",
@@ -460,59 +508,45 @@ export default function MonsterDropSection({
         __drop_kind: "rare",
       })),
     ]);
+  }, [normalDrops, rareDrops]);
 
-    const equipment = normalizeList(equipmentDrops).map((item) => ({
+  const equipment = useMemo(() => {
+    return normalizeList(equipmentDrops).map((item) => ({
       ...item,
       __display_name: getDropName(item),
     }));
+  }, [equipmentDrops]);
 
-    const orbs = normalizeList(orbDrops).map((item) => ({
+  const orbs = useMemo(() => {
+    return normalizeList(orbDrops).map((item) => ({
       ...item,
       __display_name: getDropName(item),
     }));
+  }, [orbDrops]);
 
-    return [
+  const tabs = useMemo(
+    () => [
       {
         key: "drops",
         label: "ドロップ",
-        content: (
-          <Panel
-            title="ドロップ"
-            styles={styles}
-            showTitle={!isMobile}
-          >
-            <DropTagList items={mergedDrops} styles={styles} />
-          </Panel>
-        ),
+        title: "ドロップ",
+        content: <DropTagList items={mergedDrops} styles={styles} />,
       },
       {
         key: "equipment",
         label: "白宝箱",
-        content: (
-          <Panel
-            title="白宝箱"
-            styles={styles}
-            showTitle={!isMobile}
-          >
-            <EquipmentTagList items={equipment} styles={styles} />
-          </Panel>
-        ),
+        title: "白宝箱",
+        content: <EquipmentTagList items={equipment} styles={styles} />,
       },
       {
         key: "orb",
         label: "宝珠",
-        content: (
-          <Panel
-            title="宝珠"
-            styles={styles}
-            showTitle={!isMobile}
-          >
-            <OrbTagList items={orbs} styles={styles} />
-          </Panel>
-        ),
+        title: "宝珠",
+        content: <OrbTagList items={orbs} styles={styles} />,
       },
-    ];
-  }, [normalDrops, rareDrops, equipmentDrops, orbDrops, styles, isMobile]);
+    ],
+    [mergedDrops, equipment, orbs, styles]
+  );
 
   useEffect(() => {
     if (!isMobile) return;
@@ -545,21 +579,21 @@ export default function MonsterDropSection({
       const pageWidth = el.clientWidth || 1;
       const nextTab = Math.round(el.scrollLeft / pageWidth);
 
-      if (nextTab !== activeTab && nextTab >= 0 && nextTab < data.length) {
+      if (nextTab !== activeTab && nextTab >= 0 && nextTab < tabs.length) {
         setActiveTab(nextTab);
       }
     }
 
     el.addEventListener("scroll", handleScroll, { passive: true });
     return () => el.removeEventListener("scroll", handleScroll);
-  }, [activeTab, data.length, isMobile]);
+  }, [activeTab, isMobile, tabs.length]);
 
   return (
     <section style={styles.section}>
-      {isMobile ? (
-        <>
-          <div style={styles.tabListMobile}>
-            {data.map((tab, index) => {
+      <div style={styles.outerGrid}>
+        {isMobile ? (
+          <div style={styles.tabsRow}>
+            {tabs.map((tab, index) => {
               const isActive = index === activeTab;
 
               return (
@@ -577,24 +611,63 @@ export default function MonsterDropSection({
               );
             })}
           </div>
+        ) : null}
 
-          <div ref={scrollerRef} style={styles.mobileScroller}>
-            {data.map((tab) => (
-              <div key={tab.key} style={styles.mobilePage}>
+  
+         <div
+          style={{
+            ...styles.contentRow,
+            gridTemplateColumns: isMobile
+              ? hasMonsterImage
+                ? "minmax(0, 1fr) 84px"
+                : "minmax(0, 1fr)"
+              : hasMonsterImage
+              ? "minmax(0, 1fr) 165px"
+              : "minmax(0, 1fr)",
+          }}
+        >
+  <div style={styles.leftWrap}>
+    {isMobile ? (
+      <div style={styles.mobileContentViewport}>
+        <div ref={scrollerRef} style={styles.mobileScroller}>
+          {tabs.map((tab) => (
+            <div key={tab.key} style={styles.mobilePage}>
+              <Panel title={tab.title} styles={styles}>
                 {tab.content}
-              </div>
-            ))}
-          </div>
-        </>
-      ) : (
-        <div style={styles.desktopGrid}>
-          {data.map((tab) => (
-            <div key={tab.key} style={styles.desktopItem}>
-              {tab.content}
+              </Panel>
             </div>
           ))}
         </div>
-      )}
+      </div>
+    ) : (
+      <div style={styles.desktopPanels}>
+        {tabs.map((tab) => (
+          <Panel key={tab.key} title={tab.title} styles={styles}>
+            {tab.content}
+          </Panel>
+        ))}
+      </div>
+    )}
+  </div>
+
+  {hasMonsterImage ? (
+    <div style={styles.rightWrap}>
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          alignItems: "flex-center",
+          justifyContent: "center",
+        }}
+      >
+        <MonsterImageCard monster={monster} size="sm" rounded={5} />
+      </div>
+    </div>
+  ) : null}
+         </div>
+
+      </div>
     </section>
   );
 }
