@@ -53,7 +53,7 @@ function getStyles() {
       width: "100%",
       display: "block",
       textAlign: "left",
-      borderRadius: "24px",
+      borderRadius: "5px",
       padding: "18px",
       background: "var(--card-bg)",
       border: "1px solid var(--card-border)",

@@ -270,6 +270,60 @@ export default function MonstersSearchClient() {
     });
   }
 
+  async function openDetail(monsterId) {
+    if (!monsterId) return;
+    if (expandedIds.has(monsterId)) return;
+
+    const clickedEl = itemRefs.current[monsterId];
+    const beforeTop = clickedEl?.getBoundingClientRect().top ?? null;
+
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      next.add(monsterId);
+      return next;
+    });
+
+    restoreCardPosition(monsterId, beforeTop);
+
+    if (detailCache[monsterId]) return;
+
+    try {
+      setDetailLoadingIds((prev) => {
+        const next = new Set(prev);
+        next.add(monsterId);
+        return next;
+      });
+
+      setDetailErrors((prev) => {
+        const next = { ...prev };
+        delete next[monsterId];
+        return next;
+      });
+
+      const detail = await fetchMonsterDetail(monsterId);
+
+      setDetailCache((prev) => ({
+        ...prev,
+        [monsterId]: detail,
+      }));
+
+      restoreCardPosition(monsterId, beforeTop);
+    } catch (error) {
+      console.error(error);
+      setDetailErrors((prev) => ({
+        ...prev,
+        [monsterId]: "モンスター詳細を取得できなかった",
+      }));
+      restoreCardPosition(monsterId, beforeTop);
+    } finally {
+      setDetailLoadingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(monsterId);
+        return next;
+      });
+    }
+  }
+
   async function handleToggleDetail(monsterId) {
     if (!monsterId) return;
 
@@ -352,6 +406,18 @@ export default function MonstersSearchClient() {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [keyword, searchType, initialLoading]);
+
+  useEffect(() => {
+    if (loading) return;
+    if (!searched) return;
+    if (!keyword.trim()) return;
+    if (monsters.length !== 1) return;
+
+    const onlyMonster = monsters[0];
+    if (!onlyMonster?.id) return;
+
+    openDetail(onlyMonster.id);
+  }, [loading, searched, keyword, monsters]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -622,7 +688,6 @@ function getLoadingStyles() {
       borderRadius: "24px",
       background: "var(--card-bg)",
       border: "1px solid var(--card-border)",
-     
       overflow: "hidden",
     },
     cardInner: {
@@ -669,7 +734,6 @@ function getLoadingStyles() {
       background: "var(--panel-bg)",
       border: "1px solid var(--selected-border)",
       borderTop: "1px solid var(--selected-border)",
-     
       width: "100%",
       boxSizing: "border-box",
     },
@@ -726,7 +790,6 @@ function getStyles() {
       WebkitBackdropFilter: "blur(14px)",
       borderRadius: "24px",
       padding: "18px",
-     
       width: "100%",
       maxWidth: "100%",
       minWidth: 0,
@@ -758,7 +821,6 @@ function getStyles() {
       background: "var(--primary-bg)",
       color: "var(--primary-text)",
       border: "1px solid var(--primary-border)",
-     
     },
     searchArea: {
       position: "relative",
@@ -795,7 +857,6 @@ function getStyles() {
       background: "var(--panel-bg)",
       border: "1px solid var(--input-border)",
       borderRadius: "18px",
-    
       overflow: "hidden",
       zIndex: 999,
       minWidth: 0,
@@ -913,7 +974,6 @@ function getStyles() {
       background: "var(--panel-bg)",
       border: "1px solid var(--selected-border)",
       borderTop: "1px solid var(--selected-border)",
-     
       width: "100%",
       maxWidth: "100%",
       minWidth: 0,

@@ -57,6 +57,14 @@ export function emptyMonster() {
     reincarnation_parent_name: null,
     drops: [],
     spawns: [],
+    image_path: "",
+    image_file: null,
+    image_preview_url: "",
+    remove_image: false,
+    crop_top: 0,
+    crop_left: 0,
+    crop_right: 0,
+    crop_bottom: 0,
   };
 }
 
@@ -70,6 +78,14 @@ export function normalizeMonster(row = {}) {
     name: row?.name ?? "",
     system_type: row?.system_type ?? "",
     source_url: row?.source_url ?? "",
+    image_path: row?.image_path ?? "",
+    image_file: null,
+    image_preview_url: "",
+    remove_image: false,
+    crop_top: 0,
+    crop_left: 0,
+    crop_right: 0,
+    crop_bottom: 0,
     is_reincarnated: Boolean(
       row?.is_reincarnated || row?.reincarnation_parent_id
     ),
@@ -139,6 +155,15 @@ export function buildMonsterPayload(monster = {}) {
     source_url: String(monster?.source_url ?? "").trim(),
     reincarnation_parent_id:
       Number(monster?.reincarnation_parent_id ?? 0) || null,
+
+    remove_image: Boolean(monster?.remove_image),
+    image_path: String(monster?.image_path ?? "").trim(),
+    image_file: monster?.image_file ?? null,
+    crop_top: Number(monster?.crop_top ?? 0),
+    crop_left: Number(monster?.crop_left ?? 0),
+    crop_right: Number(monster?.crop_right ?? 0),
+    crop_bottom: Number(monster?.crop_bottom ?? 0),
+
     drops: Array.isArray(monster?.drops)
       ? monster.drops.map((drop, index) => ({
           id: drop?.id ?? null,
@@ -148,6 +173,7 @@ export function buildMonsterPayload(monster = {}) {
           sort_order: Number(drop?.sort_order ?? index + 1),
         }))
       : [],
+
     spawns: Array.isArray(monster?.spawns)
       ? monster.spawns.map((spawn) => ({
           id: spawn?.id ?? null,

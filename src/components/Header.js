@@ -11,7 +11,7 @@ export default function Header() {
   const [headerHeight, setHeaderHeight] = useState(0);
   const headerRef = useRef(null);
   const { user, logout } = useAuth();
-  const term = "v7.5前期対応";
+  const term = "v7.6後期対応";
   const publicMenus = useMemo(
     () => [
       { href: "/tools/craft-profit", label: "職人あれこれ" },

@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import MonsterImageCropper from "./MonsterImageCropper";
+import { getMonsterAssetUrl } from "@/lib/monsters";
 
 export default function MonsterForm({
   monster,
@@ -216,7 +218,11 @@ export default function MonsterForm({
 
             <div
               ref={containerRef}
-              style={{ ...fieldStyle, gridColumn: "1 / -1", position: "relative" }}
+              style={{
+                ...fieldStyle,
+                gridColumn: "1 / -1",
+                position: "relative",
+              }}
             >
               <span style={labelStyle()}>転生元モンスター</span>
 
@@ -280,6 +286,24 @@ export default function MonsterForm({
                 <div style={mutedBoxStyle()}>通常モンスター</div>
               </div>
             )}
+          </div>
+          <div style={embeddedSectionStyle()}>
+            <MonsterImageCropper
+              value={
+                monster?.image_preview_url ||
+                getMonsterAssetUrl(monster?.image_path || "")
+              }
+              aspect={1}
+              disabled={disabled}
+              onApply={({ file, previewUrl }) =>
+                onChange((prev) => ({
+                  ...prev,
+                  image_file: file,
+                  image_preview_url: previewUrl,
+                  remove_image: false,
+                }))
+              }
+            />
           </div>
 
           {children ? (
