@@ -10,9 +10,13 @@ export default async function MonsterDetailPage({ params, searchParams }) {
   const showName = searchParams?.from === "zukan";
   const page = Math.max(1, Number(searchParams?.page) || 1);
 
-  const backHref = showName
-    ? `/tools/monster-zukan?page=${page}`
-    : "/tools/monster-search";
+  const rawBack = searchParams?.back;
+  const safeBackHref =
+    typeof rawBack === "string" && rawBack.startsWith("/tools/")
+      ? rawBack
+      : showName
+      ? `/tools/monster-zukan?page=${page}`
+      : "/tools/monster-search";
 
   let monster = null;
   let errorText = "";
@@ -29,7 +33,7 @@ export default async function MonsterDetailPage({ params, searchParams }) {
       <MonsterDetailPageClientShell>
         <div style={styles.centerBox}>
           <p style={styles.errorText}>{errorText || "データが見つからなかった"}</p>
-          <Link href={backHref} style={styles.backLink}>
+          <Link href={safeBackHref} style={styles.backLink}>
             ← 検索へ戻る
           </Link>
         </div>
@@ -41,7 +45,7 @@ export default async function MonsterDetailPage({ params, searchParams }) {
     <MonsterDetailPageClientShell>
       <div style={styles.container}>
         <div style={styles.topNav}>
-          <Link href={backHref} style={styles.backLink}>
+          <Link href={safeBackHref} style={styles.backLink}>
             ← 検索へ戻る
           </Link>
         </div>
@@ -49,6 +53,7 @@ export default async function MonsterDetailPage({ params, searchParams }) {
         <MonsterDetailHero monster={monster} showName={showName} />
 
         <MonsterDropSection
+          monster={monster}
           normalDrops={monster.normal_drops ?? []}
           rareDrops={monster.rare_drops ?? []}
           orbDrops={monster.orb_drops ?? []}

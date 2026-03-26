@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import PageHeroTitle from "@/components/PageHeroTitle";
 
 function buildPages(currentPage, lastPage) {
@@ -34,7 +34,7 @@ function getStyles() {
     summaryText: {
       color: "var(--text-sub)",
       textAlign: "center",
-      marginTop:"20px"
+      marginTop: "20px",
     },
     emptyBox: {
       border: "1px dashed var(--soft-border)",
@@ -193,12 +193,12 @@ function getStyles() {
   };
 }
 
-function MonsterCard({ monster, currentPage, sort, styles }) {
+function MonsterCard({ monster, backHref, styles }) {
   const [isHovered, setIsHovered] = useState(false);
 
   return (
     <Link
-      href={`/tools/monster-search/${monster.id}?from=zukan&page=${currentPage}&sort=${sort}`}
+      href={`/tools/monster-search/${monster.id}?back=${encodeURIComponent(backHref)}`}
       className="block rounded-lg px-2.5 py-2 transition sm:px-3 sm:py-2.5"
       style={{
         ...styles.card,
@@ -466,6 +466,13 @@ export default function MonsterZukanClient({
   sort = "no",
 }) {
   const styles = useMemo(() => getStyles(), []);
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const backHref = useMemo(() => {
+    const query = searchParams?.toString();
+    return query ? `${pathname}?${query}` : pathname;
+  }, [pathname, searchParams]);
 
   const safeMonsters = Array.isArray(monsters) ? monsters : [];
   const safeCurrentPage = Math.max(1, Number(currentPage) || 1);
@@ -491,6 +498,7 @@ export default function MonsterZukanClient({
           {safeCurrentPage} / {safeLastPage}ページ
         </div>
       </div>
+
       {safeMonsters.length === 0 ? (
         <div className="rounded-xl p-8 text-center" style={styles.emptyBox}>
           モンスターがいない
@@ -501,16 +509,17 @@ export default function MonsterZukanClient({
             <MonsterCard
               key={monster.id}
               monster={monster}
-              currentPage={safeCurrentPage}
-              sort={sort}
+              backHref={backHref}
               styles={styles}
             />
           ))}
         </div>
       )}
+
       <div className="mb-4 text-sm" style={styles.summaryText}>
         {start}〜{end}件 / 全{safeTotal}件
       </div>
+
       <Pagination
         currentPage={safeCurrentPage}
         lastPage={safeLastPage}

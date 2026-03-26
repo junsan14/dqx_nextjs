@@ -2,6 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
 import { fetchMaps, fetchMapOptions } from "@/lib/maps";
 import { fetchMonsterMapSpawns } from "@/lib/monsterMapSpawns";
 import { fetchMonsterDetail } from "@/lib/monsters";
@@ -15,6 +20,7 @@ import {
   MdOutlineSwipeLeft,
   MdOutlineSwipeRight,
 } from "react-icons/md";
+
 function uniqBy(array, keyGetter) {
   const map = new Map();
 
@@ -135,7 +141,7 @@ function getMapMonsterBrowserStyles() {
     page: {
       background: "var(--page-bg)",
       color: "var(--page-text)",
-      marginBottom:"50px"
+      marginBottom: "50px",
     },
     filterPanel: {
       border: "1px solid var(--panel-border)",
@@ -434,15 +440,13 @@ function getMapMonsterBrowserStyles() {
       flexDirection: "column",
       justifyContent: "center",
     },
-      
+
     swipeHint: {
       display: "inline-flex",
       alignItems: "center",
       gap: "8px",
       padding: "6px 12px",
       borderRadius: "999px",
-
-      
       color: "var(--text-muted)",
       fontSize: "12px",
       fontWeight: 700,
@@ -591,6 +595,7 @@ function AreaBadgeList({ area, styles, initialLimit = 4 }) {
     </div>
   );
 }
+
 function SearchableContinentSelect({
   disabled = false,
   value = "",
@@ -718,6 +723,7 @@ function SearchableContinentSelect({
     </div>
   );
 }
+
 function SearchableMapSelect({
   disabled = false,
   value = "",
@@ -853,6 +859,7 @@ function MonsterSpawnCard({
   emphasized = false,
   styles,
   mobile = false,
+  backHref = "/tools/map-monster-browser",
 }) {
   const cardStyle = mobile ? styles.spawnCardMobile : styles.spawnCardDesktop;
 
@@ -889,7 +896,9 @@ function MonsterSpawnCard({
 
         {monster?.id ? (
           <Link
-            href={`/tools/monster-search/${monster.id}?from=zukan`}
+            href={`/tools/monster-search/${monster.id}?back=${encodeURIComponent(
+              backHref
+            )}`}
             className="shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition"
             style={styles.detailLink}
           >
@@ -923,6 +932,7 @@ function MonsterSpawnCarousel({
   selectedSystemType,
   styles,
   mobile = false,
+  backHref = "/tools/map-monster-browser",
 }) {
   const scrollerRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -956,7 +966,6 @@ function MonsterSpawnCarousel({
   const showSwipeHint = spawns.length > 1;
 
   let HintIcon = MdOutlineSwipe;
-  
 
   if (canScrollLeft && canScrollRight) {
     HintIcon = MdOutlineSwipe;
@@ -986,6 +995,7 @@ function MonsterSpawnCarousel({
             emphasized={Boolean(emphasized)}
             styles={styles}
             mobile={mobile}
+            backHref={backHref}
           />
         );
       })}
@@ -1018,6 +1028,7 @@ function MonsterSpawnCarousel({
     </div>
   );
 }
+
 function MapWithCards({
   layer,
   spawns,
@@ -1025,6 +1036,7 @@ function MapWithCards({
   selectedSystemType,
   styles,
   isMobile,
+  backHref,
 }) {
   if (isMobile) {
     return (
@@ -1044,6 +1056,7 @@ function MapWithCards({
           selectedSystemType={selectedSystemType}
           styles={styles}
           mobile
+          backHref={backHref}
         />
       </div>
     );
@@ -1065,6 +1078,7 @@ function MapWithCards({
         monstersById={monstersById}
         selectedSystemType={selectedSystemType}
         styles={styles}
+        backHref={backHref}
       />
     </div>
   );
@@ -1079,6 +1093,7 @@ function LayerSection({
   relatedSelectedMonsterIds,
   styles,
   isMobile,
+  backHref,
 }) {
   const filteredLayerSpawns = useMemo(() => {
     return spawns.filter((spawn) => {
@@ -1141,6 +1156,7 @@ function LayerSection({
           selectedSystemType={selectedSystemType}
           styles={styles}
           isMobile={isMobile}
+          backHref={backHref}
         />
       </div>
     </section>
@@ -1153,6 +1169,7 @@ function LayerCarousel({
   selectedSystemType,
   styles,
   isMobile,
+  backHref,
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -1214,6 +1231,7 @@ function LayerCarousel({
             selectedSystemType={selectedSystemType}
             styles={styles}
             isMobile
+            backHref={backHref}
           />
         </div>
       </section>
@@ -1274,6 +1292,7 @@ function LayerCarousel({
           selectedSystemType={selectedSystemType}
           styles={styles}
           isMobile={false}
+          backHref={backHref}
         />
       </div>
     </section>
@@ -1289,13 +1308,26 @@ export default function MapMonsterBrowserClient() {
   const [allSpawns, setAllSpawns] = useState([]);
   const [monsterMaster, setMonsterMaster] = useState({});
 
-  const [selectedContinent, setSelectedContinent] = useState("");
-  const [selectedMapId, setSelectedMapId] = useState("");
-  const [selectedLayerId, setSelectedLayerId] = useState("all");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const continentParam = searchParams.get("continent") ?? "";
+  const mapIdParam = searchParams.get("mapId") ?? "";
+  const layerIdParam = searchParams.get("layerId") ?? "all";
+
+  const [selectedContinent, setSelectedContinent] = useState(continentParam);
+  const [selectedMapId, setSelectedMapId] = useState(mapIdParam);
+  const [selectedLayerId, setSelectedLayerId] = useState(layerIdParam);
   const [selectedMonsterId, setSelectedMonsterId] = useState("");
   const [selectedSystemType, setSelectedSystemType] = useState("");
 
   const isMobile = useIsMobile();
+
+  const backHref = useMemo(() => {
+    const query = searchParams?.toString();
+    return query ? `${pathname}?${query}` : pathname;
+  }, [pathname, searchParams]);
 
   const styles = useMemo(
     () => ({
@@ -1304,6 +1336,37 @@ export default function MapMonsterBrowserClient() {
     }),
     []
   );
+
+  function syncUrl({
+    continent = "",
+    mapId = "",
+    layerId = "all",
+  }) {
+    const params = new URLSearchParams();
+
+    if (continent) params.set("continent", continent);
+    if (mapId) params.set("mapId", String(mapId));
+    if (layerId && layerId !== "all") params.set("layerId", String(layerId));
+
+    const nextQuery = params.toString();
+    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, {
+      scroll: false,
+    });
+  }
+
+  useEffect(() => {
+    const nextContinent = searchParams.get("continent") ?? "";
+    const nextMapId = searchParams.get("mapId") ?? "";
+    const nextLayerId = searchParams.get("layerId") ?? "all";
+
+    setSelectedContinent((prev) =>
+      prev === nextContinent ? prev : nextContinent
+    );
+    setSelectedMapId((prev) => (prev === nextMapId ? prev : nextMapId));
+    setSelectedLayerId((prev) =>
+      prev === nextLayerId ? prev : nextLayerId
+    );
+  }, [searchParams]);
 
   useEffect(() => {
     let ignore = false;
@@ -1373,6 +1436,63 @@ export default function MapMonsterBrowserClient() {
   const mapLayers = useMemo(() => {
     return Array.isArray(selectedMap?.layers) ? selectedMap.layers : [];
   }, [selectedMap]);
+
+  useEffect(() => {
+    if (!selectedContinent) return;
+    if (continents.length === 0) return;
+
+    const exists = continents.some(
+      (continent) =>
+        normalizeText(continent) === normalizeText(selectedContinent)
+    );
+
+    if (!exists) {
+      setSelectedContinent("");
+      setSelectedMapId("");
+      setSelectedLayerId("all");
+      syncUrl({
+        continent: "",
+        mapId: "",
+        layerId: "all",
+      });
+    }
+  }, [continents, selectedContinent]);
+
+  useEffect(() => {
+    if (!selectedMapId) return;
+    if (mapsInContinent.length === 0) return;
+
+    const exists = mapsInContinent.some(
+      (row) => Number(row.id) === Number(selectedMapId)
+    );
+
+    if (!exists) {
+      setSelectedMapId("");
+      setSelectedLayerId("all");
+      syncUrl({
+        continent: selectedContinent,
+        mapId: "",
+        layerId: "all",
+      });
+    }
+  }, [mapsInContinent, selectedMapId, selectedContinent]);
+
+  useEffect(() => {
+    if (!selectedLayerId || selectedLayerId === "all") return;
+
+    const exists = mapLayers.some(
+      (layer) => Number(layer.id) === Number(selectedLayerId)
+    );
+
+    if (!exists) {
+      setSelectedLayerId("all");
+      syncUrl({
+        continent: selectedContinent,
+        mapId: selectedMapId,
+        layerId: "all",
+      });
+    }
+  }, [mapLayers, selectedLayerId, selectedContinent, selectedMapId]);
 
   const spawnsForSelectedMap = useMemo(() => {
     if (!selectedMapId) return [];
@@ -1578,6 +1698,12 @@ export default function MapMonsterBrowserClient() {
     setSelectedLayerId("all");
     setSelectedMonsterId("");
     setSelectedSystemType("");
+
+    syncUrl({
+      continent: value,
+      mapId: "",
+      layerId: "all",
+    });
   }
 
   function handleMapChange(value) {
@@ -1585,6 +1711,12 @@ export default function MapMonsterBrowserClient() {
     setSelectedLayerId("all");
     setSelectedMonsterId("");
     setSelectedSystemType("");
+
+    syncUrl({
+      continent: selectedContinent,
+      mapId: value,
+      layerId: "all",
+    });
   }
 
   function handleMonsterToggle(monsterId) {
@@ -1658,9 +1790,16 @@ export default function MapMonsterBrowserClient() {
           <select
             value={selectedLayerId}
             onChange={(e) => {
-              setSelectedLayerId(e.target.value);
+              const nextLayerId = e.target.value;
+              setSelectedLayerId(nextLayerId);
               setSelectedMonsterId("");
               setSelectedSystemType("");
+
+              syncUrl({
+                continent: selectedContinent,
+                mapId: selectedMapId,
+                layerId: nextLayerId,
+              });
             }}
             className="rounded-xl px-3 py-2 text-sm outline-none"
             style={styles.selectInput}
@@ -1808,7 +1947,10 @@ export default function MapMonsterBrowserClient() {
             </div>
           </aside>
 
-          <div className="min-w-0" style={!isMobile ? styles.rightColumnDesktop : undefined}>
+          <div
+            className="min-w-0"
+            style={!isMobile ? styles.rightColumnDesktop : undefined}
+          >
             <div className="grid gap-6 h-full">
               {layerSections.length === 0 ? (
                 <div className="rounded-2xl p-6 text-sm" style={styles.emptyDashed}>
@@ -1821,6 +1963,7 @@ export default function MapMonsterBrowserClient() {
                   selectedSystemType={selectedSystemType}
                   styles={styles}
                   isMobile={isMobile}
+                  backHref={backHref}
                 />
               ) : (
                 layerSections.map((section) => (
@@ -1834,6 +1977,7 @@ export default function MapMonsterBrowserClient() {
                     relatedSelectedMonsterIds={relatedSelectedMonsterIds}
                     styles={styles}
                     isMobile={isMobile}
+                    backHref={backHref}
                   />
                 ))
               )}
@@ -1853,6 +1997,7 @@ export default function MapMonsterBrowserClient() {
                       selectedSystemType={selectedSystemType}
                       styles={styles}
                       mobile={isMobile}
+                      backHref={backHref}
                     />
                   </div>
                 </section>
