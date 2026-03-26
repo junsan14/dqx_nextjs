@@ -274,76 +274,83 @@ export default function MonstersClient() {
     }
   }
 
-  async function handleSave() {
-    try {
-      const payload = buildMonsterPayload(selectedMonster);
+async function handleSave() {
+  try {
+    const payload = buildMonsterPayload(selectedMonster);
 
-      if (!selectedMonster?.id && !isAdmin) {
-        showToast("新規追加は管理者のみ", "error");
-        return;
-      }
-
-      if (!payload.name) {
-        showToast("名前は必須", "error");
-        return;
-      }
-
-      setSaving(true);
-
-      const isEdit = Boolean(selectedMonster?.id);
-      const targetName = selectedMonster?.name?.trim() || payload.name || "モンスター";
-
-      let monsterId = selectedMonster?.id ?? null;
-      let savedMonster = null;
-
-      if (monsterId) {
-        if (isAdmin) {
-          savedMonster = await updateMonster(monsterId, payload);
-        }
-
-        await saveMonsterMapSpawns(
-          monsterId,
-          Array.isArray(selectedMonster?.spawns) ? selectedMonster.spawns : [],
-          initialSpawns
-        );
-      } else {
-        savedMonster = await createMonster(payload);
-        monsterId = savedMonster?.id ?? null;
-
-        if (!monsterId) {
-          throw new Error("モンスター保存後のID取得に失敗");
-        }
-
-        await saveMonsterMapSpawns(
-          monsterId,
-          Array.isArray(selectedMonster?.spawns) ? selectedMonster.spawns : [],
-          initialSpawns
-        );
-      }
-
-      const [freshMonster, freshSpawns] = await Promise.all([
-        fetchMonsterDetail(monsterId),
-        fetchMonsterMapSpawns(monsterId),
-      ]);
-
-      setSelectedMonster(
-        normalizeMonster({
-          ...(freshMonster ?? savedMonster ?? {}),
-          spawns: freshSpawns,
-        })
-      );
-      setInitialSpawns(Array.isArray(freshSpawns) ? freshSpawns : []);
-      setParentCandidates([]);
-
-      await loadMonsters(keyword);
-      showToast(isEdit ? `「${targetName}」を更新した` : `「${targetName}」を作成した`);
-    } catch (error) {
-      console.error(error);
-      showToast(error.message || "保存失敗", "error");
-    } finally {
-      setSaving(false);
+    if (!selectedMonster?.id && !isAdmin) {
+      showToast("新規追加は管理者のみ", "error");
+      return;
     }
+
+    if (!payload.name) {
+      showToast("名前は必須", "error");
+      return;
+    }
+
+    setSaving(true);
+
+    const isEdit = Boolean(selectedMonster?.id);
+    const targetName = selectedMonster?.name?.trim() || payload.name || "モンスター";
+
+    let monsterId = selectedMonster?.id ?? null;
+    let savedMonster = null;
+
+    if (monsterId) {
+      if (isAdmin) {
+        savedMonster = await updateMonster(monsterId, payload);
+      }
+
+      await saveMonsterMapSpawns(
+        monsterId,
+        Array.isArray(selectedMonster?.spawns) ? selectedMonster.spawns : [],
+        initialSpawns
+      );
+    } else {
+      savedMonster = await createMonster(payload);
+      monsterId = savedMonster?.id ?? null;
+
+      if (!monsterId) {
+        throw new Error("モンスター保存後のID取得に失敗");
+      }
+
+      await saveMonsterMapSpawns(
+        monsterId,
+        Array.isArray(selectedMonster?.spawns) ? selectedMonster.spawns : [],
+        initialSpawns
+      );
+    }
+
+    const [freshMonster, freshSpawns] = await Promise.all([
+      fetchMonsterDetail(monsterId),
+      fetchMonsterMapSpawns(monsterId),
+    ]);
+
+    const normalizedMonster = normalizeMonster({
+      ...(freshMonster ?? savedMonster ?? {}),
+      spawns: freshSpawns,
+    });
+
+    setSelectedMonster({
+      ...normalizedMonster,
+      image_preview_url: "",
+      image_file: null,
+      remove_image: false,
+      image_version: Date.now(),
+    });
+
+    setInitialSpawns(Array.isArray(freshSpawns) ? freshSpawns : []);
+    setParentCandidates([]);
+
+    await loadMonsters(keyword);
+    showToast(isEdit ? `「${targetName}」を更新した` : `「${targetName}」を作成した`);
+  } catch (error) {
+    console.error(error);
+    showToast(error.message || "保存失敗", "error");
+  } finally {
+    setSaving(false);
   }
+}
 
   async function handleDelete() {
     if (!isAdmin) return;

@@ -11,6 +11,9 @@ const NEW_IMAGE_CROP = { x: 150, y: 37 };
 const EXISTING_IMAGE_ZOOM = 1;
 const NEW_IMAGE_ZOOM = 3.22;
 
+const RESET_EDIT_CROP = { x: 0, y: 0 };
+const RESET_EDIT_ZOOM = 1;
+
 const DEFAULT_FILE_NAME = "monster.png";
 const CROPPER_SIZE = 320;
 
@@ -23,40 +26,45 @@ export default function MonsterImageCropper({
 }) {
   const hasInitialValue = Boolean(value);
 
-  const [sourceUrl, setSourceUrl] = useState(value || "");
+  const [originalImageUrl, setOriginalImageUrl] = useState(value || "");
+  const [previewImageUrl, setPreviewImageUrl] = useState(value || "");
   const [sourceFileName, setSourceFileName] = useState(DEFAULT_FILE_NAME);
 
-  // 保存用の確定状態
   const [crop, setCrop] = useState(
     hasInitialValue ? EXISTING_IMAGE_CROP : NEW_IMAGE_CROP
   );
   const [zoom, setZoom] = useState(
     hasInitialValue ? EXISTING_IMAGE_ZOOM : NEW_IMAGE_ZOOM
   );
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+  const [, setCroppedAreaPixels] = useState(null);
 
-  // 編集用の下書き状態
-  const [draftCrop, setDraftCrop] = useState(
-    hasInitialValue ? EXISTING_IMAGE_CROP : NEW_IMAGE_CROP
-  );
-  const [draftZoom, setDraftZoom] = useState(
-    hasInitialValue ? EXISTING_IMAGE_ZOOM : NEW_IMAGE_ZOOM
-  );
+  const [draftCrop, setDraftCrop] = useState(RESET_EDIT_CROP);
+  const [draftZoom, setDraftZoom] = useState(RESET_EDIT_ZOOM);
   const [draftCroppedAreaPixels, setDraftCroppedAreaPixels] = useState(null);
 
   const [isEditing, setIsEditing] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [cropperKey, setCropperKey] = useState(0);
 
-  const objectUrlRef = useRef(null);
+  const originalObjectUrlRef = useRef(null);
+  const previewObjectUrlRef = useRef(null);
   const prepareTimerRef = useRef(null);
+  const autoPreparedRef = useRef(false);
 
-  const hasImage = useMemo(() => Boolean(sourceUrl), [sourceUrl]);
+  const activeImageUrl = isEditing ? originalImageUrl : previewImageUrl;
+  const hasImage = useMemo(() => Boolean(activeImageUrl), [activeImageUrl]);
 
-  const revokeObjectUrl = useCallback(() => {
-    if (objectUrlRef.current) {
-      URL.revokeObjectURL(objectUrlRef.current);
-      objectUrlRef.current = null;
+  const revokeOriginalObjectUrl = useCallback(() => {
+    if (originalObjectUrlRef.current) {
+      URL.revokeObjectURL(originalObjectUrlRef.current);
+      originalObjectUrlRef.current = null;
+    }
+  }, []);
+
+  const revokePreviewObjectUrl = useCallback(() => {
+    if (previewObjectUrlRef.current) {
+      URL.revokeObjectURL(previewObjectUrlRef.current);
+      previewObjectUrlRef.current = null;
     }
   }, []);
 
@@ -100,6 +108,15 @@ export default function MonsterImageCropper({
           buildOutputFileName(targetFileName)
         );
 
+        revokePreviewObjectUrl();
+        previewObjectUrlRef.current = previewUrl;
+
+        setPreviewImageUrl(previewUrl);
+        setCrop(nextCrop);
+        setZoom(nextZoom);
+        setCroppedAreaPixels(targetAreaPixels);
+        setCropperKey((prev) => prev + 1);
+
         onApply({
           file,
           previewUrl,
@@ -111,7 +128,7 @@ export default function MonsterImageCropper({
         setIsProcessing(false);
       }
     },
-    [buildOutputFileName, disabled, onApply]
+    [buildOutputFileName, disabled, onApply, revokePreviewObjectUrl]
   );
 
   const syncInitialState = useCallback(
@@ -124,18 +141,18 @@ export default function MonsterImageCropper({
         : NEW_IMAGE_ZOOM;
 
       clearPrepareTimer();
+      autoPreparedRef.current = false;
 
-      setSourceUrl(nextUrl || "");
+      setOriginalImageUrl(nextUrl || "");
+      setPreviewImageUrl(nextUrl || "");
       setSourceFileName(nextFileName || DEFAULT_FILE_NAME);
 
-      // 確定状態
       setCrop(initialCrop);
       setZoom(initialZoom);
       setCroppedAreaPixels(null);
 
-      // 編集用下書き
-      setDraftCrop(initialCrop);
-      setDraftZoom(initialZoom);
+      setDraftCrop(RESET_EDIT_CROP);
+      setDraftZoom(RESET_EDIT_ZOOM);
       setDraftCroppedAreaPixels(null);
 
       setIsEditing(false);
@@ -145,15 +162,30 @@ export default function MonsterImageCropper({
   );
 
   useEffect(() => {
-    syncInitialState(value || "", DEFAULT_FILE_NAME, Boolean(value));
+    const nextValue = value || "";
+    const isBlobValue =
+      typeof nextValue === "string" && nextValue.startsWith("blob:");
+    const hasLocalUpload = Boolean(originalObjectUrlRef.current);
+
+    // 親から返ってくる一時 preview blob では子を再初期化しない
+    if (hasLocalUpload && isBlobValue) {
+      return;
+    }
+
+    syncInitialState(nextValue, DEFAULT_FILE_NAME, Boolean(nextValue));
   }, [value, syncInitialState]);
 
   useEffect(() => {
     return () => {
       clearPrepareTimer();
-      revokeObjectUrl();
+      revokeOriginalObjectUrl();
+      revokePreviewObjectUrl();
     };
-  }, [clearPrepareTimer, revokeObjectUrl]);
+  }, [
+    clearPrepareTimer,
+    revokeOriginalObjectUrl,
+    revokePreviewObjectUrl,
+  ]);
 
   const scheduleAutoPrepare = useCallback(
     (nextSourceUrl, nextFileName, nextCrop, nextZoom, nextPixels) => {
@@ -181,17 +213,37 @@ export default function MonsterImageCropper({
       const file = e.target.files?.[0];
       if (!file) return;
 
-      revokeObjectUrl();
+      clearPrepareTimer();
+      revokeOriginalObjectUrl();
+      revokePreviewObjectUrl();
 
       const nextUrl = URL.createObjectURL(file);
-      objectUrlRef.current = nextUrl;
+      originalObjectUrlRef.current = nextUrl;
+      autoPreparedRef.current = false;
 
-      syncInitialState(nextUrl, file.name || DEFAULT_FILE_NAME, false);
+      setOriginalImageUrl(nextUrl);
+      setPreviewImageUrl(nextUrl);
+      setSourceFileName(file.name || DEFAULT_FILE_NAME);
 
-      // 同じファイルを再選択できるようにする
+      setCrop(NEW_IMAGE_CROP);
+      setZoom(NEW_IMAGE_ZOOM);
+      setCroppedAreaPixels(null);
+
+      setDraftCrop(RESET_EDIT_CROP);
+      setDraftZoom(RESET_EDIT_ZOOM);
+      setDraftCroppedAreaPixels(null);
+
+      setIsEditing(false);
+      setCropperKey((prev) => prev + 1);
+
       e.target.value = "";
     },
-    [disabled, revokeObjectUrl, syncInitialState]
+    [
+      clearPrepareTimer,
+      disabled,
+      revokeOriginalObjectUrl,
+      revokePreviewObjectUrl,
+    ]
   );
 
   const handleCropComplete = useCallback(
@@ -201,13 +253,22 @@ export default function MonsterImageCropper({
         return;
       }
 
-      // 通常表示中はこの時点で保存用範囲を確定
       setCroppedAreaPixels(croppedPixels);
 
-      // 新規アップロード画像だけは、この時点で自動的に保存用ファイルを作る
-      if (sourceUrl && objectUrlRef.current === sourceUrl) {
+      const isLocalOriginal =
+        Boolean(originalObjectUrlRef.current) &&
+        originalImageUrl === originalObjectUrlRef.current;
+
+      // ローカル画像の自動切り出しは1回だけ
+      if (
+        isLocalOriginal &&
+        croppedPixels &&
+        !autoPreparedRef.current
+      ) {
+        autoPreparedRef.current = true;
+
         scheduleAutoPrepare(
-          sourceUrl,
+          originalImageUrl,
           sourceFileName,
           crop,
           zoom,
@@ -215,52 +276,61 @@ export default function MonsterImageCropper({
         );
       }
     },
-    [crop, isEditing, scheduleAutoPrepare, sourceFileName, sourceUrl, zoom]
+    [
+      crop,
+      isEditing,
+      originalImageUrl,
+      scheduleAutoPrepare,
+      sourceFileName,
+      zoom,
+    ]
   );
 
   const handleStartEdit = useCallback(() => {
-    if (disabled || !sourceUrl) return;
+    if (disabled || !originalImageUrl) return;
 
-    setDraftCrop(crop);
-    setDraftZoom(zoom);
-    setDraftCroppedAreaPixels(croppedAreaPixels);
+    // 再編集中は自動切り出しループを止める
+    autoPreparedRef.current = true;
+
+    const isUploadedLocalImage =
+      Boolean(originalObjectUrlRef.current) &&
+      originalImageUrl === originalObjectUrlRef.current;
+
+    setDraftCrop(isUploadedLocalImage ? RESET_EDIT_CROP : EXISTING_IMAGE_CROP);
+    setDraftZoom(isUploadedLocalImage ? RESET_EDIT_ZOOM : EXISTING_IMAGE_ZOOM);
+    setDraftCroppedAreaPixels(null);
     setIsEditing(true);
     setCropperKey((prev) => prev + 1);
-  }, [crop, zoom, croppedAreaPixels, disabled, sourceUrl]);
+  }, [disabled, originalImageUrl]);
 
   const handleCancelEdit = useCallback(() => {
-    setDraftCrop(crop);
-    setDraftZoom(zoom);
-    setDraftCroppedAreaPixels(croppedAreaPixels);
+    setDraftCrop(RESET_EDIT_CROP);
+    setDraftZoom(RESET_EDIT_ZOOM);
+    setDraftCroppedAreaPixels(null);
     setIsEditing(false);
     setCropperKey((prev) => prev + 1);
-  }, [crop, zoom, croppedAreaPixels]);
+  }, []);
 
   const handleConfirmEdit = useCallback(async () => {
-    if (!sourceUrl || !draftCroppedAreaPixels) return;
+    if (!originalImageUrl || !draftCroppedAreaPixels) return;
 
-    // 修正後の範囲を保存用の確定状態にする
-    setCrop(draftCrop);
-    setZoom(draftZoom);
-    setCroppedAreaPixels(draftCroppedAreaPixels);
-    setIsEditing(false);
-    setCropperKey((prev) => prev + 1);
-
-    // 修正した時だけ、明示的に保存用へ再切り出し
     await prepareCroppedImage({
-      targetSourceUrl: sourceUrl,
+      targetSourceUrl: originalImageUrl,
       targetAreaPixels: draftCroppedAreaPixels,
       targetFileName: sourceFileName,
       nextCrop: draftCrop,
       nextZoom: draftZoom,
     });
+
+    setIsEditing(false);
+    setCropperKey((prev) => prev + 1);
   }, [
     draftCrop,
     draftCroppedAreaPixels,
     draftZoom,
+    originalImageUrl,
     prepareCroppedImage,
     sourceFileName,
-    sourceUrl,
   ]);
 
   return (
@@ -300,8 +370,8 @@ export default function MonsterImageCropper({
           <div style={cropContainerOuterStyle}>
             <div style={cropContainerStyle}>
               <Cropper
-                key={`${cropperKey}-${sourceUrl}-${isEditing ? "editing" : "preview"}`}
-                image={sourceUrl}
+                key={`${cropperKey}-${activeImageUrl}-${isEditing ? "editing" : "preview"}`}
+                image={activeImageUrl}
                 crop={isEditing ? draftCrop : crop}
                 zoom={isEditing ? draftZoom : zoom}
                 minZoom={1}
@@ -382,7 +452,7 @@ export default function MonsterImageCropper({
             </>
           ) : (
             <div style={helperTextStyle}>
-              画像をアップロードした時点で、今見えている範囲そのままで保存用データを作成する。範囲を直したい時だけ「修正する」を押して「この範囲で決定」を押す。
+              画像をアップロードした時点で、今見えている範囲そのままで保存用データを作成する。範囲を直したい時だけ「切り取り範囲を再選択」を押して「この範囲で決定」を押す。
             </div>
           )}
 
@@ -397,7 +467,7 @@ export default function MonsterImageCropper({
                   ...(disabled || isProcessing ? buttonDisabledStyle : {}),
                 }}
               >
-                修正する
+                切り取り範囲を再選択
               </button>
             </div>
           )}
